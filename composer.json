@@ -12,7 +12,8 @@
         "livewire/livewire": "^3.4",
         "livewire/volt": "^1.0",
         "maatwebsite/excel": "^3.1",
-        "orchid/platform": "^14.42"
+        "orchid/platform": "^14.42",
+        "phpoffice/phpspreadsheet": "^1.29"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "^3.14",

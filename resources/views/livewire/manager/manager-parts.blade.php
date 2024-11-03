@@ -1,5 +1,22 @@
 <div class="p-8 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden" id="app">
-    <!-- Сообщения об ошибке -->
+    <!-- Сообщения об успехе -->
+    @if (session()->has('error'))
+        <div
+            class="bg-red-500 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-1/6 w-1/2 align-middle"
+            x-data="{ show: true }"
+            x-init="setTimeout(() => show = false, 3500)"
+            x-show="show"
+            x-transition:enter="opacity-0"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="opacity-100"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+        >
+            {{ session('error') }}
+        </div>
+    @endif
+    <!-- Сообщения предупреждение -->
     @if (session()->has('warning'))
         <div
             class="bg-yellow-500 text-white p-4 rounded-lg mb-6 transition-opacity duration-1000"
@@ -89,35 +106,73 @@
 
         <!-- Таблица -->
         <div x-data="{
-                selected: @entangle('selectedRows').defer || [],
-                checkAll: false,
-                isSendButtonDisabled: @entangle('isSendButtonDisabled'),
-                itemsCount: {{ count($parts) }},
-                toggleAll() {
-                    // Переключаем все чекбоксы на основе checkAll
-                    this.checkAll = !this.checkAll;
-                    this.selected = this.checkAll ? [...document.querySelectorAll('.row-checkbox')].map(cb => cb.value) : [];
+                selectedParts: [],
+                partQuantities: {},
+                partStock: @js($parts->pluck('quantity', 'id')),
+                modalOpen: false,
+                selectedTechnician: @entangle('selectedTechnician').defer,
+                toggleCheckAll(event) {
+                    this.selectedParts = event.target.checked ? @json($parts->pluck('id')) : [];
+                    this.selectedParts.forEach(partId => {
+                        if (!this.partQuantities[partId]) {
+                            this.partQuantities[partId] = 1;
+                        }
+                    });
+
+                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                },
+
+                togglePartSelection(partId) {
+                    if (this.selectedParts.includes(partId)) {
+                        this.selectedParts = this.selectedParts.filter(id => id !== partId);
+                        delete this.partQuantities[partId];
+                    } else {
+                        this.selectedParts.push(partId);
+                        if (!this.partQuantities[partId]) {
+                            this.partQuantities[partId] = 1;
+                        }
+                    }
+
+                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                },
+                openModal() {
+                    if (this.selectedParts.length > 0) {
+                        this.modalOpen = true;
+                    }
+                },
+                closeModal() {
+                    this.modalOpen = false;
+                },
+                isSendButtonEnabled() {
+                    return this.selectedTechnician &&
+                        this.selectedParts.every(partId =>
+                            this.partQuantities[partId] > 0 &&
+                            this.partQuantities[partId] <= this.partStock[partId]
+                        );
+                },
+                limitQuantity(partId) {
+                    if (this.partQuantities[partId] > this.partStock[partId]) {
+                        this.partQuantities[partId] = this.partStock[partId];
+                    }
+                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
                 }
             }"
-             x-init="
-                $watch('selected', value => {
-                    checkAll = value.length === itemsCount;
-                })
-            "
-             class="overflow-hidden w-full overflow-x-auto rounded-md border border-neutral-300 dark:border-neutral-500">
+             @keydown.escape="closeModal"
+             class="overflow-hidden w-full overflow-x-auto rounded-md border border-neutral-300 dark:border-neutral-500"
+        >
             <table id="parts-table" class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                 <tr>
                     <th scope="col" class="p-4">
                         <div class="flex items-center">
-                            <input type="checkbox" x-model="checkAll" @click="toggleAll"
+                            <input type="checkbox" @click="toggleCheckAll($event)" :checked="selectedParts.length === @json($parts->count())"
                                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                             >
                             <label for="checkbox-all-search" class="sr-only">checkbox</label>
                         </div>
                     </th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Part name</th>
                     <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">SKU</th>
+                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Part name</th>
                     <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Quantity</th>
                     <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Price</th>
                     <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Category</th>
@@ -138,17 +193,34 @@
                         <td class="w-4 p-4 w-32 truncate whitespace-nowrap overflow-hidden">
                             <div class="flex items-center">
                                 <input type="checkbox"
-                                       x-bind:value="{{ $part->id }}"
-                                       x-model="selected"
+                                       :value="{{ $part->id }}" @click="togglePartSelection({{ $part->id }})"
+                                       :checked="selectedParts.includes({{ $part->id }})"
                                        class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
                                 >
                                 <label for="checkbox-table-search-{{ $part->id }}" class="sr-only">checkbox</label>
                             </div>
                         </td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->name }}</td>
                         <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->sku }}</td>
+                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->name }}</td>
                         <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->quantity }}</td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->price }}</td>
+                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">
+                            <a data-popover-target="{{ $part->id }}" data-popover-trigger="click" type="button" class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">{{ $part->price }}</a>
+
+                            <div data-popover id="{{ $part->id }}" role="tooltip" class="absolute z-10 invisible inline-block w-32 text-sm text-gray-500 transition-opacity duration-300 bg-white border border-gray-200 rounded-lg shadow-sm opacity-0 dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800">
+                                <div class="px-3 py-2">
+                                    <button wire:click="updatePartPrice({{ $part->id }})"
+                                            class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                        Edit
+                                    </button>
+                                    <!-- Кнопка для открытия истории цен -->
+                                    <button @click="$dispatch('open-price-modal', { partId: {{ $part->id }} })"
+                                            class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                        History
+                                    </button>
+                                </div>
+                                <div data-popper-arrow ></div>
+                            </div>
+                        </td>
 
                         @if(!empty($part->category))
                             <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->category->name }}</td>
@@ -168,7 +240,7 @@
                         <td class="px-5 py-5">
                             <!-- Миниатюра -->
                             <div x-data class="gallery h-12 w-12">
-                                <img src="@if ($part->image == null) @endif" alt="{{ $part->name }}"
+                                <img src="@if ($part->image == null) @else {{ Storage::disk('s3')->url($transfer->part->image) }} @endif" alt="{{ $part->name }}"
                                      @click="$dispatch('lightbox', '@if ($part->image === null) @click.stop @endif')"
                                      @click.stop
                                      class="object-cover rounded cursor-zoom-in">
@@ -203,7 +275,7 @@
 
                 @empty
                     <tr>
-                        <td colspan="8"
+                        <td colspan="9"
                             class="px-5 py-5 text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                             No spare parts available
                         </td>
@@ -214,63 +286,55 @@
 
             <button
                 class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-                @click="if(Array.isArray(selected)) $dispatch('triggerOpenModal', selected)"
-                x-bind:disabled="!selected || selected.length === 0"
+                @click="openModal" x-show="selectedParts.length > 0"
             >
                 Send part
             </button>
-        </div>
-    </div>
 
-    <!-- Передать запчасть -->
-    <div x-data="{ isOpen: @entangle('isOpen').defer, isSendButtonDisabled: @entangle('isSendButtonDisabled').defer }">
-        <div x-show="isOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50">
-            <div class="bg-white rounded-lg p-8 max-w-lg w-full">
-                <h2 class="text-xl font-bold mb-4">Transfer of spare parts to the technician</h2>
-
-                <form wire:submit.prevent="transferSelectedParts">
-                    @foreach ($selectedRows as $partId)
-                        @php
-                            $part = \App\Models\Part::find($partId);
-                        @endphp
-                        <div class="mb-4">
-                            <label for="quantity-{{ $partId }}" class="block text-sm font-medium text-gray-700">
-                                {{ $part->name }} ({{ $part->quantity }} in stock)
-                            </label>
-                            <input
-                                type="number"
-                                id="quantity-{{ $partId }}"
-                                wire:model.defer="transferQuantities.{{ $partId }}"
-                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                min="1"
-                                max="{{ $part->quantity }}"
-                            >
-                        </div>
-                    @endforeach
-                    <div class="mb-4">
-                        <label for="technician" class="block text-sm font-medium text-gray-700">Technician</label>
-                        <select wire:model.defer="technicianId" id="technician"
-                                class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
-                            <option value="">Select a technician</option>
-                            @foreach ($technicians as $technician)
-                                <option value="{{ $technician->id }}">{{ $technician->name }}</option>
-                            @endforeach
-                        </select>
+            <!-- Flowbite-стилизованное модальное окно -->
+            <div x-show="modalOpen" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50" style="display: none;">
+                <div class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
+                    <!-- Заголовок модального окна -->
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Выбранные запчасти</h3>
+                        <button @click="closeModal" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white" aria-label="Close">
+                            <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                            </svg>
+                        </button>
                     </div>
 
-                    <button
-                        type="submit"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:opacity-50"
-                        x-bind:disabled="isSendButtonDisabled"
-                    >
-                        Send
-                    </button>
-                    <button type="button" class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                            wire:click="closeModal"
-                    >
-                        Cancel
-                    </button>
-                </form>
+                    <!-- Содержимое модального окна -->
+                    <form wire:submit.prevent="sendParts">
+                        <div class="space-y-4">
+                            <template x-for="partId in selectedParts" :key="partId">
+                                <div class="mb-2">
+                                    <label>Запчасть #<span x-text="partId"></span> (Доступно: <span x-text="partStock[partId]"></span>)</label>
+                                    <input id="quantity" type="number" min="1" :max="partStock[partId]" class="input mt-1 block w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                           placeholder="Количество" x-model="partQuantities[partId]" @input="limitQuantity(partId)">
+                                </div>
+                            </template>
+
+                            <!-- Выбор техника -->
+                            <div>
+                                <label for="technician" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
+                                <select id="technician" x-model="selectedTechnician" wire:model="selectedTechnician" class="block w-full p-2 mt-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                    <option value="">Выберите техника</option>
+                                    @foreach ($technicians as $technician)
+                                        <option value="{{ $technician->id }}">{{ $technician->name }}</option>
+                                    @endforeach
+                                </select>
+                                <p class="text-sm text-gray-500">Выбранный техник: <span x-text="selectedTechnician"></span></p>
+                            </div>
+                        </div>
+
+                        <!-- Кнопки действия -->
+                        <div class="flex items-center justify-end mt-6 space-x-4">
+                            <button type="button" @click="closeModal" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Отменить</button>
+                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800" :disabled="!isSendButtonEnabled()">Подтвердить</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -319,17 +383,42 @@
         </div>
     @endif
 
-    <div x-data="{ open: @entangle('isPriceHistoryModalOpen') }">
-        <div x-show="open" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div @click.away="open = false" class="bg-white dark:bg-gray-800 rounded-lg p-4 max-w-lg w-full mx-4">
-                <button @click="open = false"
-                        class="float-right text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">&times;
-                </button>
-                <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Price change history</h2>
-                <livewire:part-price-history :part-id="$selectedPartId"/>
+    @if ($openPriceModal)
+        <!-- Фон модального окна -->
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50">
+            <!-- Контейнер модального окна -->
+            <div x-transition
+                 @click.away="$dispatch(closePriceModal)"
+                 class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-lg w-full p-6 mx-4"
+                 role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+                <!-- Заголовок и кнопка закрытия -->
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="modal-title" class="text-xl font-semibold text-gray-900 dark:text-white">Price Change History</h2>
+                    <button wire:click="closePriceModal"
+                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                            aria-label="Close">
+                        <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414 1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Содержимое модального окна -->
+                <div class="overflow-y-auto max-h-96">
+                    <livewire:part-price-history :part-id="$selectedPartId" />
+                </div>
+
+                <!-- Кнопка закрытия внизу окна -->
+                <div class="flex justify-end mt-4">
+                    <button wire:click="closePriceModal"
+                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800">
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    @endif
 
     <!-- Модальное окно показа большого изображения -->
     <div>

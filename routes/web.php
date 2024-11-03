@@ -23,15 +23,15 @@ Route::view('profile', 'profile')
 require __DIR__.'/auth.php';
 
 Route::middleware(['auth', 'role:manager'])->group(function () {
-    Route::post('/manager', Manager::class)->name('manager.manager');
-    Route::post('/manager/manager-dashboard', ManagerDashboard::class)->name('manager.manager-dashboard');
-    Route::post('/manager/parts', ManagerParts::class)->name('manager.parts');
-    Route::post('/manager/transfer', TransferPartForm::class)->name('manager.transfer');
-    Route::post('/manager/technicians', ManagerTechnicians::class)->name('manager.technicians');
+    Route::get('/manager', Manager::class)->name('manager.manager');
+    Route::get('/manager/manager-dashboard', ManagerDashboard::class)->name('manager.manager-dashboard');
+    Route::get('/manager/parts', ManagerParts::class)->name('manager.parts');
+    Route::get('/manager/transfer', TransferPartForm::class)->name('manager.transfer');
+    Route::get('/manager/technicians', ManagerTechnicians::class)->name('manager.technicians');
 });
 
 Route::middleware(['auth', 'role:technician'])->group(function () {
-    Route::post('/technician', Technician::class)->name('technician.technician');
-    Route::post('/technician/technician-dashboard', TechnicianDashboard::class)->name('technician.technician-dashboard');
-    Route::post('/technician/parts', TechnicianParts::class)->name('technician.parts');
+    Route::get('/technician', Technician::class)->name('technician.technician');
+    Route::get('/technician/technician-dashboard', TechnicianDashboard::class)->name('technician.technician-dashboard');
+    Route::get('/technician/parts', TechnicianParts::class)->name('technician.parts');
 });

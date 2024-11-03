@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Orchid\Access\UserAccess;
 use Orchid\Filters\Types\Like;
 use Orchid\Filters\Types\Where;
 use Orchid\Filters\Types\WhereDateStartEnd;

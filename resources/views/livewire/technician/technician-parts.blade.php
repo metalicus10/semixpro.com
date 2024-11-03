@@ -70,6 +70,7 @@
         <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
+                <th scope="col" class="px-5 py-3">SKU</th>
                 <th scope="col" class="px-5 py-3">Name</th>
                 <th scope="col" class="px-5 py-3">Quantity</th>
                 <th scope="col" class="px-5 py-3">Brand</th>
@@ -80,7 +81,8 @@
             </thead>
             <tbody>
             @forelse ($parts as $transfer)
-                <tr class="cursor-pointer bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
+                <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
+                    <td class="px-5 py-5">{{ $transfer->part->sku }}</td>
                     <td class="px-5 py-5">{{ $transfer->part->name }}</td>
                     <td class="px-5 py-5">{{ $transfer->quantity }}</td>
                     @if(!empty($transfer->part->brands))
@@ -99,8 +101,9 @@
                     @endif
                     <td class="px-5 py-5">
                         <div x-data class="gallery h-12 w-12">
-                            <img src="{{ Storage::disk('s3')->url($transfer->part->image) }}" alt="{{ $transfer->part->name }}"
-                                 @click="$dispatch('lightbox', '{{ Storage::disk('s3')->url($transfer->part->image) }}')" @click.stop
+                            <img src="@if ($transfer->part->image == null) @else {{ Storage::disk('s3')->url($transfer->part->image) }}@endif" alt="{{ $transfer->part->name }}"
+                                 @click="$dispatch('lightbox', '@if ($transfer->part->image === null) @click.stop @endif')"
+                                 @click.stop
                                  class="object-cover rounded cursor-zoom-in">
                         </div>
                     </td>
@@ -116,7 +119,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6"
+                    <td colspan="7"
                         class="px-5 py-5 text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                         No data
                     </td>

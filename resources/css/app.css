@@ -22,3 +22,18 @@ p {
     cursor: move;
     transition: transform 0.3s ease;
 }
+
+.tooltip-arrow {
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 6px solid white; /* Цвет фона поповера */
+    position: absolute;
+    top: -6px; /* Положение над поповером */
+    left: 20px; /* Отступ слева, настраиваем для точного позиционирования */
+    z-index: 10;
+}
+.dark .tooltip-arrow {
+    border-bottom-color: #2d3748; /* Цвет фона поповера в темной теме */
+}

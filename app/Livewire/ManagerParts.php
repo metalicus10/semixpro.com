@@ -17,14 +17,18 @@ use Livewire\Component;
 
 class ManagerParts extends Component
 {
+    public $brands;
+    public $technicians;
+    public $categories;
+    public $selectedParts = [];
+    public $partQuantities = [];
+    public $selectedTechnician = null;
     public $selectedPartId = null;
     public $selectedCategory = null;
     public $selectedBrand = null;
     public array $transferQuantities = [];
     public ?int $technicianId = null;
-    public $technicians = [];
-    public $brands;
-    public bool $isOpen = false;
+    public bool $openPriceModal = false;
     public bool $isSendButtonDisabled = true;
     public string $search = '';
     public $selectedRows = [];
@@ -37,12 +41,13 @@ class ManagerParts extends Component
     public $fullImage;
     public $startDate, $endDate;
 
-    protected $listeners = ['categoryUpdated' => 'refreshComponent', 'partUpdated' => 'refreshComponent', 'brandUpdated' => 'refreshComponent', 'triggerOpenModal'];
-
-    public function refreshComponent()
-    {
-        $this->render();
-    }
+    protected $listeners = [
+        'categoryUpdated' => 'refreshComponent',
+        'partUpdated' => 'refreshComponent',
+        'brandUpdated' => 'refreshComponent',
+        'update-part-quantities' => 'updatePartQuantities',
+        'open-price-modal' => 'openPriceModal'
+    ];
 
     public function showImage($imageUrl)
     {
@@ -102,81 +107,77 @@ class ManagerParts extends Component
         $this->updateSendButtonState();
     }
 
-    public function openModal()
+    public function openPriceModal($partId)
     {
-        $this->isOpen = true;
-        $this->transferQuantities = array_fill_keys($this->selectedRows, 1);
-        $this->technicianId = null;
-        $this->updateSendButtonState();
+        $this->selectedPartId = $partId;
+        $this->openPriceModal = true;
     }
 
-    public function closeModal()
+    public function closePriceModal()
     {
-        $this->isOpen = false;
-        $this->selectedRows = [];
-        $this->transferQuantities = [];
-        $this->technicianId = null;
-        $this->isSendButtonDisabled = true;
+        $this->selectedPartId = null;
+        $this->openPriceModal = false;
     }
 
-    public function updateSendButtonState()
+    public function updatePartQuantities($quantities)
     {
-        $this->isSendButtonDisabled = empty($this->technicianId) || empty(array_filter($this->transferQuantities));
+        if (is_array($quantities)) {
+            $this->partQuantities = $quantities;
+        } else {
+            $this->partQuantities = [];
+        }
     }
 
-    public function updatedTechnicianId()
+    public function sendParts()
     {
-        $this->updateSendButtonState();
-    }
-
-    public function transferSelectedParts()
-    {
-        $technician = Technician::find($this->technicianId);
+        // Находим техника по идентификатору
+        $technician = Technician::find($this->selectedTechnician);
 
         if (!$technician) {
             session()->flash('error', 'Техник не найден.');
             return;
         }
+        // Проверяем, есть ли выбранные запчасти с указанными количествами
+        foreach ($this->partQuantities as $partId => $quantity) {
+            $part = Part::find($partId);
 
-        if (count($this->transferQuantities) > 0) {
-            foreach ($this->selectedRows as $partId) {
-                $part = Part::find($partId);
-                $quantity = $this->transferQuantities[$partId];
+            $quantity = $this->partQuantities[$partId] ?? 1;
 
-                if ($quantity > $part->quantity) {
-                    $quantity = $part->quantity;
-                }
-
-                // Уменьшаем количество запчастей на складе
-                $part->update(['quantity' => $part->quantity - $quantity]);
-
-                // Находим или создаем запись для техника
-                $technicianPart = TechnicianPart::where('technician_id', $technician->user_id)
-                    ->where('part_id', $part->id)
-                    ->first();
-
-                if ($technicianPart) {
-                    // Обновляем количество и общее количество переданных запчастей
-                    $technicianPart->increment('quantity', $quantity);
-                    $technicianPart->increment('total_transferred', $quantity);
-                } else {
-                    // Создаем новую запись с начальными значениями
-                    TechnicianPart::create([
-                        'technician_id' => $technician->user_id,
-                        'part_id' => $part->id,
-                        'quantity' => $quantity,
-                        'total_transferred' => $quantity,
-                        'manager_id' => Auth::id(),
-                    ]);
-                }
+            // Убедимся, что запрашиваемое количество не превышает количество на складе
+            if ($quantity > $part->quantity) {
+                $quantity = $part->quantity;
             }
 
-            $this->closeModal();
-            session()->flash('message', 'Запчасти успешно переданы.');
-            $this->reset(['selectedRows', 'transferQuantities', 'technicianId']);
-        }
-    }
+            // Уменьшаем количество запчастей на складе
+            $part->update(['quantity' => $part->quantity - $quantity]);
 
+            // Проверяем, есть ли у техника уже эта запчасть, если да - обновляем
+            $technicianPart = TechnicianPart::where('technician_id', $technician->user_id)
+                ->where('part_id', $part->id)
+                ->first();
+
+            if ($technicianPart) {
+                // Увеличиваем количество запчастей у техника и общее количество переданных
+                $technicianPart->increment('quantity', $quantity);
+                $technicianPart->increment('total_transferred', $quantity);
+            } else {
+                // Создаем запись для новой запчасти, если её ещё нет у техника
+                TechnicianPart::create([
+                    'technician_id' => $technician->user_id,
+                    'part_id' => $part->id,
+                    'quantity' => $quantity,
+                    'total_transferred' => $quantity,
+                    'manager_id' => Auth::id(),
+                ]);
+            }
+        }
+
+        // Закрываем модальное окно и сбрасываем выбранные значения
+        $this->dispatch('modal-close');
+        session()->flash('message', 'Запчасти успешно переданы.');
+        $this->isPriceHistoryModalOpen = false;
+        $this->reset(['selectedTechnician', 'partQuantities', 'selectedPartId']);
+    }
 
     // Метод для увеличения на единицу
     public function incrementPart($partId)
@@ -231,7 +232,7 @@ class ManagerParts extends Component
     public function updatePartPrice($partId)
     {
         // Находим запчасть
-        $part = Part::find($partId);
+        $part = Part::where('id', $partId)->get();
 
         if ($part && isset($this->newPrice[$partId])) {
             // Записываем текущую цену в таблицу истории
@@ -250,7 +251,7 @@ class ManagerParts extends Component
         }
     }
 
-    public function showPriceHistory($partId)
+    public function openPriceHistoryModal($partId)
     {
         $this->selectedPartId = $partId;
         $this->isPriceHistoryModalOpen = true;
@@ -275,11 +276,16 @@ class ManagerParts extends Component
     {
         $userId = Auth::id();
         $this->technicians = Technician::where('manager_id', $userId)->where('is_active', true)->get();
+        $parts = $this->getFilteredParts();
         $managerData = User::with(['categories', 'brands'])->find($userId);
-        $categories = $managerData->categories;
+        $this->categories = $managerData->categories;
         $this->brands = $managerData->brands;
 
-        return view('livewire.manager.manager-parts', ['parts' => $this->getFilteredParts(), 'categories' => $categories, 'technicians' => $this->technicians])
+        return view('livewire.manager.manager-parts', [
+            'parts' => $parts, 'categories' => $this->categories, 'technicians' => $this->technicians,
+            'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen,
+            'selectedPartId' => $this->selectedPartId
+        ])
             ->layout('layouts.app');
     }
 }
