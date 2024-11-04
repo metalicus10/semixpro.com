@@ -20,19 +20,15 @@ class ManagerParts extends Component
     public $brands;
     public $technicians;
     public $categories;
-    public $selectedParts = [];
     public $partQuantities = [];
     public $selectedTechnician = null;
     public $selectedPartId = null;
     public $selectedCategory = null;
     public $selectedBrand = null;
     public array $transferQuantities = [];
-    public ?int $technicianId = null;
     public bool $openPriceModal = false;
-    public bool $isSendButtonDisabled = true;
     public string $search = '';
-    public $selectedRows = [];
-    public array $newPrice = [];
+    public $newPrice = '';
     public $quantityToAdd = 1;
     public $operation = null;
     public $showQuantityModal = false;
@@ -40,14 +36,30 @@ class ManagerParts extends Component
     public $errorMessage = '';
     public $fullImage;
     public $startDate, $endDate;
+    public $notificationMessage = '';
+    public $notificationType = 'info';
+    public $managerPartUrlModalVisible = false; // Управление видимостью модального окна
+    public $managerPartUrlText = '';
+    public $managerPartUrl = '';
 
     protected $listeners = [
         'categoryUpdated' => 'refreshComponent',
         'partUpdated' => 'refreshComponent',
         'brandUpdated' => 'refreshComponent',
         'update-part-quantities' => 'updatePartQuantities',
-        'open-price-modal' => 'openPriceModal'
+        'open-price-modal' => 'openPriceModal',
+        'refreshParts' => '$refresh'
     ];
+
+    public function refreshComponent()
+    {
+        $this->render();
+    }
+
+    public function clearNotification()
+    {
+        $this->notificationMessage = '';
+    }
 
     public function showImage($imageUrl)
     {
@@ -229,12 +241,19 @@ class ManagerParts extends Component
         $this->dispatch('partUpdated');
     }
 
-    public function updatePartPrice($partId)
+    public function updatePartPrice($partId, $newPrice)
     {
         // Находим запчасть
-        $part = Part::where('id', $partId)->get();
+        $part = Part::find($partId);
 
-        if ($part && isset($this->newPrice[$partId])) {
+        if ($part && $this->newPrice) {
+            // Проверяем, отличается ли новая цена от текущей
+            if ($part->price == $newPrice) {
+                $this->notificationMessage = 'Цена не изменена';
+                $this->notificationType = 'info';
+                return; // Выходим из метода, если цена не изменилась
+            }
+
             // Записываем текущую цену в таблицу истории
             DB::table('part_price_history')->insert([
                 'part_id' => $part->id,
@@ -243,11 +262,13 @@ class ManagerParts extends Component
             ]);
 
             // Обновляем цену запчасти
-            $part->update(['price' => $this->newPrice[$partId]]);
+            $part->update(['price' => $newPrice]);
 
-            session()->flash('message', 'Цена успешно обновлена и записана в историю.');
+            $this->notificationMessage = 'Цена успешно обновлена и записана в историю';
+            $this->notificationType = 'success';
         } else {
-            session()->flash('error', 'Запчасть не найдена.');
+            $this->notificationMessage = 'Цена не была введена';
+            $this->notificationType = 'info';
         }
     }
 
@@ -255,6 +276,31 @@ class ManagerParts extends Component
     {
         $this->selectedPartId = $partId;
         $this->isPriceHistoryModalOpen = true;
+    }
+
+    public function openManagerPartUrlModal($partId)
+    {
+        $this->selectedPartId = $partId;
+        $part = Part::find($partId);
+
+        $data = json_decode($part->url, true) ?? [];
+        $this->managerPartUrlText = $data['text'] ?? '';
+        $this->managerPartUrl = $data['url'] ?? '';
+        $this->managerPartUrlModalVisible = true;
+    }
+
+    public function saveManagerPartUrl()
+    {
+        $part = Part::find($this->selectedPartId);
+        //$part->url = json_encode(['text' => '', 'url' => $this->url]);
+        $part->url = json_encode([
+            'text' => $this->managerPartUrlText,
+            'url' => $this->managerPartUrl,
+        ]);
+        $part->save();
+
+        $this->managerPartUrlModalVisible = false;
+        $this->refreshComponent();
     }
 
     // Сброс модального окна

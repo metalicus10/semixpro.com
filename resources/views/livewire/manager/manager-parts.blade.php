@@ -1,10 +1,12 @@
 <div class="p-8 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden" id="app">
-    <!-- Сообщения об успехе -->
-    @if (session()->has('error'))
+    @if ($notificationMessage)
         <div
-            class="bg-red-500 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-1/6 w-1/2 align-middle"
+            class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
             x-data="{ show: true }"
-            x-init="setTimeout(() => show = false, 3500)"
+            x-init="
+            setTimeout(() => show = false, 3500);
+            setTimeout(() => $wire.clearNotification(), 3500);
+        "
             x-show="show"
             x-transition:enter="opacity-0"
             x-transition:enter-start="opacity-0"
@@ -12,42 +14,13 @@
             x-transition:leave="opacity-100"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
+            :class="{
+            'bg-blue-700': '{{ $notificationType }}' === 'info',
+            'bg-green-500': '{{ $notificationType }}' === 'success',
+            'bg-yellow-500': '{{ $notificationType }}' === 'warning'
+        }"
         >
-            {{ session('error') }}
-        </div>
-    @endif
-    <!-- Сообщения предупреждение -->
-    @if (session()->has('warning'))
-        <div
-            class="bg-yellow-500 text-white p-4 rounded-lg mb-6 transition-opacity duration-1000"
-            x-data="{ show: true }"
-            x-init="setTimeout(() => show = false, 3500)"
-            x-show="show"
-            x-transition:enter="opacity-0"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="opacity-100"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-        >
-            {{ session('warning') }}
-        </div>
-    @endif
-    <!-- Сообщения об успехе -->
-    @if (session()->has('message'))
-        <div
-            class="bg-green-500 text-white p-4 rounded-lg mb-6 transition-opacity duration-1000"
-            x-data="{ show: true }"
-            x-init="setTimeout(() => show = false, 3500)"
-            x-show="show"
-            x-transition:enter="opacity-0"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="opacity-100"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-        >
-            {{ session('message') }}
+            {{ $notificationMessage }}
         </div>
     @endif
 
@@ -158,131 +131,183 @@
                 }
             }"
              @keydown.escape="closeModal"
-             class="overflow-hidden w-full overflow-x-auto rounded-md border border-neutral-300 dark:border-neutral-500"
+             class="overflow-hidden w-full overflow-x-hidden rounded-md border border-neutral-300 dark:border-neutral-500"
         >
-            <table id="parts-table" class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                <tr>
-                    <th scope="col" class="p-4">
-                        <div class="flex items-center">
-                            <input type="checkbox" @click="toggleCheckAll($event)" :checked="selectedParts.length === @json($parts->count())"
-                                   class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                            >
-                            <label for="checkbox-all-search" class="sr-only">checkbox</label>
-                        </div>
-                    </th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">SKU</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Part name</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Quantity</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Price</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Category</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Brand</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Image</th>
-                    <th scope="col" class="px-5 py-3 w-32 truncate whitespace-nowrap overflow-hidden">Actions</th>
-                </tr>
-                </thead>
+            <div id="parts-table"
+                 class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
+                <!-- Заголовок таблицы -->
+                <div class="flex text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 py-3">
+                    <div class="p-4 flex items-center w-1/12">
+                        <input type="checkbox" @click="toggleCheckAll($event)"
+                               :checked="selectedParts.length === @json($parts->count())"
+                               class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                        <label for="checkbox-all-search" class="sr-only">checkbox</label>
+                    </div>
+                    <div class="px-5 py-3 w-1/12">SKU</div>
+                    <div class="px-5 py-3 w-2/12">Name</div>
+                    <div class="px-5 py-3 w-1/12">Quantity</div>
+                    <div class="px-5 py-3 w-1/12">Price</div>
+                    <div class="px-5 py-3 w-1/12">Total</div>
+                    <div class="px-5 py-3 w-2/12">Image</div>
+                    <div class="px-5 py-3 w-2/12">URL</div>
+                    <div class="px-5 py-3 w-2/12">Actions</div>
+                </div>
 
-                <!-- Подключаем Livewire с Alpine -->
-                <tbody>
-
-                @forelse ($parts as $part)
-
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]"
-
-                    >
-                        <td class="w-4 p-4 w-32 truncate whitespace-nowrap overflow-hidden">
-                            <div class="flex items-center">
-                                <input type="checkbox"
-                                       :value="{{ $part->id }}" @click="togglePartSelection({{ $part->id }})"
+                <!-- Строки таблицы -->
+                <div class="flex flex-col space-y-1">
+                    @forelse ($parts as $part)
+                        <div
+                            class="flex items-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
+                            <div class="flex items-center w-1/12 p-4">
+                                <input type="checkbox" :value="{{ $part->id }}"
+                                       @click="togglePartSelection({{ $part->id }})"
                                        :checked="selectedParts.includes({{ $part->id }})"
-                                       class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                                >
+                                       class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <label for="checkbox-table-search-{{ $part->id }}" class="sr-only">checkbox</label>
                             </div>
-                        </td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->sku }}</td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->name }}</td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->quantity }}</td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">
-                            <a data-popover-target="{{ $part->id }}" data-popover-trigger="click" type="button" class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">{{ $part->price }}</a>
+                            <div class="px-5 py-5 w-1/12">{{ $part->sku }}</div>
+                            <div class="px-5 py-5 w-2/12">{{ $part->name }}</div>
+                            <div class="px-5 py-5 w-1/12">{{ $part->quantity }}</div>
+                            <div class="px-5 py-5 w-1/12"
+                                 x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
-                            <div data-popover id="{{ $part->id }}" role="tooltip" class="absolute z-10 invisible inline-block w-32 text-sm text-gray-500 transition-opacity duration-300 bg-white border border-gray-200 rounded-lg shadow-sm opacity-0 dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800">
-                                <div class="px-3 py-2">
-                                    <button wire:click="updatePartPrice({{ $part->id }})"
-                                            class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                        Edit
+                                <!-- Кликабельная ссылка с ценой запчасти -->
+                                <a id="{{ $part->id }}"
+                                   @click="
+                                        $nextTick(() => {
+                                            const element = document.getElementById('{{ $part->id }}');
+                                            var offsetX = 75;
+                                            var offsetY = 58;
+
+                                            if (element) {
+                                                const rect = element.getBoundingClientRect();
+
+                                                var xPosition = element.offsetLeft - offsetX;
+                                                var yPosition = element.offsetTop - offsetY;
+
+                                                popoverX = xPosition;
+                                                popoverY = yPosition;
+
+                                                showPopover = !showPopover;
+                                                editing = false;
+                                            }
+                                        });
+                                    "
+                                   class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
+                                    ${{ $part->price }}
+                                </a>
+
+                                <!-- Поповер с динамическим позиционированием -->
+                                <div x-show="showPopover" role="tooltip"
+                                     :style="'position: absolute; top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                     class="w-48 z-50 text-sm text-gray-500 bg-white border border-gray-300 rounded-lg shadow-sm dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800"
+                                     @click.away="showPopover = false">
+                                    <div class="flex flew-row w-full px-3 py-2">
+                                        <!-- Кнопка Edit -->
+                                        <button x-show="!editing"
+                                                @click.prevent="editing = true; $nextTick(() => { $refs.priceInput.focus() })"
+                                                class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                            Edit
+                                        </button>
+
+                                        <!-- Поле ввода новой цены и кнопка подтверждения -->
+                                        <div x-show="editing" class="flex items-center mt-2">
+                                            <input type="number" x-ref="priceInput" x-model="newPrice"
+                                                   class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
+                                                   placeholder="{{ $part->price }}">
+                                            <button @click="$wire.set('newPrice', newPrice)
+                                                .then(() => {
+                                                    $wire.updatePartPrice({{ $part->id }}, newPrice);
+                                                    showPopover = false;
+                                                    editing = false;
+                                                });"
+                                                    class="bg-green-500 text-white px-2 py-1 rounded-full">
+                                                ✓
+                                            </button>
+                                        </div>
+
+                                        <!-- Кнопка для открытия истории цен -->
+                                        <button x-show="!editing"
+                                                @click="$dispatch('open-price-modal', { partId: {{ $part->id }} })"
+                                                class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                            History
+                                        </button>
+                                    </div>
+
+                                    <!-- Стрелка поповера -->
+                                    <div data-popper-arrow
+                                         class="absolute w-3 h-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600"
+                                         :style="'top: 100%; left: 50%; transform: translateX(-50%) translateY(-50%) rotate(90deg);'"></div>
+                                </div>
+                            </div>
+                            <div class="px-5 py-5 w-2/12">${{ $part->total }}</div>
+                            <div class="px-5 py-5 w-2/12">
+                                <!-- Миниатюра -->
+                                <div x-data class="gallery h-12 w-12">
+                                    <img
+                                        src="@if ($part->image == null) @else {{ Storage::disk('s3')->url($transfer->part->image) }} @endif"
+                                        alt="{{ $part->name }}"
+                                        @click="$dispatch('lightbox', '@if ($part->image === null) @click.stop @endif')"
+                                        @click.stop class="object-cover rounded cursor-zoom-in">
+                                </div>
+                            </div>
+                            @php
+                                $urlData = json_decode($part->url, true);
+                            @endphp
+                            <div class="px-5 py-3 w-2/12 cursor-pointer text-white" x-data="{ clickCount: 0 }"
+                                 @click="
+                                    clickCount++;
+                                    setTimeout(() => {
+                                        if (clickCount === 1) {
+                                            // Одиночный клик - переход по ссылке
+                                            window.open('{{ $urlData['url'] ?? '' }}', '_blank');
+                                        } else if (clickCount === 2) {
+                                            // Двойной клик - открытие модального окна
+                                            $wire.openManagerPartUrlModal({{ $part->id }});
+                                        }
+                                        clickCount = 0; // Сброс счетчика
+                                    }, 300); // Таймаут для определения двойного клика
+                                "
+                            >
+                                @if(isset($urlData['text']) && $urlData['text'] !== '')
+                                    {{ $urlData['text'] }}
+                                @else
+                                    {{ $urlData['url'] ?? '' }}
+                                @endif
+                            </div>
+                            <div class="flex flex-col justify-start p-5 w-2/12 items-center">
+                                <!-- Кнопки действий -->
+                                <div class="flex flex-row w-full justify-evenly">
+                                    <button wire:click="incrementPart({{ $part->id }})" @click.stop
+                                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full">
+                                        +
                                     </button>
-                                    <!-- Кнопка для открытия истории цен -->
-                                    <button @click="$dispatch('open-price-modal', { partId: {{ $part->id }} })"
-                                            class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                        History
+                                    <button wire:click="openQuantityModal({{ $part->id }}, 'add')" @click.stop
+                                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full">
+                                        ++
                                     </button>
                                 </div>
-                                <div data-popper-arrow ></div>
+                                <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
+                                <div class="flex flex-row w-full justify-evenly">
+                                    <button wire:click="decrementPart({{ $part->id }})" @click.stop
+                                            class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full">
+                                        -
+                                    </button>
+                                    <button wire:click="openQuantityModal({{ $part->id }}, 'subtract')" @click.stop
+                                            class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full">
+                                        --
+                                    </button>
+                                </div>
                             </div>
-                        </td>
-
-                        @if(!empty($part->category))
-                            <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">{{ $part->category->name }}</td>
-                        @else
-                            <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden"></td>
-                        @endif
-                        @if(!empty($part->brands))
-                            <td class="px-5 py-5 truncate whitespace-nowrap overflow-hidden flex flex-col">
-                                @foreach($part->brands as $brand)
-                                    <span>{{ $brand->name }}{{ !$loop->last ? ', ' : '' }}</span>
-                                @endforeach
-                            </td>
-                        @else
-                            <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden"></td>
-                        @endif
-
-                        <td class="px-5 py-5">
-                            <!-- Миниатюра -->
-                            <div x-data class="gallery h-12 w-12">
-                                <img src="@if ($part->image == null) @else {{ Storage::disk('s3')->url($transfer->part->image) }} @endif" alt="{{ $part->name }}"
-                                     @click="$dispatch('lightbox', '@if ($part->image === null) @click.stop @endif')"
-                                     @click.stop
-                                     class="object-cover rounded cursor-zoom-in">
-                            </div>
-                        </td>
-                        <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">
-                            <!-- Кнопка для увеличения количества на 1 -->
-                            <button wire:click="incrementPart({{ $part->id }})" @click.stop
-                                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full">
-                                +
-                            </button>
-
-                            <!-- Кнопка для уменьшения количества на 1 -->
-                            <button wire:click="decrementPart({{ $part->id }})" @click.stop
-                                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full ml-2">
-                                -
-                            </button>
-
-                            <!-- Кнопка для открытия модального окна для увеличения количества -->
-                            <button wire:click="openQuantityModal({{ $part->id }}, 'add')" @click.stop
-                                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full ml-2">
-                                ++
-                            </button>
-
-                            <!-- Кнопка для открытия модального окна для уменьшения количества -->
-                            <button wire:click="openQuantityModal({{ $part->id }}, 'subtract')" @click.stop
-                                    class="bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-full ml-2">
-                                --
-                            </button>
-                        </td>
-                    </tr>
-
-                @empty
-                    <tr>
-                        <td colspan="9"
+                        </div>
+                    @empty
+                        <div
                             class="px-5 py-5 text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                             No spare parts available
-                        </td>
-                    </tr>
-                @endforelse
-                </tbody>
-            </table>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
 
             <button
                 class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
@@ -292,14 +317,21 @@
             </button>
 
             <!-- Flowbite-стилизованное модальное окно -->
-            <div x-show="modalOpen" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50" style="display: none;">
+            <div x-show="modalOpen"
+                 class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
+                 style="display: none;">
                 <div class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
                     <!-- Заголовок модального окна -->
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Выбранные запчасти</h3>
-                        <button @click="closeModal" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white" aria-label="Close">
-                            <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        <button @click="closeModal"
+                                class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                                aria-label="Close">
+                            <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+                                 xmlns="http://www.w3.org/2000/svg">
+                                <path fill-rule="evenodd"
+                                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                      clip-rule="evenodd"></path>
                             </svg>
                         </button>
                     </div>
@@ -309,29 +341,41 @@
                         <div class="space-y-4">
                             <template x-for="partId in selectedParts" :key="partId">
                                 <div class="mb-2">
-                                    <label>Запчасть #<span x-text="partId"></span> (Доступно: <span x-text="partStock[partId]"></span>)</label>
-                                    <input id="quantity" type="number" min="1" :max="partStock[partId]" class="input mt-1 block w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                           placeholder="Количество" x-model="partQuantities[partId]" @input="limitQuantity(partId)">
+                                    <label>Запчасть #<span x-text="partId"></span> (Доступно: <span
+                                            x-text="partStock[partId]"></span>)</label>
+                                    <input id="quantity" type="number" min="1" :max="partStock[partId]"
+                                           class="input mt-1 block w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                           placeholder="Количество" x-model="partQuantities[partId]"
+                                           @input="limitQuantity(partId)">
                                 </div>
                             </template>
 
                             <!-- Выбор техника -->
                             <div>
-                                <label for="technician" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
-                                <select id="technician" x-model="selectedTechnician" wire:model="selectedTechnician" class="block w-full p-2 mt-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <label for="technician"
+                                       class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
+                                <select id="technician" x-model="selectedTechnician" wire:model="selectedTechnician"
+                                        class="block w-full p-2 mt-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                     <option value="">Выберите техника</option>
                                     @foreach ($technicians as $technician)
                                         <option value="{{ $technician->id }}">{{ $technician->name }}</option>
                                     @endforeach
                                 </select>
-                                <p class="text-sm text-gray-500">Выбранный техник: <span x-text="selectedTechnician"></span></p>
+                                <p class="text-sm text-gray-500">Выбранный техник: <span
+                                        x-text="selectedTechnician"></span></p>
                             </div>
                         </div>
 
                         <!-- Кнопки действия -->
                         <div class="flex items-center justify-end mt-6 space-x-4">
-                            <button type="button" @click="closeModal" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Отменить</button>
-                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800" :disabled="!isSendButtonEnabled()">Подтвердить</button>
+                            <button type="button" @click="closeModal"
+                                    class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                Отменить
+                            </button>
+                            <button type="submit"
+                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
+                                    :disabled="!isSendButtonEnabled()">Подтвердить
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -394,19 +438,23 @@
 
                 <!-- Заголовок и кнопка закрытия -->
                 <div class="flex items-center justify-between mb-4">
-                    <h2 id="modal-title" class="text-xl font-semibold text-gray-900 dark:text-white">Price Change History</h2>
+                    <h2 id="modal-title" class="text-xl font-semibold text-gray-900 dark:text-white">Price Change
+                        History</h2>
                     <button wire:click="closePriceModal"
                             class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
                             aria-label="Close">
-                        <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414 1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                        <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+                             xmlns="http://www.w3.org/2000/svg">
+                            <path fill-rule="evenodd"
+                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414 1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                  clip-rule="evenodd"></path>
                         </svg>
                     </button>
                 </div>
 
                 <!-- Содержимое модального окна -->
                 <div class="overflow-y-auto max-h-96">
-                    <livewire:part-price-history :part-id="$selectedPartId" />
+                    <livewire:part-price-history :part-id="$selectedPartId"/>
                 </div>
 
                 <!-- Кнопка закрытия внизу окна -->
@@ -443,6 +491,36 @@
             </div>
         @endif
     </div>
+
+    <!-- Модальное окно для редактирования URL -->
+    @if($managerPartUrlModalVisible)
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded shadow-md w-1/3">
+                <h2 class="text-xl font-semibold mb-4">Редактировать ссылку</h2>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="managerPartUrlText">Text:</label>
+                    <input wire:model="managerPartUrlText" type="text" id="managerPartUrlText"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="managerPartUrl">URL:</label>
+                    <input wire:model="managerPartUrl" type="text" id="managerPartUrl"
+                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                </div>
+
+                <div class="flex justify-end">
+                    <button wire:click="$set('managerPartUrlModalVisible', false)"
+                            class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2">Отмена
+                    </button>
+                    <button wire:click="saveManagerPartUrl"
+                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <!-- Общий Lightbox для всех изображений -->
     <div class="lightbox fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center"

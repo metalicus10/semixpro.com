@@ -22,7 +22,9 @@ class Part extends Model
         'quantity',
         'price',
         'image',
-        'category_id'
+        'category_id',
+        'total',
+        'url'
     ];
 
     public static function boot()
@@ -37,6 +39,13 @@ class Part extends Model
                     'changed_at' => now(),
                 ]);
             }
+        });
+    }
+
+    protected static function booted()
+    {
+        static::saving(function ($part) {
+            $part->total = $part->price * $part->quantity;
         });
     }
 
