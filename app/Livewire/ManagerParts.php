@@ -38,7 +38,7 @@ class ManagerParts extends Component
     public $startDate, $endDate;
     public $notificationMessage = '';
     public $notificationType = 'info';
-    public $managerPartUrlModalVisible = false; // Управление видимостью модального окна
+    public $managerPartUrlModalVisible = false;
     public $managerPartUrlText = '';
     public $managerPartUrl = '';
 

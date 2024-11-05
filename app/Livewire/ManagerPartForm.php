@@ -31,6 +31,8 @@ class ManagerPartForm extends Component
     public $showCategoryModal = false;
     public $showPartModal = false;
     public $price = null;
+    public $notificationMessage = '';
+    public $notificationType = 'info';
 
     protected $listeners = ['categoryUpdated' => 'refreshCategories', 'brandUpdated' => 'refreshBrands'];
 
@@ -48,6 +50,11 @@ class ManagerPartForm extends Component
     {
         $this->refreshBrands();
         $this->refreshCategories();
+    }
+
+    public function clearNotification()
+    {
+        $this->notificationMessage = '';
     }
 
     public function refreshBrands()
@@ -69,7 +76,8 @@ class ManagerPartForm extends Component
 
         Category::create(['name' => $this->categoryName, 'user_id' => Auth::id()]);
 
-        session()->flash('message', 'Категория успешно добавлена.');
+        $this->notificationType = 'success';
+        $this->notificationMessage = 'Категория успешно добавлена';
         $this->categoryName = '';
         $this->showCategoryModal = false; // Закрываем модальное окно
 
@@ -100,6 +108,38 @@ class ManagerPartForm extends Component
         $imagePath = null;
 
         if ($this->image) {
+            // Скачиваем изображение из временного URL
+            $tempPath = $this->image->getRealPath();
+            $tempContents = Storage::disk('s3')->get($tempPath);
+
+            // Создаем экземпляр ImageManager
+            $manager = new ImageManager(new Driver());
+
+            // Читаем загруженное изображение
+            $img = $manager->read($tempContents)
+                ->resize(1024, 1024, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+
+            // Генерируем уникальное имя файла с расширением .webp
+            $filename = pathinfo($this->image->hashName(), PATHINFO_FILENAME) . '.webp';
+
+            // Кодируем изображение в формат WebP с качеством 60
+            $encodedImg = $img->encode('webp', 60);
+
+            // Определяем путь для сохранения на S3
+            $imagePath = $path . '/' . $filename;
+
+            // Сохраняем изображение на S3
+            Storage::disk('s3')->put($imagePath, (string) $encodedImg, 'public');
+
+            // Вы можете сохранить путь к изображению в базе данных или выполнить другие действия
+
+            session()->flash('message', 'Изображение успешно загружено и сохранено на S3.');
+        }
+
+        /*if ($this->image) {
 
             // Скачиваем изображение из временного URL
             $tempPath = $this->image->getRealPath();
@@ -113,14 +153,14 @@ class ManagerPartForm extends Component
                     $constraint->aspectRatio();
                     $constraint->upsize();
                 });
-            $encodedImg = $img->toJpeg(80);
-
             $filename = $this->image->hashName();
+            $encodedImg = $img->toWebp(60)->save($filename, progressive: true, quality: 60);
+
             //$imagePath = $path . '/' . $filename;
-            $imagePath = $this->image->storeAs($path, $filename, 's3');
+            $imagePath = $encodedImg->storeAs($path, $filename, 's3');
 
             //Storage::disk('s3')->put($imagePath, (string) $encodedImg, 'public');
-        }
+        }*/
 
         $part = Part::create([
             'name' => $this->partName,
@@ -134,7 +174,8 @@ class ManagerPartForm extends Component
         // Привязываем выбранные бренды к запчасти
         $part->brands()->sync($this->selectedBrands);
 
-        session()->flash('message', 'The spare part has been added successfully.');
+        $this->notificationType = 'success';
+        $this->notificationMessage = 'The spare part has been added successfully';
         $this->reset(['partName', 'sku', 'selectedBrands', 'quantity', 'image', 'selectedCategory']);
         $this->showPartModal = false; // Закрываем модальное окно
 

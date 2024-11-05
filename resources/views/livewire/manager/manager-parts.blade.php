@@ -137,7 +137,7 @@
                  class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                 <!-- Заголовок таблицы -->
                 <div class="flex text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 py-3">
-                    <div class="p-4 flex items-center w-1/12">
+                    <div class="px-5 py-3 flex items-center w-1/12">
                         <input type="checkbox" @click="toggleCheckAll($event)"
                                :checked="selectedParts.length === @json($parts->count())"
                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
@@ -245,7 +245,7 @@
                                 <!-- Миниатюра -->
                                 <div x-data class="gallery h-12 w-12">
                                     <img
-                                        src="@if ($part->image == null) @else {{ Storage::disk('s3')->url($transfer->part->image) }} @endif"
+                                        src="@if ($part->image == null) @else {{ Storage::disk('s3')->url($part->image) }} @endif"
                                         alt="{{ $part->name }}"
                                         @click="$dispatch('lightbox', '@if ($part->image === null) @click.stop @endif')"
                                         @click.stop class="object-cover rounded cursor-zoom-in">
@@ -279,11 +279,11 @@
                                 <!-- Кнопки действий -->
                                 <div class="flex flex-row w-full justify-evenly">
                                     <button wire:click="incrementPart({{ $part->id }})" @click.stop
-                                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full">
+                                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
                                         +
                                     </button>
                                     <button wire:click="openQuantityModal({{ $part->id }}, 'add')" @click.stop
-                                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-full">
+                                            class="bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
                                         ++
                                     </button>
                                 </div>

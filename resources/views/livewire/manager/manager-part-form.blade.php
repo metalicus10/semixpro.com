@@ -1,10 +1,12 @@
 <div class="container mx-auto">
-    <!-- Сообщения об ошибке -->
-    @if (session()->has('warning'))
+    @if ($notificationMessage)
         <div
-            class="bg-yellow-500 text-white p-4 rounded-lg mb-6 transition-opacity duration-1000"
+            class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
             x-data="{ show: true }"
-            x-init="setTimeout(() => show = false, 3500)"
+            x-init="
+            setTimeout(() => show = false, 3500);
+            setTimeout(() => $wire.clearNotification(), 3500);
+        "
             x-show="show"
             x-transition:enter="opacity-0"
             x-transition:enter-start="opacity-0"
@@ -12,25 +14,13 @@
             x-transition:leave="opacity-100"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
+            :class="{
+            'bg-blue-700': '{{ $notificationType }}' === 'info',
+            'bg-green-500': '{{ $notificationType }}' === 'success',
+            'bg-yellow-500': '{{ $notificationType }}' === 'warning'
+        }"
         >
-            {{ session('warning') }}
-        </div>
-    @endif
-    <!-- Сообщения об успехе -->
-    @if (session()->has('message'))
-        <div
-            class="bg-green-500 text-white p-4 rounded-lg mb-6 transition-opacity duration-1000"
-            x-data="{ show: true }"
-            x-init="setTimeout(() => show = false, 3500)"
-            x-show="show"
-            x-transition:enter="opacity-0"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="opacity-100"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-        >
-            {{ session('message') }}
+            {{ $notificationMessage }}
         </div>
     @endif
 
