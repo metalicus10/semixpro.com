@@ -101,8 +101,8 @@
                     @endif
                     <td class="px-5 py-5">
                         <div x-data class="gallery h-12 w-12">
-                            <img src="@if ($transfer->part->image == null) @else {{ Storage::disk('s3')->url($transfer->part->image) }}@endif" alt="{{ $transfer->part->name }}"
-                                 @click="$dispatch('lightbox', '@if ($transfer->part->image === null) @click.stop @endif')"
+                            <img src="{{ $transfer->part->image }}" alt="{{ $transfer->part->name }}"
+                                 @click="$dispatch('lightbox', '{{ $transfer->part->image }}')"
                                  @click.stop
                                  class="object-cover rounded cursor-zoom-in">
                         </div>

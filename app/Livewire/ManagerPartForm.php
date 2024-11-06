@@ -7,11 +7,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Drivers\Imagick\Driver;
 use Livewire\Component;
 use App\Models\Category;
 use App\Models\Part;
 use Livewire\WithFileUploads;
+use Exception;
 use function Termwind\render;
 
 class ManagerPartForm extends Component
@@ -33,6 +34,8 @@ class ManagerPartForm extends Component
     public $price = null;
     public $notificationMessage = '';
     public $notificationType = 'info';
+    public $imgUrl = null;
+    public $url = null;
 
     protected $listeners = ['categoryUpdated' => 'refreshCategories', 'brandUpdated' => 'refreshBrands'];
 
@@ -96,6 +99,7 @@ class ManagerPartForm extends Component
             'price' => 'nullable|numeric|min:0',
             'image' => 'nullable|image|max:5200',
             'selectedCategory' => 'required|exists:categories,id',
+            'url' => 'nullable|url',
         ]);
 
         $this->price = $this->price !== null ? (float) $this->price : null;
@@ -105,70 +109,39 @@ class ManagerPartForm extends Component
 
         // Путь для сохранения изображений
         $path = 'partsImages/' . $userId;
-        $imagePath = null;
+        $fileName = null;
 
         if ($this->image) {
-            // Скачиваем изображение из временного URL
+        
             $tempPath = $this->image->getRealPath();
-            $tempContents = Storage::disk('s3')->get($tempPath);
+            $tempImg = Storage::disk('s3')->get($tempPath);
+        
+            $manager = new ImageManager(Driver::class);
+            
+            $processedImage = $manager->read($tempImg)
+            ->resize(1024, 1024, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })
+            ->toWebp(quality: 60);
 
-            // Создаем экземпляр ImageManager
-            $manager = new ImageManager(new Driver());
+            // Генерируем уникальное имя для файла
+            $fileName = $path. '/' . uniqid() . '.webp';
 
-            // Читаем загруженное изображение
-            $img = $manager->read($tempContents)
-                ->resize(1024, 1024, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-
-            // Генерируем уникальное имя файла с расширением .webp
-            $filename = pathinfo($this->image->hashName(), PATHINFO_FILENAME) . '.webp';
-
-            // Кодируем изображение в формат WebP с качеством 60
-            $encodedImg = $img->encode('webp', 60);
-
-            // Определяем путь для сохранения на S3
-            $imagePath = $path . '/' . $filename;
-
-            // Сохраняем изображение на S3
-            Storage::disk('s3')->put($imagePath, (string) $encodedImg, 'public');
-
-            // Вы можете сохранить путь к изображению в базе данных или выполнить другие действия
-
-            session()->flash('message', 'Изображение успешно загружено и сохранено на S3.');
+            // Сохраняем закодированное изображение в S3
+            $result = Storage::disk('s3')->put($fileName, $processedImage);
+            $this->imgUrl = Storage::disk('s3')->url($fileName);
         }
-
-        /*if ($this->image) {
-
-            // Скачиваем изображение из временного URL
-            $tempPath = $this->image->getRealPath();
-            $tempContents = Storage::disk('s3')->get($tempPath);
-
-            $manager = new ImageManager(new Driver());
-
-            // Используем make для создания изображения
-            $img = $manager->read($tempContents)
-                ->resize(1024, 1024, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
-            $filename = $this->image->hashName();
-            $encodedImg = $img->toWebp(60)->save($filename, progressive: true, quality: 60);
-
-            //$imagePath = $path . '/' . $filename;
-            $imagePath = $encodedImg->storeAs($path, $filename, 's3');
-
-            //Storage::disk('s3')->put($imagePath, (string) $encodedImg, 'public');
-        }*/
 
         $part = Part::create([
             'name' => $this->partName,
             'sku' => $this->sku,
             'quantity' => $this->quantity,
             'price' => $this->price,
-            'image' => $imagePath,
+            'image' => $this->imgUrl,
             'category_id' => $this->selectedCategory,
+            'url' => json_encode(['url' => $this->url, 'text' => $this->text ?? '']),
+            'total' => $this->quantity * $this->price,
         ]);
 
         // Привязываем выбранные бренды к запчасти
@@ -176,7 +149,7 @@ class ManagerPartForm extends Component
 
         $this->notificationType = 'success';
         $this->notificationMessage = 'The spare part has been added successfully';
-        $this->reset(['partName', 'sku', 'selectedBrands', 'quantity', 'image', 'selectedCategory']);
+        $this->reset(['partName', 'sku', 'selectedBrands', 'quantity', 'image', 'selectedCategory', 'price', 'url']);
         $this->showPartModal = false; // Закрываем модальное окно
 
         // Событие добавления запчасти
@@ -198,7 +171,7 @@ class ManagerPartForm extends Component
     {
         $this->showCategoryModal = false;
         $this->showPartModal = false;
-        $this->reset(['partName', 'sku', 'selectedBrands', 'quantity', 'image', 'selectedCategory']);
+        $this->reset(['partName', 'sku', 'selectedBrands', 'quantity', 'image', 'selectedCategory', 'price', 'url']);
     }
 
     public function render()

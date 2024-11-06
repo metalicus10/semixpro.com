@@ -136,40 +136,55 @@
             <div id="parts-table"
                  class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                 <!-- Заголовок таблицы -->
-                <div class="flex text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 py-3">
-                    <div class="px-5 py-3 flex items-center w-1/12">
+                <div class="flex text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                    <div class="flex items-center w-1/12">
                         <input type="checkbox" @click="toggleCheckAll($event)"
                                :checked="selectedParts.length === @json($parts->count())"
                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                         <label for="checkbox-all-search" class="sr-only">checkbox</label>
                     </div>
-                    <div class="px-5 py-3 w-1/12">SKU</div>
-                    <div class="px-5 py-3 w-2/12">Name</div>
-                    <div class="px-5 py-3 w-1/12">Quantity</div>
-                    <div class="px-5 py-3 w-1/12">Price</div>
-                    <div class="px-5 py-3 w-1/12">Total</div>
-                    <div class="px-5 py-3 w-2/12">Image</div>
-                    <div class="px-5 py-3 w-2/12">URL</div>
-                    <div class="px-5 py-3 w-2/12">Actions</div>
+                    <div class="w-1/12">SKU</div>
+                    <div class="w-2/12">Name</div>
+                    <div class="w-1/12">Quantity</div>
+                    <div class="w-1/12">Price</div>
+                    <div class="w-1/12">Total</div>
+                    <div class="w-2/12">Image</div>
+                    <div class="w-2/12 flex items-center">
+                        <span>URL</span>
+                        <span class="relative flex items-center ml-2">
+                            <div x-data="{ showTooltip: false }" 
+                                @click="showTooltip = !showTooltip" 
+                                @click.away="showTooltip = false"
+                                class="flex items-center justify-center w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full cursor-pointer">
+                                i
+                                <!-- Поповер -->
+                                <div x-show="showTooltip" x-transition
+                                    class="absolute top-full mt-1 w-max px-2 py-1 text-xs lowercase bg-blue-500 text-white rounded shadow-lg"
+                                    style="white-space: nowrap;">
+                                    2-click for edit
+                                </div>
+                            </div>
+                        </span>
+                    </div>
+                    <div class="w-2/12">Actions</div>
                 </div>
 
                 <!-- Строки таблицы -->
                 <div class="flex flex-col space-y-1">
                     @forelse ($parts as $part)
                         <div
-                            class="flex items-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
-                            <div class="flex items-center w-1/12 p-4">
+                            class="flex items-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3">
+                            <div class="flex items-center w-1/12">
                                 <input type="checkbox" :value="{{ $part->id }}"
                                        @click="togglePartSelection({{ $part->id }})"
                                        :checked="selectedParts.includes({{ $part->id }})"
                                        class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <label for="checkbox-table-search-{{ $part->id }}" class="sr-only">checkbox</label>
                             </div>
-                            <div class="px-5 py-5 w-1/12">{{ $part->sku }}</div>
-                            <div class="px-5 py-5 w-2/12">{{ $part->name }}</div>
-                            <div class="px-5 py-5 w-1/12">{{ $part->quantity }}</div>
-                            <div class="px-5 py-5 w-1/12"
-                                 x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
+                            <div class="w-1/12">{{ $part->sku }}</div>
+                            <div class="w-2/12">{{ $part->name }}</div>
+                            <div class="w-1/12">{{ $part->quantity }}</div>
+                            <div class="w-1/12" x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
                                 <!-- Кликабельная ссылка с ценой запчасти -->
                                 <a id="{{ $part->id }}"
@@ -240,29 +255,31 @@
                                          :style="'top: 100%; left: 50%; transform: translateX(-50%) translateY(-50%) rotate(90deg);'"></div>
                                 </div>
                             </div>
-                            <div class="px-5 py-5 w-2/12">${{ $part->total }}</div>
-                            <div class="px-5 py-5 w-2/12">
+                            <div class="w-1/12">${{ $part->total }}</div>
+                            <div class="w-2/12">
                                 <!-- Миниатюра -->
                                 <div x-data class="gallery h-12 w-12">
                                     <img
-                                        src="@if ($part->image == null) @else {{ Storage::disk('s3')->url($part->image) }} @endif"
-                                        alt="{{ $part->name }}"
-                                        @click="$dispatch('lightbox', '@if ($part->image === null) @click.stop @endif')"
+                                        src="{{ $part->image }}" alt="{{ $part->name }}"
+                                        @click="$dispatch('lightbox', '{{ $part->image }}')"
                                         @click.stop class="object-cover rounded cursor-zoom-in">
                                 </div>
                             </div>
                             @php
                                 $urlData = json_decode($part->url, true);
                             @endphp
-                            <div class="px-5 py-3 w-2/12 cursor-pointer text-white" x-data="{ clickCount: 0 }"
-                                 @click="
+
+                            <div class="w-2/12 cursor-pointer text-white" x-data="{ clickCount: 0 }"
+                                @click="
                                     clickCount++;
                                     setTimeout(() => {
                                         if (clickCount === 1) {
-                                            // Одиночный клик - переход по ссылке
-                                            window.open('{{ $urlData['url'] ?? '' }}', '_blank');
+                                            // Одиночный клик - проверка на наличие ссылки
+                                            if ('{{ $urlData['url'] ?? '' }}') {
+                                                window.open('{{ $urlData['url'] ?? '' }}', '_blank');
+                                            }
                                         } else if (clickCount === 2) {
-                                            // Двойной клик - открытие модального окна
+                                            // Двойной клик - открытие модального окна для редактирования
                                             $wire.openManagerPartUrlModal({{ $part->id }});
                                         }
                                         clickCount = 0; // Сброс счетчика
@@ -270,12 +287,21 @@
                                 "
                             >
                                 @if(isset($urlData['text']) && $urlData['text'] !== '')
+                                    <!-- Отображение текста, если он есть -->
                                     {{ $urlData['text'] }}
+                                @elseif(isset($urlData['url']) && $urlData['url'] !== '')
+                                    <!-- Отображение URL, если текст отсутствует, но есть URL -->
+                                    {{ $urlData['url'] }}
                                 @else
-                                    {{ $urlData['url'] ?? '' }}
+                                    <!-- Отображение иконки, если URL пуст -->
+                                    <span class="text-gray-500" title="Edit URL">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536M9 13h.01M6 9l5 5-3 3h6l-1.293-1.293a1 1 0 010-1.414l7.42-7.42a2.828 2.828 0 10-4-4l-7.42 7.42a1 1 0 01-1.414 0L6 9z" />
+                                        </svg>
+                                    </span>
                                 @endif
                             </div>
-                            <div class="flex flex-col justify-start p-5 w-2/12 items-center">
+                            <div class="flex flex-col justify-start w-2/12 items-center">
                                 <!-- Кнопки действий -->
                                 <div class="flex flex-row w-full justify-evenly">
                                     <button wire:click="incrementPart({{ $part->id }})" @click.stop
@@ -302,7 +328,7 @@
                         </div>
                     @empty
                         <div
-                            class="px-5 py-5 text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            class="text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
                             No spare parts available
                         </div>
                     @endforelse
