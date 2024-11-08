@@ -1,5 +1,5 @@
-<div class="bg-white shadow-md rounded-lg p-6 mb-6">
-    <h3 class="text-xl font-bold mb-4">Статистика отгрузок</h3>
+<div class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+    <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400 mb-2 mt-1">Статистика отгрузок</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Отгрузки за день -->
@@ -22,7 +22,7 @@
     </div>
 
     <!-- Топ запчастей -->
-    <h4 class="text-lg font-bold mt-6">Топ отгружаемых запчастей</h4>
+    <h4 class="md:text-xl text-md font-bold text-gray-500 dark:text-gray-400 mb-2 mt-3">Топ отгружаемых запчастей</h4>
     <ul class="list-disc list-inside">
         @foreach($topParts as $part)
             <li>{{ $part->part_id }} {{ $part->part->name }} — {{ $part->total }} отгрузок</li>

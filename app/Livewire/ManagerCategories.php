@@ -15,6 +15,7 @@ class ManagerCategories extends Component
     public $isEditMode = false;
     public $showCategoryModal = false;
     public $showDeleteModal = false;
+    public $loaded = false;
 
     protected $listeners = ['confirmDelete' => 'deleteCategory'];
 
@@ -22,6 +23,11 @@ class ManagerCategories extends Component
     public function mount()
     {
         $this->loadCategories();
+    }
+
+    public function loadComponent()
+    {
+        $this->loaded = true;
     }
 
     // Получаем все категории, добавленные менеджером

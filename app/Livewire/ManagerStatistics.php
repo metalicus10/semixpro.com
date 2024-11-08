@@ -11,6 +11,8 @@ class ManagerStatistics extends Component
 {
     public $transfers;
     public $usedParts = [];
+    public $notificationMessage = '';
+    public $notificationType = 'info';
 
     protected $listeners = ['partUsedByTechnician' => 'updatePartQuantity', 'partUsed' => 'refreshUsedParts'];
 
@@ -56,13 +58,14 @@ class ManagerStatistics extends Component
                 $technicianUsageStats[$transfer->technician->name] = $usageCount;
             }
 
-            // Пример использования статистики:
-            session()->flash('message', 'Обновлена статистика по использованию запчасти.');
+            $this->notificationMessage = 'Обновлена статистика по использованию запчасти';
+            $this->notificationType = 'info';
 
             // Вы можете отобразить статистику на странице или сохранить данные, как вам нужно
             return $technicianUsageStats;  // Либо вы можете передать эти данные в компонент для отображения
         } else {
-            session()->flash('error', 'Запчасть не найдена.');
+            $this->notificationMessage = 'Запчасть не найдена';
+            $this->notificationType = 'error';
         }
     }
 

@@ -1,4 +1,6 @@
-<div class="p-8 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div wire:init="loadComponent" x-data="{ initialized: false }" x-init="setTimeout(() => initialized = true, 100)"
+     class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+    @if($loaded)
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Brands</h1>
     </div>
@@ -18,8 +20,14 @@
                     <table class="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                         <tr>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">Brand Name</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">Actions</th>
+                            <th scope="col"
+                                class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
+                                Brand Name
+                            </th>
+                            <th scope="col"
+                                class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
+                                Actions
+                            </th>
                         </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
@@ -51,7 +59,7 @@
             </div>
         </div>
     </div>
-
+    @endif
     <!-- Модальное окно -->
     @if($isOpen)
         <div class="fixed inset-0 flex items-center justify-center">

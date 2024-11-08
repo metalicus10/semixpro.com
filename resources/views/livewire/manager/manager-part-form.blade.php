@@ -55,131 +55,121 @@
     @endif
 
     <!-- Модальное окно для добавления запчасти -->
-@if ($showPartModal)
-    <div class="fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-50">
-        <div x-data="{ step: 1 }" class="relative bg-white rounded-lg p-6 w-96">
-            
-            <!-- Кнопка закрытия (крестик) в правом верхнем углу -->
-            <button wire:click="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+    @if ($showPartModal)
+        <div class="fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-50">
+            <div class="relative bg-white rounded-lg p-6 w-96" x-data @click.away="$wire.closeModal()">
 
-            <h2 class="text-xl font-bold mb-4">Add Part</h2>
-
-            <!-- Шаг 1: Ввод наименования -->
-            <div x-show="step === 1" class="mb-4">
-                <input type="text" wire:model="partName"
-                       class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="Part Name">
-                @error('partName') <span class="text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Шаг 2: Ввод артикула -->
-            <div x-show="step === 2" class="mb-4">
-                <input type="text" wire:model="sku"
-                       class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="SKU">
-                @error('sku') <span class="text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Шаг 3: Ввод количества -->
-            <div x-show="step === 3" class="mb-4">
-                <input type="number" wire:model="quantity"
-                       class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="Quantity">
-                @error('quantity') <span class="text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Шаг 4: Ввод цены -->
-            <div x-show="step === 4" class="mb-4">
-                <input type="text" wire:model="price"
-                       class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                       placeholder="Price">
-                @error('price') <span class="text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Шаг 5: Выбор категории -->
-            <div x-show="step === 5" class="mb-4">
-                <select wire:model="selectedCategory"
-                        class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
-                    <option value="">Select Category</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                    @endforeach
-                </select>
-                @error('selectedCategory') <span class="text-red-500">{{ $message }}</span> @enderror
-            </div>
-
-            <!-- Дополнительные поля: Бренды, изображение и URL -->
-            <div x-show="step === 6" class="mt-4 space-y-4">
-                <!-- Выбор бренда -->
-                <div x-data="{ open: false, selectedBrands: @entangle('selectedBrands').defer || [] }"
-                    x-init="$watch('selectedBrands', value => $wire.set('selectedBrands', value))"
-                    class="relative w-full text-gray-500"
-                >
-                
-                <!-- Поле ввода брендов, показывающее количество выбранных брендов или их список -->
-                <div @click="open = !open" class="w-full cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center text-gray-500">
-                    <span x-text="selectedBrands.length > 0 ? selectedBrands.length + ' selected' : 'Select Brands'"></span>
-                    <svg class="h-5 w-5 text-gray-400 transform transition-transform" :class="{'rotate-180': open}"
-                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd"
-                            d="M5.23 7.21a.75.75 0 011.06-.02L10 10.879l3.72-3.67a.75.75 0 111.04 1.08l-4.25 4.2a.75.75 0 01-1.06 0l-4.25-4.2a.75.75 0 01-.02-1.06z"
-                            clip-rule="evenodd"/>
+                <!-- Кнопка закрытия (крестик) в правом верхнем углу -->
+                <button wire:click="closeModal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
-                </div>
+                </button>
 
-                <!-- Выпадающий список с мульти-выбором брендов -->
-                <div x-show="open" @click.away="open = false" x-transition
-                    class="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                    <ul class="py-1 text-sm text-gray-700">
-                        @foreach ($brands as $brand)
-                            <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">
-                                <input type="checkbox" value="{{ $brand->id }}" x-model="selectedBrands" 
-                                    class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                <label class="ml-2 text-gray-700">{{ $brand->name }}</label>
-                            </li>
+                <h2 class="text-xl font-bold mb-4">Add Part</h2>
+
+                <!-- Шаг 1: Выбор категории -->
+                <div class="mb-4">
+                    <select wire:model="selectedCategory"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
+                        <option value="">Select Category</option>
+                        @foreach ($categories as $category)
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
                         @endforeach
-                    </ul>
+                    </select>
+                    @error('selectedCategory') <span class="text-red-500">{{ $message }}</span> @enderror
                 </div>
-            </div>
 
-                <!-- Кнопка для выбора изображения -->
-                <input type="file" wire:model="image" id="image" accept="image/*"
-                       class="border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
-                <div wire:loading wire:target="image">Image loading...</div>
-                @error('image') <span class="text-red-500">{{ $message }}</span> @enderror
+                <!-- Шаг 2: Ввод наименования -->
+                <div class="mb-4">
+                    <input type="text" wire:model="partName"
+                           class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Part Name">
+                    @error('partName') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>
 
-                <!-- Предпросмотр загруженного изображения -->
-                @if ($image)
-                    <img src="{{ $image->temporaryUrl() }}" class="h-20 w-20 object-cover rounded mt-4">
-                @endif
+                <!-- Шаг 3: Ввод артикула -->
+                <div class="mb-4">
+                    <input type="text" wire:model="sku"
+                           class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="SKU">
+                    @error('sku') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>
 
-                <!-- Ввод URL -->
-                <input type="text" wire:model.defer="url" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="URL">
-                @error('url') <span class="text-red-500">{{ $message }}</span> @enderror
+                <!-- Шаг 4: Ввод количества -->
+                <div class="mb-4">
+                    <input type="number" wire:model="quantity"
+                           class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Quantity">
+                    @error('quantity') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Шаг 5: Ввод цены -->
+                <div class="mb-4">
+                    <input type="text" wire:model="price"
+                           class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           placeholder="Price">
+                    @error('price') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Дополнительные поля: Бренды, изображение и URL -->
+                <div class="mt-4 space-y-4">
+                    <!-- Выбор бренда -->
+                    <div x-data="{ open: false, selectedBrands: @entangle('selectedBrands').defer || [] }"
+                         x-init="$watch('selectedBrands', value => $wire.set('selectedBrands', value))"
+                         class="relative w-full text-gray-500"
+                    >
+
+                        <!-- Поле ввода брендов, показывающее количество выбранных брендов или их список -->
+                        <div @click="open = !open" class="w-full cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center text-gray-500">
+                            <span x-text="selectedBrands.length > 0 ? selectedBrands.length + ' selected' : 'Select Brands'"></span>
+                            <svg class="h-5 w-5 text-gray-400 transform transition-transform" :class="{'rotate-180': open}"
+                                 xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd"
+                                      d="M5.23 7.21a.75.75 0 011.06-.02L10 10.879l3.72-3.67a.75.75 0 111.04 1.08l-4.25 4.2a.75.75 0 01-1.06 0l-4.25-4.2a.75.75 0 01-.02-1.06z"
+                                      clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+
+                        <!-- Выпадающий список с мульти-выбором брендов -->
+                        <div x-show="open" @click.away="open = false" x-transition
+                             class="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                            <ul class="py-1 text-sm text-gray-700">
+                                @foreach ($brands as $brand)
+                                    <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">
+                                        <input type="checkbox" value="{{ $brand->id }}" x-model="selectedBrands"
+                                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                        <label class="ml-2 text-gray-700">{{ $brand->name }}</label>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    </div>
+                    <!-- Кнопка для выбора изображения -->
+                    <input type="file" wire:model="image" id="image" accept="image/*"
+                           class="border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
+                    <div wire:loading wire:target="image">Image loading...</div>
+                    @error('image') <span class="text-red-500">{{ $message }}</span> @enderror
+
+                    <!-- Предпросмотр загруженного изображения -->
+                    @if ($image)
+                        <img src="{{ $image->temporaryUrl() }}" class="h-20 w-20 object-cover rounded mt-4">
+                    @endif
+
+                    <!-- Ввод URL -->
+                    <input type="text" wire:model.defer="url" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="URL">
+                    @error('url') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>
             </div>
 
             <!-- Кнопки Назад, Далее и Добавить -->
             <div class="mt-4 flex justify-between">
-                <button @click="step = step > 1 ? step - 1 : step" x-show="step > 1"
-                        class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600">Назад
-                </button>
-
-                <button @click="step = step < 6 ? step + 1 : step" 
-                        x-show="step < 6 && ((step === 1 && $wire.partName) || (step === 2 && $wire.sku) || (step === 3 && $wire.quantity) || (step === 4 && $wire.price) || (step === 5 && $wire.selectedCategory))"
-                        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600">Далее
-                </button>
-
                 <!-- Кнопка Добавить на последнем шаге -->
-                <button wire:click="addPart" x-show="step === 6"
+                <button wire:click="addPart"
                         class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">Добавить
                 </button>
             </div>
         </div>
-    </div>
-@endif
-    
+    @endif
+
 </div>

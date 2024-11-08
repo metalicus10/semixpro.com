@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\ManagerProfile;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Manager;
 use App\Livewire\ManagerDashboard;
@@ -16,9 +17,9 @@ Route::view('/', 'welcome');
     ->middleware(['auth', 'verified'])
     ->name('dashboard');*/
 
-Route::view('profile', 'profile')
+/*Route::view('profile', 'profile')
     ->middleware(['auth'])
-    ->name('profile');
+    ->name('profile');*/
 
 require __DIR__.'/auth.php';
 
@@ -28,6 +29,7 @@ Route::middleware(['auth', 'role:manager'])->group(function () {
     Route::get('/manager/parts', ManagerParts::class)->name('manager.parts');
     Route::get('/manager/transfer', TransferPartForm::class)->name('manager.transfer');
     Route::get('/manager/technicians', ManagerTechnicians::class)->name('manager.technicians');
+    Route::get('/manager/manager-profile', ManagerProfile::class)->name('manager.manager-profile');
 });
 
 Route::middleware(['auth', 'role:technician'])->group(function () {

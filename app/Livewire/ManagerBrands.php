@@ -10,12 +10,18 @@ class ManagerBrands extends Component
 {
     public $brands, $name, $brandId;
     public $isOpen = false;
+    public $loaded = false;
 
     protected $listeners = ['brandUpdated' => 'refreshBrands'];
 
     public function mount()
     {
         $this->loadBrands();
+    }
+
+    public function loadComponent()
+    {
+        $this->loaded = true;
     }
 
     public function loadBrands()

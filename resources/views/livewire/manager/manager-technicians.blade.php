@@ -1,8 +1,8 @@
-<div>
+<div class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
     <h2 class="text-lg font-semibold dark:text-white">Add Technicians</h2>
 
     <!-- Кнопка добавления нового техника -->
-    <button wire:click="showAddTechnicianModal" class="bg-blue-500 text-white px-4 py-2 rounded-md my-2">
+    <button wire:click="showAddTechnicianModal" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
         Add technician
     </button>
 

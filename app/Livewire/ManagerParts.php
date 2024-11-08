@@ -41,6 +41,7 @@ class ManagerParts extends Component
     public $managerPartUrlModalVisible = false;
     public $managerPartUrlText = '';
     public $managerPartUrl = '';
+    public $loaded = false;
 
     protected $listeners = [
         'categoryUpdated' => 'refreshComponent',
@@ -50,6 +51,11 @@ class ManagerParts extends Component
         'open-price-modal' => 'openPriceModal',
         'refreshParts' => '$refresh'
     ];
+
+    public function loadComponent()
+    {
+        $this->loaded = true;
+    }
 
     public function refreshComponent()
     {
