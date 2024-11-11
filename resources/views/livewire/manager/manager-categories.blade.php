@@ -24,7 +24,7 @@
             </div>
 
             <!-- Ряды таблицы -->
-            <div class="space-y-2">
+            <div class="space-y-0">
                 @foreach($categories as $category)
                     <div
                         class="flex flex-col md:flex-row items-start md:items-center bg-white text-gray-700 dark:text-gray-400 border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-4">

@@ -160,14 +160,12 @@
                     <input type="text" wire:model.defer="url" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="URL">
                     @error('url') <span class="text-red-500">{{ $message }}</span> @enderror
                 </div>
-            </div>
-
-            <!-- Кнопки Назад, Далее и Добавить -->
-            <div class="mt-4 flex justify-between">
+                <div class="mt-4 flex justify-between">
                 <!-- Кнопка Добавить на последнем шаге -->
                 <button wire:click="addPart"
                         class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">Добавить
                 </button>
+            </div>
             </div>
         </div>
     @endif

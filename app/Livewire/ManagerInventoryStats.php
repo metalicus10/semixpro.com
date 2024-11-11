@@ -15,8 +15,11 @@ class ManagerInventoryStats extends Component
 
     public function mount()
     {
+        $userId = Auth::id();
         // Получить последние 10 записей
-        $this->inventory = Part::select('name', 'sku', 'quantity')
+        $this->inventory = Part::select('name', 'sku', 'quantity')->whereHas('category', function ($query) use ($userId) {
+            $query->where('manager_id', $userId);
+        })
             ->orderBy('updated_at', 'desc')
             ->take(10)
             ->get();

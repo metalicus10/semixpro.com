@@ -16,80 +16,79 @@
     @livewireStyles
 </head>
 <body class="dark font-sans antialiased bg-gray-800">
-<div x-data="{ currentTab: 'dashboard' }">
-<nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-    <div class="px-3 py-3 lg:px-5 lg:pl-3">
-        <div class="flex items-center justify-between">
+<div x-data="{ currentTab: 'dashboard', showSidebar: false }">
 
-            <!-- Левая часть: Логотип, название и название меню -->
-            <div class="flex items-center md:space-x-32 space-x-2">
-                <!-- Логотип и название приложения -->
-                <a href="https://flowbite.com" class="flex items-center">
-                    <img src="https://flowbite.com/docs/images/logo.svg" class="h-8 me-3" alt="FlowBite Logo"/>
-                    <span class="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white">Flowbite</span>
-                </a>
-            </div>
+    <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+        <div class="px-3 py-3 lg:px-5 lg:pl-3">
+            <div class="flex items-center justify-between">
 
-            <!-- Правая часть: Меню пользователя -->
-            <div class="flex items-center">
-                <button type="button"
-                        class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
-                        aria-expanded="false" data-dropdown-toggle="dropdown-user">
-                    <span class="sr-only">Open user menu</span>
-                    <img class="w-8 h-8 rounded-full"
-                         src="https://flowbite.com/docs/images/people/profile-picture-5.jpg"
-                         alt="user photo">
-                </button>
-                <!-- Выпадающее меню пользователя -->
-                <div
-                    class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
-                    id="dropdown-user">
-                    <div class="px-4 py-3" role="none">
-                        <p class="text-sm text-gray-900 dark:text-white" role="none">
-                            Neil Sims
-                        </p>
-                        <p class="text-sm font-medium text-gray-900 truncate dark:text-gray-300" role="none">
-                            neil.sims@flowbite.com
-                        </p>
-                    </div>
-                    <ul class="py-1" role="none">
-                        <li>
-                            <a href="#"
-                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-                               role="menuitem">Dashboard
-                            </a>
-                        </li>
-                        <li>
-                            <a x-on:click="currentTab = 'profile'"
-                               class="block px-4 cursor-pointer py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-                               role="menuitem">{{ __('Profile') }}
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#"
-                               class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
-                               role="menuitem">Earnings
-                            </a>
-                        </li>
-                        <li>
-
-                        </li>
-                    </ul>
+                <!-- Левая часть: Логотип, название и название меню -->
+                <div class="flex items-center md:space-x-0 space-x-2">
+                    <!-- Кнопка для открытия боковой панели на мобильных устройствах -->
+                    <button @click="showSidebar = !showSidebar" 
+                        class="py-1 px-2 bg-gray-500 text-white z-20 top-4 rounded left-4 md:hidden">
+                        ☰
+                    </button>
+                    <!-- Логотип и название приложения -->
+                    <a href="https://semixpro.com" class="flex items-center">
+                        <img src="https://flowbite.com/docs/images/logo.svg" class="h-8 me-3" alt="Semixpro Logo"/>
+                        <span class="self-center text-xl font-semibold sm:text-2xl whitespace-nowrap dark:text-white uppercase">semixpro</span>
+                    </a>
                 </div>
+
+                <!-- Правая часть: Меню пользователя -->
+                <div class="flex items-center">
+                    <button type="button"
+                            class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
+                            aria-expanded="false" data-dropdown-toggle="dropdown-user">
+                        <span class="sr-only">Open user menu</span>
+                        <img class="w-8 h-8 rounded-full"
+                            src="https://flowbite.com/docs/images/people/profile-picture-5.jpg"
+                            alt="user photo">
+                    </button>
+                    <!-- Выпадающее меню пользователя -->
+                    <div
+                        class="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
+                        id="dropdown-user">
+                        <div class="px-4 py-3" role="none">
+                            <p class="text-sm text-gray-900 dark:text-white" role="none">
+                                Neil Sims
+                            </p>
+                            <p class="text-sm font-medium text-gray-900 truncate dark:text-gray-300" role="none">
+                                neil.sims@flowbite.com
+                            </p>
+                        </div>
+                        <ul class="py-1" role="none">
+                            <li>
+                                <a x-on:click="currentTab = 'profile'"
+                                class="block px-4 cursor-pointer py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white"
+                                role="menuitem">{{ __('Profile') }}
+                                </a>
+                            </li>
+                            <li>
+                                @livewire('logout')
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
             </div>
-
         </div>
-    </div>
-</nav>
+    </nav>
 
-
-    <aside id="logo-sidebar"
+    <aside id="logo-sidebar" :class="{'translate-x-0': showSidebar, '-translate-x-full': !showSidebar}"
            class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
            aria-label="Sidebar">
         <div class="h-full px-1 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
+            <div class="p-4 flex justify-between items-center">
+                <!-- Кнопка закрытия боковой панели на мобильных устройствах -->
+                <button @click="showSidebar = false" class="text-gray-500 dark:text-gray-400 md:hidden">
+                    ✕
+                </button>
+            </div>
             <ul class="space-y-2 font-medium">
                 <li>
-                    <a x-on:click="currentTab = 'dashboard'"
+                    <a x-on:click="currentTab = 'dashboard', showSidebar = false"
                        class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                         <svg
                             class="w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -105,7 +104,7 @@
                 </li>
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'categories'"
+                        <a x-on:click="currentTab = 'categories', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -119,7 +118,7 @@
                     </li>
                 @endif
                 <li>
-                    <a x-on:click="currentTab = 'parts'"
+                    <a x-on:click="currentTab = 'parts', showSidebar = false"
                        class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                         <svg
                             class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -133,7 +132,7 @@
                 </li>
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'brands'"
+                        <a x-on:click="currentTab = 'brands', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -148,7 +147,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'statistics'"
+                        <a x-on:click="currentTab = 'statistics', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -163,7 +162,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'technicians'"
+                        <a x-on:click="currentTab = 'technicians', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"

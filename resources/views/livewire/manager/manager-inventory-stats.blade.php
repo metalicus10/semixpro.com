@@ -9,7 +9,7 @@
             </button>
 
             <!-- Подменю для выбора формата (XLSX или PDF) -->
-            <div x-show="open" @click.away="open = false" class="hidden origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+            <div x-show="open" @click.away="open = false" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                 <div class="flex flex-col py-1 w-full" role="menu" aria-orientation="vertical" aria-labelledby="options-menu">
                     <button wire:click="export('xlsx')" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download XLSX</button>
                     <button wire:click="export('pdf')" class="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Download PDF</button>
