@@ -31,35 +31,69 @@
         <div class="-m-1.5 overflow-x-auto">
             <div class="p-1.5 min-w-full inline-block align-middle">
                 <div class="overflow-hidden">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">Name</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">Technician</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">Transmitted</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">Remained with the technician</th>
-                            <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">How much was used</th>
-                        </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
+                    <!-- Контейнер для заголовков на экранах sm и выше -->
+                    <div class="hidden sm:flex bg-gray-50 dark:bg-gray-700 text-gray-700 uppercase text-xs font-bold">
+                        <div class="px-6 py-3 w-1/5 text-start dark:text-neutral-500">Name</div>
+                        <div class="px-6 py-3 w-1/5 text-start dark:text-neutral-500">Technician</div>
+                        <div class="px-6 py-3 w-1/5 text-start dark:text-neutral-500">Transmitted</div>
+                        <div class="px-6 py-3 w-1/5 text-start dark:text-neutral-500">Remained</div>
+                        <div class="px-6 py-3 w-1/5 text-start dark:text-neutral-500">Used</div>
+                    </div>
+
+                    <!-- Тело таблицы -->
+                    <div class="divide-y divide-gray-200 dark:divide-neutral-700">
                         @forelse ($transfers as $transfer)
-                            <tr class="hover:bg-gray-100 dark:hover:bg-[#162033]">
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-400">{{ $transfer->part->name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-400">{{ $transfer->technician->name }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-400">{{ $transfer->total_transferred }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-400">{{ $transfer->quantity }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-400">{{ $usedParts[$transfer->part_id]['total_transferred'] - $transfer->quantity ?? 0 }}</td>
-                            </tr>
+                            <!-- Ряд данных для мобильной версии с двумя элементами на строку -->
+                            <div
+                                class="flex flex-col sm:flex-row sm:items-center border border-gray-700 rounded hover:bg-gray-100 dark:hover:bg-[#162033] py-4">
+                                <div class="flex flex-wrap">
+                                    <!-- Первая пара: Name и Technician -->
+                                    <div class="w-1/2 px-6 py-2">
+                                        <div class="text-xs font-bold text-gray-500 dark:text-gray-400">Name</div>
+                                        <div class="text-sm font-medium text-gray-700 dark:text-gray-400">
+                                            {{ $transfer->part->name }}
+                                        </div>
+                                    </div>
+                                    <div class="w-1/2 px-6 py-2">
+                                        <div class="text-xs font-bold text-gray-500 dark:text-gray-400">Technician</div>
+                                        <div class="text-sm font-medium text-gray-700 dark:text-gray-400">
+                                            {{ $transfer->technician->name }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Вторая пара: Transmitted и Remained -->
+                                    <div class="w-1/2 px-6 py-2">
+                                        <div class="text-xs font-bold text-gray-500 dark:text-gray-400">Transmitted
+                                        </div>
+                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-400">
+                                            {{ $transfer->total_transferred }}
+                                        </div>
+                                    </div>
+                                    <div class="w-1/2 px-6 py-2">
+                                        <div class="text-xs font-bold text-gray-500 dark:text-gray-400">Remained</div>
+                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-400">
+                                            {{ $transfer->quantity }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Третья пара: Used и пустое место -->
+                                    <div class="w-1/2 px-6 py-2">
+                                        <div class="text-xs font-bold text-gray-500 dark:text-gray-400">Used</div>
+                                        <div class="text-sm font-medium text-gray-800 dark:text-gray-400">
+                                            {{ $usedParts[$transfer->part_id]['total_transferred'] - $transfer->quantity ?? 0 }}
+                                        </div>
+                                    </div>
+                                    <div class="w-1/2 px-6 py-2"></div> <!-- Пустая ячейка для выравнивания -->
+                                </div>
+                            </div>
                         @empty
-                            <tr>
-                                <td colspan="5"
-                                    class="px-5 py-5 text-sm text-center text-gray-400 bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                    No data
-                                </td>
-                            </tr>
+                            <!-- Сообщение об отсутствии данных -->
+                            <div
+                                class="px-6 py-5 text-sm text-center text-gray-400 bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                No data
+                            </div>
                         @endforelse
-                        </tbody>
-                    </table>
+                    </div>
                 </div>
             </div>
         </div>

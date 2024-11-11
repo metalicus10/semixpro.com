@@ -31,10 +31,10 @@
             <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
             <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                 <!-- Фильтр по категориям -->
-                <div>
+                <div class="flex flex-row justify-between items-center">
                     <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by Cat:</label>
                     <select wire:model.live="selectedCategory" id="category"
-                            class="ml-2 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            class="w-28 ml-2 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">All cats</option>
                         @foreach ($categories as $cat)
                             <option value="{{ $cat->id }}">{{ $cat->name }}</option>
@@ -42,10 +42,10 @@
                     </select>
                 </div>
                 <!-- Фильтр по брендам -->
-                <div>
+                <div class="flex flex-row justify-between items-center">
                     <label for="brand" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by Brand:</label>
                     <select wire:model.live="selectedBrand" id="brand"
-                            class="ml-2 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            class="w-28 ml-2 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="">All brands</option>
                         @foreach ($brands as $brand)
                             <option value="{{ $brand->id }}">{{ $brand->name }}</option>
@@ -165,11 +165,18 @@
                     </div>
 
                     <!-- Строки таблицы -->
-                    <div class="space-y-2 md:space-y-1 dark:bg-gray-900">
+                    <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                         @forelse ($parts as $part)
                             <div
                                 class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 rounded-md relative">
-                                <div class="absolute top-5 right-5 md:w-1/12 mb-2 md:mb-0">
+                                <div class="block sm:hidden absolute top-5 right-5 mb-2">
+                                    <input type="checkbox" :value="{{ $part->id }}"
+                                           @click="togglePartSelection({{ $part->id }})"
+                                           :checked="selectedParts.includes({{ $part->id }})"
+                                           class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                    <label for="checkbox-table-search-{{ $part->id }}" class="sr-only">checkbox</label>
+                                </div>
+                                <div class="hidden sm:block md:w-1/12 mb-0">
                                     <input type="checkbox" :value="{{ $part->id }}"
                                            @click="togglePartSelection({{ $part->id }})"
                                            :checked="selectedParts.includes({{ $part->id }})"
@@ -188,7 +195,7 @@
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0">
                                     <span class="md:hidden font-semibold">Quantity:</span> {{ $part->quantity }}
                                 </div>
-                                
+
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0"
                                      x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
@@ -318,22 +325,22 @@
                                     <div class="flex flex-row w-full"><span class="md:hidden font-semibold">Actions:</span></div>
                                     <div class="flex flex-row w-full justify-evenly">
                                         <button wire:click="incrementPart({{ $part->id }})" @click.stop title="Add one"
-                                                class="w-12 h-12 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
                                             +
                                         </button>
                                         <button wire:click="openQuantityModal({{ $part->id }}, 'add')" @click.stop title="Add some"
-                                                class="w-12 h-12 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
                                             ++
                                         </button>
                                     </div>
                                     <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
                                     <div class="flex flex-row w-full justify-evenly">
                                         <button wire:click="decrementPart({{ $part->id }})" @click.stop title="Remove one"
-                                                class="w-12 h-12 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
                                             -
                                         </button>
                                         <button wire:click="openQuantityModal({{ $part->id }}, 'subtract')" @click.stop title="Remove some"
-                                                class="w-12 h-12 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
                                             --
                                         </button>
                                     </div>
@@ -429,7 +436,7 @@
         @if($showQuantityModal)
             <div class="fixed z-10 inset-0 overflow-y-auto" x-data @click.away="$wire.resetQuantityModal()">
                 <div class="flex items-center justify-center min-h-screen">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 relative">
+                    <div class="flex flex-col justify-center items-center border border-gray-400 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 relative">
                         <!-- Кнопка закрытия -->
                         <button @click="$wire.resetQuantityModal()"
                                 class="absolute top-0 right-0 mt-2 mr-2 text-gray-400 hover:text-gray-600">

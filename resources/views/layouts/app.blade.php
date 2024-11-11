@@ -25,9 +25,32 @@
                 <!-- Левая часть: Логотип, название и название меню -->
                 <div class="flex items-center md:space-x-0 space-x-2">
                     <!-- Кнопка для открытия боковой панели на мобильных устройствах -->
-                    <button @click="showSidebar = !showSidebar" 
-                        class="py-1 px-2 bg-gray-500 text-white z-20 top-4 rounded left-4 md:hidden">
-                        ☰
+                    <button @click="showSidebar = !showSidebar"
+                        class="py-1 px-2 bg-transparent border border-gray-600 text-white z-20 top-4 rounded left-4 md:hidden">
+                        <div class="relative w-5 h-5">
+                            <span x-show="!showSidebar" class="absolute inset-0 flex items-center justify-center"
+                                  x-transition:enter="transition ease-out duration-200"
+                                  x-transition:enter-start="opacity-0"
+                                  x-transition:enter-end="opacity-100"
+                                  x-transition:leave="transition ease-in duration-150"
+                                  x-transition:leave-start="opacity-100"
+                                  x-transition:leave-end="opacity-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            </span>
+                            <span x-show="showSidebar" class="absolute inset-0 flex items-center justify-center"
+                                  x-transition:enter="transition ease-out duration-200"
+                                  x-transition:enter-start="opacity-0"
+                                  x-transition:enter-end="opacity-100"
+                                  x-transition:leave="transition ease-in duration-150"
+                                  x-transition:leave-start="opacity-100"
+                                  x-transition:leave-end="opacity-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </span>
+                        </div>
                     </button>
                     <!-- Логотип и название приложения -->
                     <a href="https://semixpro.com" class="flex items-center">
@@ -80,12 +103,6 @@
            class="fixed top-0 left-0 z-40 w-64 h-screen pt-20 transition-transform -translate-x-full bg-white border-r border-gray-200 sm:translate-x-0 dark:bg-gray-800 dark:border-gray-700"
            aria-label="Sidebar">
         <div class="h-full px-1 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
-            <div class="p-4 flex justify-between items-center">
-                <!-- Кнопка закрытия боковой панели на мобильных устройствах -->
-                <button @click="showSidebar = false" class="text-gray-500 dark:text-gray-400 md:hidden">
-                    ✕
-                </button>
-            </div>
             <ul class="space-y-2 font-medium">
                 <li>
                     <a x-on:click="currentTab = 'dashboard', showSidebar = false"
@@ -181,7 +198,7 @@
 
 
     <div class="p-1 sm:ml-64">
-        <div class="p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 bg-gray-500 mt-14">
+        <div class="p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900 mt-14">
             {{ $slot }}
         </div>
     </div>
