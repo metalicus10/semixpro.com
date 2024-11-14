@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Brand;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -24,6 +25,7 @@ class ManagerPartForm extends Component
     public $sku;
     public $brand;
     public $brands;
+    public $warehouses;
     public $categories;
     public $quantity;
     public $image;
@@ -36,8 +38,9 @@ class ManagerPartForm extends Component
     public $notificationType = 'info';
     public $imgUrl = null;
     public $url = null;
+    public $selectedWarehouse;
 
-    protected $listeners = ['categoryUpdated' => 'refreshCategories', 'brandUpdated' => 'refreshBrands'];
+    protected $listeners = ['categoryUpdated' => 'refreshCategories', 'brandUpdated' => 'refreshBrands', 'defaultWarehouseUpdated' => 'refreshWarehouses'];
 
     protected $rules = [
         'categoryName' => 'required|string|max:255',
@@ -51,6 +54,9 @@ class ManagerPartForm extends Component
 
     public function mount()
     {
+        $defaultWarehouse = Warehouse::where('manager_id', Auth::id())->where('is_default', true)->first();
+        $this->selectedWarehouse = $defaultWarehouse ? $defaultWarehouse->id : null;
+        $this->refreshWarehouses();
         $this->refreshBrands();
         $this->refreshCategories();
     }
@@ -58,6 +64,11 @@ class ManagerPartForm extends Component
     public function clearNotification()
     {
         $this->notificationMessage = '';
+    }
+
+    public function refreshWarehouses()
+    {
+        $this->warehouses = Warehouse::where('manager_id', Auth::id())->get();
     }
 
     public function refreshBrands()
@@ -68,6 +79,14 @@ class ManagerPartForm extends Component
     public function refreshCategories()
     {
         $this->categories = Category::where('manager_id', Auth::id())->get();
+    }
+
+    public function updatedSelectedWarehouse($value)
+    {
+        // Проверяем, задан ли уже склад по умолчанию
+        if (empty($this->selectedWarehouse)) {
+            $this->selectedWarehouse = $value;
+        }
     }
 
     // Метод для добавления новой категории

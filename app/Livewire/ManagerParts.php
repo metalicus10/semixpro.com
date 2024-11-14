@@ -25,6 +25,7 @@ class ManagerParts extends Component
     public $selectedPartId = null;
     public $selectedCategory = null;
     public $selectedBrand = null;
+    public $selectedBrands;
     public array $transferQuantities = [];
     public bool $openPriceModal = false;
     public string $search = '';
@@ -307,6 +308,25 @@ class ManagerParts extends Component
 
         $this->managerPartUrlModalVisible = false;
         $this->refreshComponent();
+    }
+
+    /*public function saveBrands($partId, $selectedBrands)
+    {
+        // Получаем запчасть и синхронизируем бренды
+        $part = Part::find($partId);
+        $part->brands()->sync($selectedBrands);
+
+        // Обновляем представление
+        $this->dispatch('brandsUpdated');
+    }*/
+
+    public function updatePartBrands($partId, $selectedBrands)
+    {
+        $part = Part::find($partId);
+        $part->brands()->sync($selectedBrands);
+        
+        // Обновляем данные в представлении
+        $this->dispatch('brandsUpdated');
     }
 
     // Сброс модального окна

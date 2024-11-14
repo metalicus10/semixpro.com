@@ -68,6 +68,18 @@
 
                 <h2 class="text-xl font-bold mb-4">Add Part</h2>
 
+                <!-- Шаг 1: Выбор склада -->
+                <div class="mb-4">
+                    <select wire:model="selectedWarehouse"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
+                        <option value="">Select Warehouse</option>
+                        @foreach ($warehouses as $warehouse)
+                            <option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('selectedWarehouse') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>          
+
                 <!-- Шаг 1: Выбор категории -->
                 <div class="mb-4">
                     <select wire:model="selectedCategory"

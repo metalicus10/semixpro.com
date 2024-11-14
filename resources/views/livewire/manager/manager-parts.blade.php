@@ -148,7 +148,8 @@
                         <div class="w-1/12">Quantity</div>
                         <div class="w-1/12">Price</div>
                         <div class="w-1/12">Total</div>
-                        <div class="w-2/12">Image</div>
+                        <div class="w-1/12">Image</div>
+                        <div class="w-1/12">Brand</div>
                         <div class="w-2/12 flex items-center">
                             <span>URL</span>
                             <div x-data="{ showTooltip: false }" @click="showTooltip = !showTooltip" @click.away="showTooltip = false"
@@ -156,7 +157,7 @@
                                 i
                                 <!-- Поповер -->
                                 <div x-show="showTooltip" x-transition
-                                    class="absolute top-full mt-1 w-max px-2 py-1 text-xs bg-blue-500 lowercase text-white rounded shadow-lg">
+                                    class="absolute z-50 top-full mt-1 w-max px-2 py-1 text-xs bg-blue-500 lowercase text-white rounded shadow-lg">
                                     2-click for edit
                                 </div>
                             </div>
@@ -168,7 +169,7 @@
                     <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                         @forelse ($parts as $part)
                             <div
-                                class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 rounded-md relative">
+                                class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 relative">
                                 <div class="block sm:hidden absolute top-5 right-5 mb-2">
                                     <input type="checkbox" :value="{{ $part->id }}"
                                            @click="togglePartSelection({{ $part->id }})"
@@ -202,26 +203,26 @@
                                     <!-- Кликабельная ссылка с ценой запчасти -->
                                     <span class="md:hidden font-semibold">Price:</span>
                                     <a id="{{ $part->id }}"
-                                       @click="
-                                        $nextTick(() => {
-                                            const element = document.getElementById('{{ $part->id }}');
-                                            var offsetX = 75;
-                                            var offsetY = 58;
+                                        @click="
+                                            $nextTick(() => {
+                                                const element = document.getElementById('{{ $part->id }}');
+                                                var offsetX = 75;
+                                                var offsetY = 58;
 
-                                            if (element) {
-                                                const rect = element.getBoundingClientRect();
+                                                if (element) {
+                                                    const rect = element.getBoundingClientRect();
 
-                                                var xPosition = element.offsetLeft - offsetX;
-                                                var yPosition = element.offsetTop - offsetY;
+                                                    var xPosition = element.offsetLeft - offsetX;
+                                                    var yPosition = element.offsetTop - offsetY;
 
-                                                popoverX = xPosition;
-                                                popoverY = yPosition;
+                                                    popoverX = xPosition;
+                                                    popoverY = yPosition;
 
-                                                showPopover = !showPopover;
-                                                editing = false;
-                                            }
-                                        });
-                                    "
+                                                    showPopover = !showPopover;
+                                                    editing = false;
+                                                }
+                                            });
+                                        "
                                        class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
                                         ${{ $part->price }}
                                     </a>
@@ -231,6 +232,7 @@
                                          :style="'position: absolute; top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
                                          class="w-48 z-50 text-sm text-gray-500 bg-white border border-gray-300 rounded-lg shadow-sm dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800"
                                          @click.away="showPopover = false">
+                                         
                                         <div class="flex flew-row w-full px-3 py-2">
                                             <!-- Кнопка Edit -->
                                             <button x-show="!editing"
@@ -270,7 +272,7 @@
                                     </div>
                                 </div>
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0"><span class="md:hidden font-semibold">Total:</span>${{ $part->total }}</div>
-                                <div class="flex flex-row justify-start space-x-3 w-full md:w-2/12 mb-2 md:mb-0">
+                                <div class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
                                     <!-- Миниатюра -->
                                     <span class="md:hidden font-semibold">Image:</span>
                                     <div x-data class="gallery h-12 w-12">
@@ -280,6 +282,86 @@
                                             @click.stop class="object-cover rounded cursor-zoom-in">
                                     </div>
                                 </div>
+                                <div class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative" 
+                                    x-data="{ showPopover: false, selectedBrands: @json($part->brands->pluck('id')), search: '', popoverX: 0, popoverY: 0 }"
+                                    
+                                    @click.away="showPopover = false"
+                                    @mousedown.stop
+                                    @click="
+                                            $nextTick(() => {
+                                                const element = document.getElementById('{{ $part->id }}');
+                                                let offsetX = window.innerWidth <= 768 ? 30 : 670;
+                                                let offsetY = window.innerWidth <= 768 ? 195 : 150;
+
+                                                if (element) {
+                                                    const rect = element.getBoundingClientRect();
+
+                                                    var xPosition = element.offsetLeft - offsetX;
+                                                    var yPosition = element.offsetTop - offsetY;
+
+                                                    popoverX = xPosition;
+                                                    popoverY = yPosition;
+
+                                                    showPopover = !showPopover;
+                                                    editing = false;
+                                                }
+                                            });
+                                        ">
+
+                                    <!-- Текущие бренды -->
+                                    <div>
+                                        <span class="md:hidden font-semibold">Brand:</span>
+                                        @if(count($part->brands) == 0)
+                                            <div class="px-3 py-2">---</div>
+                                        @else                    
+                                            @foreach($part->brands as $brand)
+                                                <span>{{ $brand->name }}{{ !$loop->last ? ', ' : '' }}</span>
+                                            @endforeach
+                                        @endif
+                                    </div>
+
+                                    <!-- Поповер с мульти-выбором брендов -->
+                                    <div x-show="showPopover" 
+                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-54 p-1"
+                                        :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                        @click.outside="showPopover = false"
+                                        x-transition>
+                                        
+                                        <!-- Поле поиска -->
+                                        <div class="mb-2" @click.stop>
+                                            <input type="text" x-model="search"
+                                                placeholder="Search brands..."
+                                                class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
+                                        </div>
+
+                                        <div class="flex flex-row justify-between items-center">
+                                            <!-- Список брендов с мульти-выбором -->
+                                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                                                @foreach ($brands as $brand)
+                                                    <template x-if="!search || '{{ strtolower($brand->name) }}'.includes(search.toLowerCase())">
+                                                        <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                            <input type="checkbox" value="{{ $brand->id }}" x-model="selectedBrands"
+                                                                class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" @click.stop>
+                                                            <label class="ml-2">{{ $brand->name }}</label>
+                                                        </li>
+                                                    </template>
+                                                @endforeach
+                                            </ul>
+
+                                            <!-- Кнопка подтверждения -->
+                                            <div class="flex justify-end">
+                                                <button @click="$wire.set('selectedBrands', selectedBrands).then(() => {
+                                                                $wire.updatePartBrands({{ $part->id }}, selectedBrands);
+                                                                showPopover = false;
+                                                            });"
+                                                        class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
+                                                    ✓
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 @php
                                     $urlData = json_decode($part->url, true);
                                 @endphp

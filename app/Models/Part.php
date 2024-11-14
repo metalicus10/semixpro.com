@@ -78,5 +78,9 @@ class Part extends Model
         return $this->belongsToMany(Brand::class, 'brand_part');
     }
 
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 
 }

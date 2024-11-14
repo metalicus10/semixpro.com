@@ -4,6 +4,9 @@
     <div x-show="currentTab === 'dashboard'">
         @livewire('manager-dashboard', [], key('manager-dashboard'))
     </div>
+    <div x-show="currentTab === 'warehouses'">
+        @livewire('manager-warehouses', [], key('manager-warehouses'))
+    </div>
     <div x-show="currentTab === 'categories'">
         @livewire('manager-categories', [], key('manager-categories'))
     </div>
