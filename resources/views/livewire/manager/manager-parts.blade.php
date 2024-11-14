@@ -60,7 +60,7 @@
         <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-800">
 
         <!-- Таблица с запчастями -->
-        <div class="bg-white dark:bg-gray-800 shadow-md rounded-md overflow-hidden">
+        <div class="bg-white dark:bg-gray-800 shadow-md rounded-md">
             <!-- Поле поиска -->
             <div class="pb-4 bg-white dark:bg-gray-900">
                 <label for="table-search" class="sr-only">Поиск</label>
@@ -131,7 +131,7 @@
                 }
             }"
                  @keydown.escape="closeModal"
-                 class="overflow-hidden w-full overflow-x-hidden rounded-md bg-gray-300 dark:bg-gray-800 md:border-neutral-300 md:dark:border-neutral-500"
+                 class="w-full rounded-md bg-gray-300 dark:bg-gray-800 md:border-neutral-300 md:dark:border-neutral-500"
             >
                 <div id="parts-table"
                      class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
@@ -169,7 +169,7 @@
                     <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                         @forelse ($parts as $part)
                             <div
-                                class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 relative">
+                                class="parent-container flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 relative">
                                 <div class="block sm:hidden absolute top-5 right-5 mb-2">
                                     <input type="checkbox" :value="{{ $part->id }}"
                                            @click="togglePartSelection({{ $part->id }})"
@@ -202,10 +202,10 @@
 
                                     <!-- Кликабельная ссылка с ценой запчасти -->
                                     <span class="md:hidden font-semibold">Price:</span>
-                                    <a id="{{ $part->id }}"
+                                    <a id="price-item-{{ $part->id }}"
                                         @click="
                                             $nextTick(() => {
-                                                const element = document.getElementById('{{ $part->id }}');
+                                                const element = document.getElementById('price-item-{{ $part->id }}');
                                                 var offsetX = 75;
                                                 var offsetY = 58;
 
@@ -228,11 +228,11 @@
                                     </a>
 
                                     <!-- Поповер с динамическим позиционированием -->
-                                    <div x-show="showPopover" role="tooltip"
+                                    <div x-show="showPopover" x-transition role="tooltip"
                                          :style="'position: absolute; top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
                                          class="w-48 z-50 text-sm text-gray-500 bg-white border border-gray-300 rounded-lg shadow-sm dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800"
                                          @click.away="showPopover = false">
-                                         
+
                                         <div class="flex flew-row w-full px-3 py-2">
                                             <!-- Кнопка Edit -->
                                             <button x-show="!editing"
@@ -242,7 +242,7 @@
                                             </button>
 
                                             <!-- Поле ввода новой цены и кнопка подтверждения -->
-                                            <div x-show="editing" class="flex items-center mt-2">
+                                            <div x-show="editing" class="flex items-center mt-2" x-transition>
                                                 <input type="number" x-ref="priceInput" x-model="newPrice"
                                                        class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
                                                        placeholder="{{ $part->price }}">
@@ -282,29 +282,21 @@
                                             @click.stop class="object-cover rounded cursor-zoom-in">
                                     </div>
                                 </div>
-                                <div class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative" 
+                                <div id="brand-item-{{ $part->id }}" class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative"
                                     x-data="{ showPopover: false, selectedBrands: @json($part->brands->pluck('id')), search: '', popoverX: 0, popoverY: 0 }"
-                                    
+
                                     @click.away="showPopover = false"
                                     @mousedown.stop
                                     @click="
                                             $nextTick(() => {
-                                                const element = document.getElementById('{{ $part->id }}');
-                                                let offsetX = window.innerWidth <= 768 ? 30 : 670;
-                                                let offsetY = window.innerWidth <= 768 ? 195 : 150;
+                                                const parent = $el.closest('.parent-container');
+                                                const elementOffsetLeft = $el.offsetLeft;
+                                                const elementOffsetTop = $el.offsetTop;
 
-                                                if (element) {
-                                                    const rect = element.getBoundingClientRect();
+                                                popoverX = elementOffsetLeft / parent.offsetWidth ;
+                                                popoverY = elementOffsetTop / parent.offsetHeight ;
 
-                                                    var xPosition = element.offsetLeft - offsetX;
-                                                    var yPosition = element.offsetTop - offsetY;
-
-                                                    popoverX = xPosition;
-                                                    popoverY = yPosition;
-
-                                                    showPopover = !showPopover;
-                                                    editing = false;
-                                                }
+                                                showPopover = true;
                                             });
                                         ">
 
@@ -313,7 +305,7 @@
                                         <span class="md:hidden font-semibold">Brand:</span>
                                         @if(count($part->brands) == 0)
                                             <div class="px-3 py-2">---</div>
-                                        @else                    
+                                        @else
                                             @foreach($part->brands as $brand)
                                                 <span>{{ $brand->name }}{{ !$loop->last ? ', ' : '' }}</span>
                                             @endforeach
@@ -321,12 +313,12 @@
                                     </div>
 
                                     <!-- Поповер с мульти-выбором брендов -->
-                                    <div x-show="showPopover" 
-                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-54 p-1"
+                                    <div x-show="showPopover"
+                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
                                         :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
                                         @click.outside="showPopover = false"
                                         x-transition>
-                                        
+
                                         <!-- Поле поиска -->
                                         <div class="mb-2" @click.stop>
                                             <input type="text" x-model="search"
