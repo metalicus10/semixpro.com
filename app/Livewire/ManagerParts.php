@@ -4,6 +4,8 @@ namespace App\Livewire;
 
 use App\Models\Category;
 use App\Models\Part;
+use App\Models\Pn;
+use App\Models\Supplier;
 use App\Models\PartTransfer;
 use App\Models\Shipment;
 use App\Models\Technician;
@@ -19,12 +21,15 @@ class ManagerParts extends Component
 {
     public $brands;
     public $technicians;
+    public $selectedTechnicians;
     public $categories;
+    public $suppliers;
     public $partQuantities = [];
     public $selectedTechnician = null;
     public $selectedPartId = null;
     public $selectedCategory = null;
     public $selectedBrand = null;
+    public $selectedSupplier = null;
     public $selectedBrands;
     public array $transferQuantities = [];
     public bool $openPriceModal = false;
@@ -40,8 +45,10 @@ class ManagerParts extends Component
     public $notificationMessage = '';
     public $notificationType = 'info';
     public $managerPartUrlModalVisible = false;
-    public $managerPartUrlText = '';
+    public $managerPartSupplier = '';
     public $managerPartUrl = '';
+    public $availablePns = [];
+    public $selectedPns = [];
     public $loaded = false;
 
     protected $listeners = [
@@ -53,9 +60,20 @@ class ManagerParts extends Component
         'refreshParts' => '$refresh'
     ];
 
+    public function mount()
+    {
+        $this->loadSuppliers();
+        $this->availablePns = Pn::pluck('number')->toArray();
+    }
+
     public function loadComponent()
     {
         $this->loaded = true;
+    }
+
+    public function loadSuppliers()
+    {
+        $this->suppliers = Supplier::where('manager_id', Auth::id())->get();
     }
 
     public function refreshComponent()
@@ -84,7 +102,7 @@ class ManagerParts extends Component
         $userId = auth()->user()->id;
         $partsQuery = Part::whereHas('category', function ($query) use ($userId) {
             $query->where('manager_id', $userId);
-        })->with('category', 'brands');
+        })->with('category', 'brands', 'pns');
 
         // Фильтр по категории
         if ($this->selectedCategory) {
@@ -149,53 +167,73 @@ class ManagerParts extends Component
 
     public function sendParts()
     {
-        // Находим техника по идентификатору
-        $technician = Technician::find($this->selectedTechnician);
-
-        if (!$technician) {
-            session()->flash('error', 'Техник не найден.');
+        if (empty($this->selectedTechnicians)) {
+            $this->notificationType = 'error';
+            $this->notificationMessage = 'Не выбраны техники для передачи запчастей';
             return;
         }
-        // Проверяем, есть ли выбранные запчасти с указанными количествами
-        foreach ($this->partQuantities as $partId => $quantity) {
-            $part = Part::find($partId);
 
-            $quantity = $this->partQuantities[$partId] ?? 1;
+        foreach ($this->selectedTechnicians as $technicianId) {
+            // Находим техника по идентификатору
+            $technician = Technician::find($technicianId);
 
-            // Убедимся, что запрашиваемое количество не превышает количество на складе
-            if ($quantity > $part->quantity) {
-                $quantity = $part->quantity;
+            if (!$technician) {
+                $this->notificationType = 'error';
+                $this->notificationMessage = "Техник с ID $technicianId не найден";
+                continue; // Переходим к следующему технику
             }
 
-            // Уменьшаем количество запчастей на складе
-            $part->update(['quantity' => $part->quantity - $quantity]);
+            // Проверяем, есть ли выбранные запчасти с указанными количествами
+            foreach ($this->partQuantities as $partId => $quantity) {
+                $part = Part::find($partId);
 
-            // Проверяем, есть ли у техника уже эта запчасть, если да - обновляем
-            $technicianPart = TechnicianPart::where('technician_id', $technician->user_id)
-                ->where('part_id', $part->id)
-                ->first();
+                if (!$part) {
+                    $this->notificationType = 'error';
+                    $this->notificationMessage = "Запчасть с ID $partId не найдена";
+                    continue; // Переходим к следующей запчасти
+                }
 
-            if ($technicianPart) {
-                // Увеличиваем количество запчастей у техника и общее количество переданных
-                $technicianPart->increment('quantity', $quantity);
-                $technicianPart->increment('total_transferred', $quantity);
-            } else {
-                // Создаем запись для новой запчасти, если её ещё нет у техника
-                TechnicianPart::create([
-                    'technician_id' => $technician->user_id,
-                    'part_id' => $part->id,
-                    'quantity' => $quantity,
-                    'total_transferred' => $quantity,
-                    'manager_id' => Auth::id(),
-                ]);
+                $quantity = $this->partQuantities[$partId] ?? 1;
+
+                // Убедимся, что запрашиваемое количество не превышает количество на складе
+                if ($quantity > $part->quantity) {
+                    $quantity = $part->quantity;
+                }
+
+                if ($quantity <= 0) {
+                    continue; // Пропускаем, если количество равно 0 или отрицательное
+                }
+
+                // Уменьшаем количество запчастей на складе
+                $part->update(['quantity' => $part->quantity - $quantity]);
+
+                // Проверяем, есть ли у техника уже эта запчасть
+                $technicianPart = TechnicianPart::where('technician_id', $technician->user_id)
+                    ->where('part_id', $part->id)
+                    ->first();
+
+                if ($technicianPart) {
+                    // Увеличиваем количество запчастей у техника и общее количество переданных
+                    $technicianPart->increment('quantity', $quantity);
+                    $technicianPart->increment('total_transferred', $quantity);
+                } else {
+                    // Создаем запись для новой запчасти, если её ещё нет у техника
+                    TechnicianPart::create([
+                        'technician_id' => $technician->user_id,
+                        'part_id' => $part->id,
+                        'quantity' => $quantity,
+                        'total_transferred' => $quantity,
+                        'manager_id' => Auth::id(),
+                    ]);
+                }
             }
         }
 
         // Закрываем модальное окно и сбрасываем выбранные значения
         $this->dispatch('modal-close');
-        session()->flash('message', 'Запчасти успешно переданы.');
-        $this->isPriceHistoryModalOpen = false;
-        $this->reset(['selectedTechnician', 'partQuantities', 'selectedPartId']);
+        $this->notificationType = 'success';
+        $this->notificationMessage = 'Запчасти успешно переданы выбранным техникам';
+        $this->reset(['selectedTechnicians', 'partQuantities', 'selectedPartId']);
     }
 
     // Метод для увеличения на единицу
@@ -248,6 +286,57 @@ class ManagerParts extends Component
         $this->dispatch('partUpdated');
     }
 
+    public function updateName($partId, $newName)
+    {
+        $part = Part::find($partId);
+
+        if (!$part) {
+            $this->notificationType = 'error';
+            $this->notificationMessage = 'Part not found';
+            return;
+        }
+
+        // Обновляем название
+        $part->name = $newName;
+        $part->save();
+
+        $this->notificationType = 'success';
+        $this->notificationMessage = 'Part name updated successfully';
+    }
+
+    public function savePns($partId, $selectedPns)
+    {
+        // Найти запчасть по ID
+        $part = Part::find($partId);
+
+        if (!$part) {
+            $this->notificationType = 'error';
+            $this->notificationMessage = 'Part not found';
+            return;
+        }
+
+        // Удаляем существующие PN, которые отсутствуют в выбранном списке
+        $part->pns()->whereNotIn('number', $selectedPns)->delete();
+
+        // Проверяем и добавляем новые PN
+        foreach ($selectedPns as $pn) {
+            // Проверяем существование PN для данной запчасти
+            $exists = Pn::where('number', $pn)->where('part_id', $part->id)->exists();
+
+            if (!$exists) {
+                // Добавляем только новые PN
+                Pn::create([
+                    'number' => $pn,
+                    'part_id' => $part->id,
+                ]);
+            }
+        }
+
+        // Уведомление об успешной операции
+        $this->notificationType = 'success';
+        $this->notificationMessage = 'PNs updated successfully!';
+    }
+
     public function updatePartPrice($partId, $newPrice)
     {
         // Находим запчасть
@@ -291,7 +380,7 @@ class ManagerParts extends Component
         $part = Part::find($partId);
 
         $data = json_decode($part->url, true) ?? [];
-        $this->managerPartUrlText = $data['text'] ?? '';
+        $this->managerPartSupplier = $data['text'] ?? '';
         $this->managerPartUrl = $data['url'] ?? '';
         $this->managerPartUrlModalVisible = true;
     }
@@ -301,7 +390,7 @@ class ManagerParts extends Component
         $part = Part::find($this->selectedPartId);
         //$part->url = json_encode(['text' => '', 'url' => $this->url]);
         $part->url = json_encode([
-            'text' => $this->managerPartUrlText,
+            'text' => $this->managerPartSupplier,
             'url' => $this->managerPartUrl,
         ]);
         $part->save();
@@ -309,16 +398,6 @@ class ManagerParts extends Component
         $this->managerPartUrlModalVisible = false;
         $this->refreshComponent();
     }
-
-    /*public function saveBrands($partId, $selectedBrands)
-    {
-        // Получаем запчасть и синхронизируем бренды
-        $part = Part::find($partId);
-        $part->brands()->sync($selectedBrands);
-
-        // Обновляем представление
-        $this->dispatch('brandsUpdated');
-    }*/
 
     public function updatePartBrands($partId, $selectedBrands)
     {

@@ -13,6 +13,9 @@
     <div x-show="currentTab === 'brands'">
         @livewire('manager-brands', [], key('manager-brands'))
     </div>
+    <div x-show="currentTab === 'suppliers'">
+        @livewire('manager-suppliers', [], key('manager-suppliers'))
+    </div>
     <div x-show="currentTab === 'parts'">
         @livewire('manager-parts', [], key('manager-parts'))
     </div>

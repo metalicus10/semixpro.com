@@ -82,8 +82,7 @@
                 selectedParts: [],
                 partQuantities: {},
                 partStock: @js($parts->pluck('quantity', 'id')),
-                modalOpen: false,
-                selectedTechnician: @entangle('selectedTechnician').defer,
+                transferPartsModalOpen: false,
                 toggleCheckAll(event) {
                     this.selectedParts = event.target.checked ? @json($parts->pluck('id')) : [];
                     this.selectedParts.forEach(partId => {
@@ -110,18 +109,11 @@
                 },
                 openModal() {
                     if (this.selectedParts.length > 0) {
-                        this.modalOpen = true;
+                        this.transferPartsModalOpen = true;
                     }
                 },
                 closeModal() {
-                    this.modalOpen = false;
-                },
-                isSendButtonEnabled() {
-                    return this.selectedTechnician &&
-                        this.selectedParts.every(partId =>
-                            this.partQuantities[partId] > 0 &&
-                            this.partQuantities[partId] <= this.partStock[partId]
-                        );
+                    this.transferPartsModalOpen = false;
                 },
                 limitQuantity(partId) {
                     if (this.partQuantities[partId] > this.partStock[partId]) {
@@ -136,7 +128,7 @@
                 <div id="parts-table"
                      class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                     <!-- Заголовок таблицы -->
-                    <div class="hidden md:flex text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                    <div class="hidden md:flex text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
                         <div class="flex items-center w-1/12">
                             <input type="checkbox" @click="toggleCheckAll($event)"
                                 :checked="selectedParts.length === @json($parts->count())"
@@ -169,7 +161,7 @@
                     <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                         @forelse ($parts as $part)
                             <div
-                                class="parent-container flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 relative">
+                                class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 relative">
                                 <div class="block sm:hidden absolute top-5 right-5 mb-2">
                                     <input type="checkbox" :value="{{ $part->id }}"
                                            @click="togglePartSelection({{ $part->id }})"
@@ -189,51 +181,214 @@
                                     <span class="md:hidden font-semibold">SKU:</span> {{ $part->sku }}
                                 </div>
                                 <!-- Name -->
-                                <div class="w-full md:w-2/12 mb-2 md:mb-0">
-                                    <span class="md:hidden font-semibold">Name:</span> {{ $part->name }}
+                                <div x-data="{ 
+                                    showPnPopover: false, 
+                                    showEditMenu: false,
+                                    showAddMenu: false,
+                                    editingName: false, 
+                                    editingPn: false,
+                                    addingPn: false, 
+                                    newName: '{{ $part->name }}',
+                                    originalName: '{{ $part->name }}',
+                                    selectedPns: @js($part->pns ? $part->pns->pluck('number')->toArray() : []),
+                                    availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
+                                    searchPn: '',
+                                    errorMessage: '', 
+                                    newPn: '', 
+                                    savePn() {
+                                        if (!this.newPn.trim()) {
+                                            this.errorMessage = 'PN cannot be empty.';
+                                            return;
+                                        }
+                                        // Проверяем на дублирование
+                                        if (this.selectedPns.includes(this.newPn)) {
+                                            this.errorMessage = 'PN already exists.';
+                                            return;
+                                        }
+                                        this.errorMessage = '';
+                                        this.selectedPns.push(this.newPn);
+                                        this.newPn = '';
+                                        addingPn = false;
+                                    }
+                                }" 
+                                class="w-full md:w-2/12 mb-2 md:mb-0 flex items-center relative">
+                                    <span class="md:hidden font-semibold">Name:</span>
+
+                                    <!-- Синий кружок для PN -->
+                                    <div class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2"
+                                        @click="showPnPopover = !showPnPopover">
+                                        PN
+                                    </div>
+
+                                    <!-- Поповер для PN -->
+                                    <div x-show="showPnPopover"
+                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                        @click.away="showPnPopover = false" 
+                                        x-cloak>
+                                        <h4 class="text-gray-700 dark:text-gray-400 text-sm font-semibold mb-2">Part Numbers</h4>
+                                        <ul>
+                                        @if(!is_null($part->pns))
+                                        @if($part->pns->isNotEmpty())
+                                        <!-- Если массив не пуст -->
+                                            @foreach ($part->pns as $pn)
+                                                <li class="text-gray-600 text-sm mb-1"><span>{{ $pn->number }}</span></li>
+                                            @endforeach
+                                        @else
+                                            <li class="text-gray-600 text-sm mb-1"><span>No PN's</span></li>
+                                        @endif
+                                        @endif
+                                        </ul>
+                                    </div>
+
+                                    <!-- Название с подменю -->
+                                    <div class="flex items-center w-full relative">
+                                        <!-- Оверлей -->
+                                        <div x-show="editingName || editingPn || addingPn" 
+                                            class="fixed inset-0 bg-black bg-opacity-50 z-40" 
+                                            @click="editingName = false; editingPn = false; showEditMenu = false;" 
+                                            x-cloak>
+                                        </div>
+
+                                        <!-- Основное отображение -->
+                                        <span x-show="!editingName && !editingPn" 
+                                            @click="showEditMenu = !showEditMenu" 
+                                            class="flex items-center cursor-pointer hover:underline min-h-[30px]">
+                                            {{ $part->name }}
+                                        </span>
+
+                                        <!-- Подменю -->
+                                        <div x-show="showEditMenu" 
+                                            class="absolute flex flex-row w-full z-50 bg-white dark:bg-gray-800 text-xs border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1" 
+                                            @click.away="showEditMenu = false" 
+                                            x-cloak>
+                                            <div class="flex flex-row w-full">
+                                                <div @click="addingPn = true; showAddMenu = false;" class="w-1/3 p-2 cursor-pointer hover:bg-gray-100 hover:text-black">
+                                                    Add PN
+                                                </div>
+                                                <div @click="editingPn = true; showEditMenu = false;" class="w-1/3 p-2 cursor-pointer hover:bg-gray-100 hover:text-black">
+                                                    Edit PN
+                                                </div>
+                                                <div @click="editingName = true; showEditMenu = false;" class="w-1/3 p-2 cursor-pointer hover:bg-gray-100 hover:text-black">
+                                                    Edit Name
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Режим редактирования PN -->
+                                    <div x-show="editingPn"
+                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                        x-cloak>
+                                        <h4 class="text-gray-700 dark:text-gray-400 text-sm font-semibold mb-2">Edit Part Numbers</h4>
+                                        <input type="text" placeholder="Search PN's..." x-model="searchPn"
+                                            class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                        <div class="flex flex-row justify-between items-center">
+                                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                                                <!-- Если список отфильтрованных PNs пуст -->
+                                                <template x-if="availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase())).length === 0">
+                                                    <li class="text-gray-600 text-sm mb-1">No PN's</li>
+                                                </template>
+
+                                                <!-- Если список отфильтрованных PNs не пуст -->
+                                                <template x-for="pn in availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase()))" :key="pn">
+                                                    <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                        <input type="checkbox" :value="pn" x-model="selectedPns" class="mr-2">
+                                                        <span x-text="pn"></span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                            <div class="flex justify-end">
+                                                <button @click="$wire.savePns({{ $part->id }}, selectedPns); editingPn = false;"
+                                                    class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                                                ✓
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                        <!-- Модальное окно для добавления нового PN -->
+                                        <div x-show="addingPn" 
+                                            class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                            x-cloak @click.away="addingPn = false" >
+                                            <h4 class="text-gray-700 text-sm font-semibold mb-2">Add Part Number</h4>
+                                            
+                                            <!-- Поле ввода -->
+                                            <input type="text" x-model="newPn" placeholder="Enter new PN"
+                                                class="w-full border border-gray-300 rounded-md mb-2 px-2 py-1 text-sm">
+                                            
+                                            <!-- Ошибка -->
+                                            <div x-show="errorMessage" class="text-red-500 text-sm mb-2" x-text="errorMessage"></div>
+                                            
+                                            <!-- Кнопки действия -->
+                                            <div class="flex justify-end space-x-2">
+                                                <button @click="addingPn = false; newPn = ''; errorMessage = '';"
+                                                    class="px-3 py-1 text-sm text-gray-700 bg-white border rounded hover:bg-gray-100">
+                                                    Cancel
+                                                </button>
+                                                <button @click="
+                                                    if (newPn !== '') {
+                                                    selectedPns.push(newPn);
+                                                    $wire.savePns({{ $part->id }}, selectedPns).then(() => {
+                                                        newPn = '';
+                                                        addingPn = false;
+                                                    });
+                                                }
+                                                " class="px-3 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600">
+                                                    Save
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                    <!-- Режим редактирования Name -->
+                                    <div x-show="editingName" 
+                                        class="flex justify-center items-center w-full relative z-50" 
+                                        x-cloak>
+                                        <input type="text" x-model="newName" 
+                                            class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
+                                            @keydown.enter="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
+                                            @keydown.escape="editingName = false">
+                                        <button @click="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;" 
+                                                class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                                            ✓
+                                        </button>
+                                    </div>
                                 </div>
                                 <!-- Quantity -->
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0">
                                     <span class="md:hidden font-semibold">Quantity:</span> {{ $part->quantity }}
                                 </div>
 
-                                <div class="w-full md:w-1/12 mb-2 md:mb-0"
-                                     x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
+                                <div class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
+                                    x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
                                     <!-- Кликабельная ссылка с ценой запчасти -->
                                     <span class="md:hidden font-semibold">Price:</span>
                                     <a id="price-item-{{ $part->id }}"
                                         @click="
                                             $nextTick(() => {
-                                                const element = document.getElementById('price-item-{{ $part->id }}');
-                                                var offsetX = 75;
-                                                var offsetY = 58;
+                                                editing = false; // Сбрасываем редактирование при открытии
+                                                newPrice = '{{ $part->price }}'; // Устанавливаем текущее значение
+                                                const parent = $el.closest('.parent-container');
+                                                const elementOffsetLeft = $el.offsetLeft;
+                                                const elementOffsetTop = $el.offsetTop;
 
-                                                if (element) {
-                                                    const rect = element.getBoundingClientRect();
+                                                popoverX = elementOffsetLeft / parent.offsetWidth;
+                                                popoverY = elementOffsetTop / parent.offsetHeight;
 
-                                                    var xPosition = element.offsetLeft - offsetX;
-                                                    var yPosition = element.offsetTop - offsetY;
-
-                                                    popoverX = xPosition;
-                                                    popoverY = yPosition;
-
-                                                    showPopover = !showPopover;
-                                                    editing = false;
-                                                }
+                                                showPopover = true;
                                             });
                                         "
-                                       class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
+                                    class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
                                         ${{ $part->price }}
                                     </a>
 
                                     <!-- Поповер с динамическим позиционированием -->
                                     <div x-show="showPopover" x-transition role="tooltip"
-                                         :style="'position: absolute; top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
-                                         class="w-48 z-50 text-sm text-gray-500 bg-white border border-gray-300 rounded-lg shadow-sm dark:text-gray-400 dark:border-gray-600 dark:bg-gray-800"
-                                         @click.away="showPopover = false">
+                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                        :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                        @click.away="showPopover = false">
 
-                                        <div class="flex flew-row w-full px-3 py-2">
+                                        <div class="flex flex-row w-full">
                                             <!-- Кнопка Edit -->
                                             <button x-show="!editing"
                                                     @click.prevent="editing = true; $nextTick(() => { $refs.priceInput.focus() })"
@@ -242,17 +397,21 @@
                                             </button>
 
                                             <!-- Поле ввода новой цены и кнопка подтверждения -->
-                                            <div x-show="editing" class="flex items-center mt-2" x-transition>
+                                            <div x-show="editing" class="flex justify-center items-center" x-transition>
                                                 <input type="number" x-ref="priceInput" x-model="newPrice"
-                                                       class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
-                                                       placeholder="{{ $part->price }}">
-                                                <button @click="$wire.set('newPrice', newPrice)
-                                                .then(() => {
-                                                    $wire.updatePartPrice({{ $part->id }}, newPrice);
+                                                    class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
+                                                    placeholder="{{ $part->price }}">
+                                                <button @click="
+                                                    if (newPrice !== '{{ $part->price }}') {
+                                                        $wire.set('newPrice', newPrice)
+                                                        .then(() => {
+                                                            $wire.updatePartPrice({{ $part->id }}, newPrice);
+                                                        });
+                                                    }
                                                     showPopover = false;
                                                     editing = false;
-                                                });"
-                                                        class="bg-green-500 text-white px-2 py-1 rounded-full">
+                                                "
+                                                        class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
                                                     ✓
                                                 </button>
                                             </div>
@@ -264,11 +423,6 @@
                                                 History
                                             </button>
                                         </div>
-
-                                        <!-- Стрелка поповера -->
-                                        <div data-popper-arrow
-                                             class="absolute w-3 h-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600"
-                                             :style="'top: 100%; left: 50%; transform: translateX(-50%) translateY(-50%) rotate(90deg);'"></div>
                                     </div>
                                 </div>
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0"><span class="md:hidden font-semibold">Total:</span>${{ $part->total }}</div>
@@ -282,7 +436,7 @@
                                             @click.stop class="object-cover rounded cursor-zoom-in">
                                     </div>
                                 </div>
-                                <div id="brand-item-{{ $part->id }}" class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative"
+                                <div id="brand-item-{{ $part->id }}" class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
                                     x-data="{ showPopover: false, selectedBrands: @json($part->brands->pluck('id')), search: '', popoverX: 0, popoverY: 0 }"
 
                                     @click.away="showPopover = false"
@@ -429,7 +583,7 @@
                     </div>
                 </div>
 
-                <div x-data="{ modalOpen: false }" x-bind:class="{ 'overflow-hidden': modalOpen }">
+                <div x-data="{ transferPartsModalOpen: false }" x-bind:class="{ 'overflow-hidden': transferPartsModalOpen }">
 
                     <button
                         class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
@@ -439,7 +593,19 @@
                     </button>
 
                     <!-- Flowbite-стилизованное модальное окно -->
-                    <div x-show="modalOpen"
+                    <div x-show="transferPartsModalOpen"
+                        x-data="{ 
+                            open: false, 
+                            selectedTechnicians: @entangle('selectedTechnicians').defer || [],
+                            isSendButtonEnabled() {
+                                return this.selectedTechnicians &&
+                                    this.selectedParts.every(partId =>
+                                        this.partQuantities[partId] > 0 &&
+                                        this.partQuantities[partId] <= this.partStock[partId]
+                                    );
+                            },
+                        }"
+                        x-init="$watch('selectedTechnicians', value => $wire.set('selectedTechnicians', value))"
                         class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
                         style="display: none;">
                         <div class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
@@ -462,7 +628,7 @@
                             <form wire:submit.prevent="sendParts">
                                 <div class="space-y-4">
                                     <template x-for="partId in selectedParts" :key="partId">
-                                        <div class="mb-2">
+                                        <div class="mb-2 text-gray-900 dark:text-gray-400">
                                             <label>Запчасть #<span x-text="partId"></span> (Доступно: <span
                                                     x-text="partStock[partId]"></span>)</label>
                                             <input id="quantity" type="number" min="1" :max="partStock[partId]"
@@ -472,25 +638,42 @@
                                         </div>
                                     </template>
 
-                                    <!-- Выбор техника -->
-                                    <div>
+                                    <div
+                                        class="relative w-full text-gray-500"
+                                    >
                                         <label for="technician"
-                                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
-                                        <select id="technician" x-model="selectedTechnician" wire:model="selectedTechnician"
-                                                class="block w-full p-2 mt-1 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-                                            <option value="">Выберите техника</option>
-                                            @foreach ($technicians as $technician)
-                                                <option value="{{ $technician->id }}">{{ $technician->name }}</option>
-                                            @endforeach
-                                        </select>
-                                        <p class="text-sm text-gray-500">Выбранный техник: <span
-                                                x-text="selectedTechnician"></span></p>
+                                        class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
+
+                                        <!-- Поле выбора техников для передачи запчастей -->
+                                        <div @click="open = !open" class="w-full cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center text-gray-500">
+                                            <span x-text="selectedTechnicians.length > 0 ? selectedTechnicians.length + ' selected' : 'Select Technicians'"></span>
+                                            <svg class="h-5 w-5 text-gray-400 transform transition-transform" :class="{'rotate-180': open}"
+                                                xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd"
+                                                    d="M5.23 7.21a.75.75 0 011.06-.02L10 10.879l3.72-3.67a.75.75 0 111.04 1.08l-4.25 4.2a.75.75 0 01-1.06 0l-4.25-4.2a.75.75 0 01-.02-1.06z"
+                                                    clip-rule="evenodd"/>
+                                            </svg>
+                                        </div>
+
+                                        <!-- Выпадающий список с мульти-выбором техников -->
+                                        <div x-show="open" @click.away="open = false" x-transition
+                                            class="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                            <ul id="technician" class="py-1 text-sm text-gray-700">
+                                                @foreach ($technicians as $technician)
+                                                    <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">
+                                                        <input type="checkbox" value="{{ $technician->id }}" x-model="selectedTechnicians"
+                                                            class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                        <label class="ml-2 text-gray-700">{{ $technician->name }}</label>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <!-- Кнопки действия -->
                                 <div class="flex items-center justify-end mt-6 space-x-4">
-                                    <button type="button" @click="closeModal, modalOpen = false; document.body.classList.remove('overflow-hidden')"
+                                    <button type="button" @click="closeModal, transferPartsModalOpen = false; document.body.classList.remove('overflow-hidden')"
                                             class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
                                         Отменить
                                     </button>
@@ -624,9 +807,15 @@
                     <h2 class="text-xl font-semibold mb-4">Редактировать ссылку</h2>
 
                     <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="managerPartUrlText">Text:</label>
-                        <input wire:model="managerPartUrlText" type="text" id="managerPartUrlText"
-                               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                        <label class="block text-gray-700 text-sm font-bold mb-2" for="selectedSupplier">Supplier:</label>
+                        <select wire:model="managerPartSupplier" id="selectedSupplier"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
+                            <option value="">Select Supplier</option>
+                            @foreach ($suppliers as $supplier)
+                                <option value="{{ $supplier->name }}">{{ $supplier->name }}</option>
+                            @endforeach
+                       </select>
+                       @error('selectedSupplier') <span class="text-red-500">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="mb-4">

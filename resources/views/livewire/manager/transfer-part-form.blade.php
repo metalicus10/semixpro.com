@@ -1,14 +1,27 @@
 <div class="container mx-auto py-8">
-    @if (session()->has('message'))
-        <div class="bg-green-500 text-white p-4 rounded-lg mb-6">
-            {{ session('message') }}
-        </div>
-    @endif
-
-    @if (session()->has('error'))
-        <div class="bg-red-500 text-white p-4 rounded-lg mb-6">
-            {{ session('error') }}
-        </div>
+    @if ($notificationMessage)
+            <div
+                class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
+                x-data="{ show: true }"
+                x-init="
+            setTimeout(() => show = false, 3500);
+            setTimeout(() => $wire.clearNotification(), 3500);
+        "
+                x-show="show"
+                x-transition:enter="opacity-0"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="opacity-100"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                :class="{
+            'bg-blue-700': '{{ $notificationType }}' === 'info',
+            'bg-green-500': '{{ $notificationType }}' === 'success',
+            'bg-yellow-500': '{{ $notificationType }}' === 'warning'
+        }"
+            >
+                {{ $notificationMessage }}
+            </div>
     @endif
 
     <div class="mb-8">

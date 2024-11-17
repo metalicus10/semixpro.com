@@ -11,6 +11,10 @@ class Part extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'pns' => 'array',
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -24,7 +28,8 @@ class Part extends Model
         'image',
         'category_id',
         'total',
-        'url'
+        'url',
+        'pns',
     ];
 
     public static function boot()
@@ -81,6 +86,11 @@ class Part extends Model
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    public function pns()
+    {
+        return $this->hasMany(Pn::class, 'part_id', 'id');
     }
 
 }

@@ -12,6 +12,7 @@ use Intervention\Image\Drivers\Imagick\Driver;
 use Livewire\Component;
 use App\Models\Category;
 use App\Models\Part;
+use App\Models\Pn;
 use Livewire\WithFileUploads;
 use Exception;
 use function Termwind\render;
@@ -23,6 +24,7 @@ class ManagerPartForm extends Component
     public $categoryName;
     public $partName;
     public $sku;
+    public $pn;
     public $brand;
     public $brands;
     public $warehouses;
@@ -119,9 +121,16 @@ class ManagerPartForm extends Component
             'image' => 'nullable|image|max:5200',
             'selectedCategory' => 'required|exists:categories,id',
             'url' => 'nullable|url',
+            'pn' => 'nullable|string|max:255',
         ]);
 
         $this->price = $this->price !== null ? (float) $this->price : null;
+        
+        if (Pn::where('number', $this->pn)->exists()) {
+            $this->notificationType = 'error';
+            $this->notificationMessage = 'Part number already exists';
+            return;
+        }
 
         // Получаем идентификатор текущего пользователя
         $userId = auth()->id();
@@ -161,6 +170,11 @@ class ManagerPartForm extends Component
             'category_id' => $this->selectedCategory,
             'url' => json_encode(['url' => $this->url, 'text' => $this->text ?? '']),
             'total' => $this->quantity * $this->price,
+        ]);
+
+        Pn::create([
+            'number' => $this->pn,
+            'part_id' => $part->id,
         ]);
 
         // Привязываем выбранные бренды к запчасти

@@ -3,16 +3,30 @@
 namespace App\Livewire;
 
 use App\Models\Part;
+use App\Models\Supplier;
 use Livewire\Component;
+use Illuminate\Support\Facades\Auth;
 
 class ManagerPartUrlModal extends Component
 {
     public $partId;
     public $text = '';
+    public $selectedSupplier;
     public $url = '';
-    public $isOpen = false;
+    public $isUrlModalOpen = false;
+    public $suppliers;
 
     protected $listeners = ['openModal' => 'open'];
+
+    public function mount()
+    {
+        $this->loadSuppliers();
+    }
+
+    public function loadSuppliers()
+    {
+        $this->suppliers = Supplier::where('manager_id', Auth::id())->get();
+    }
 
     public function open($partId)
     {
@@ -21,7 +35,7 @@ class ManagerPartUrlModal extends Component
 
         $this->text = $part->text ?? '';
         $this->url = $part->url;
-        $this->isOpen = true;
+        $this->isUrlModalOpen = true;
     }
 
     public function save()
@@ -31,7 +45,7 @@ class ManagerPartUrlModal extends Component
         $part->url = $this->url;
         $part->save();
 
-        $this->isOpen = false;
+        $this->isUrlModalOpen = false;
         $this->dispatch('refreshParts'); // Для обновления списка запчастей
     }
     public function render()

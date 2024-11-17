@@ -17,27 +17,22 @@
         <!-- Таблица с категориями -->
         <div class="bg-white shadow-md rounded-lg overflow-hidden">
             <!-- Заголовок таблицы -->
-            <div class="hidden md:flex bg-gray-50 dark:bg-gray-700 text-xs text-gray-700 uppercase dark:text-gray-400">
-                <div class="flex-1 px-5 py-3">ID</div>
-                <div class="flex-1 px-5 py-3">Category Name</div>
-                <div class="flex-1 px-5 py-3">Actions</div>
+            <div class="hidden md:flex bg-gray-50 dark:bg-gray-700 text-xs font-bold text-gray-700 uppercase dark:text-gray-400 px-5 py-3">
+                <div class="flex-1">Category Name</div>
+                <div class="flex-1">Actions</div>
             </div>
 
             <!-- Ряды таблицы -->
             <div class="space-y-0">
                 @foreach($categories as $category)
                     <div
-                        class="flex flex-col md:flex-row items-start md:items-center bg-white text-gray-700 dark:text-gray-400 border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-4">
-                        <!-- ID -->
-                        <div class="md:flex-1 md:px-5 py-2">
-                            <span class="md:hidden font-semibold">ID: </span>{{ $category->id }}
-                        </div>
+                        class="flex flex-col md:flex-row items-start md:items-center bg-white text-gray-700 dark:text-gray-400 border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] px-5 py-3">
                         <!-- Category Name -->
-                        <div class="md:flex-1 md:px-5 py-2">
+                        <div class="md:flex-1">
                             <span class="md:hidden font-semibold">Category Name: </span>{{ $category->name }}
                         </div>
                         <!-- Actions -->
-                        <div class="md:flex-1 md:px-5 py-2 flex space-x-2">
+                        <div class="md:flex-1 flex space-x-2">
                             <button wire:click="editCategory({{ $category->id }})"
                                     class="px-2 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
                                 Edit

@@ -13,6 +13,13 @@ class TransferPartForm extends Component
     public $partId;
     public $technicianId;
     public $quantity;
+    public $notificationMessage = '';
+    public $notificationType = 'info';
+
+    public function clearNotification()
+    {
+        $this->notificationMessage = '';
+    }
 
     public function transferPart()
     {
@@ -25,7 +32,8 @@ class TransferPartForm extends Component
         $part = Part::find($this->partId);
 
         if ($this->quantity > $part->quantity) {
-            session()->flash('error', 'Недостаточно запчастей на складе.');
+            $this->notificationMessage = 'Недостаточно запчастей на складе';
+            $this->notificationType = 'warning';
             return;
         }
 
@@ -40,8 +48,9 @@ class TransferPartForm extends Component
             'manager_id' => Auth::id(),
         ]);
 
-        session()->flash('message', 'Запчасть успешно передана.');
         $this->reset(['partId', 'technicianId', 'quantity']);
+        $this->notificationMessage = 'Запчасть успешно передана';
+        $this->notificationType = 'success';
     }
 
     public function render()

@@ -1,4 +1,4 @@
-<div class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg">
     <h2 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400 mb-6">Manage Warehouses</h2>
 
     <!-- Создание нового склада -->
@@ -61,7 +61,7 @@
                 </div>
 
                 <!-- Список запчастей с мульти-выбором -->
-                <ul class="py-1 text-sm text-gray-700">
+                <ul class="py-1 text-sm text-gray-700 max-h-[100px]">
                     @foreach ($parts as $part)
                         <template x-if="!search || '{{ strtolower($part->name) }}'.includes(search.toLowerCase())">
                             <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">

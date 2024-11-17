@@ -11,11 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('part_price_history', function (Blueprint $table) {
+        Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('part_id')->constrained('parts')->onDelete('cascade');
-            $table->decimal('price', 10, 2);
-            $table->timestamp('changed_at')->useCurrent();
+            $table->string('name')->unique();
+            $table->foreignId('manager_id')->constrained('users');
             $table->timestamps();
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('part_price_history');
+        Schema::dropIfExists('suppliers');
     }
 };

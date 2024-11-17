@@ -80,6 +80,11 @@ class ManagerStatistics extends Component
         $this->usedParts[$partId] = $this->countUsedParts($partId);
     }
 
+    public function clearNotification()
+    {
+        $this->notificationMessage = '';
+    }
+
     public function render()
     {
         //$usageStats = $this->updatePartQuantity($partId);

@@ -157,6 +157,12 @@
                             </ul>
                         </div>
                     </div>
+                    <!-- Ввод part number -->
+                    <div class="mb-4">
+                        <input id="partNumber" type="text" wire:model="pn"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Part Number">
+                    </div>
                     <!-- Кнопка для выбора изображения -->
                     <input type="file" wire:model="image" id="image" accept="image/*"
                            class="border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full">
