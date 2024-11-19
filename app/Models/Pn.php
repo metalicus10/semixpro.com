@@ -9,10 +9,15 @@ class Pn extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['number', 'part_id'];
+    protected $fillable = ['number', 'part_id', 'manager_id',];
 
     public function part()
     {
         return $this->belongsTo(Part::class);
+    }
+
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id');
     }
 }

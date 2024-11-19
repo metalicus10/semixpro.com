@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Illuminate\Support\Facades\Storage;
 
 class ManagerParts extends Component
 {
@@ -42,14 +43,24 @@ class ManagerParts extends Component
     public $errorMessage = '';
     public $fullImage;
     public $startDate, $endDate;
-    public $notificationMessage = '';
-    public $notificationType = 'info';
+    //public $notificationMessage = '';
+    //public $notificationType = 'info';
     public $managerPartUrlModalVisible = false;
     public $managerPartSupplier = '';
     public $managerPartUrl = '';
-    public $availablePns = [];
-    public $selectedPns = [];
     public $loaded = false;
+    public $selectedPns = [];
+    public $availablePns = [];
+    public $selectedPartNames = [];
+    public $selectedParts = [];
+    
+    public $partId;
+    public $newPn;
+    public $searchPn = '';
+
+    protected $rules = [
+        'newPn' => 'required|string|max:255|unique:pns,number',
+    ];
 
     protected $listeners = [
         'categoryUpdated' => 'refreshComponent',
@@ -57,13 +68,27 @@ class ManagerParts extends Component
         'brandUpdated' => 'refreshComponent',
         'update-part-quantities' => 'updatePartQuantities',
         'open-price-modal' => 'openPriceModal',
+        'pnsAdded' => 'handlePnsUpdated',
         'refreshParts' => '$refresh'
     ];
 
     public function mount()
     {
         $this->loadSuppliers();
-        $this->availablePns = Pn::pluck('number')->toArray();
+        //$this->selectedPns = $partPns->pluck('number')->toArray();
+        //$this->availablePns = Pn::pluck('number')->toArray();
+    }
+
+    public function handlePnsUpdated($props)
+    {
+        // Обработка события
+        //$this->dispatch('notification', ['type' => 'success', 'message' => 'PNs updated for part ID: ' . $partId]);
+
+        $this->notificationType = $props['type'];
+        $this->notificationMessage = $props['message'];
+        
+        // Обновление данных, если нужно
+        //$this->parts = $this->getFilteredParts();
     }
 
     public function loadComponent()
@@ -81,9 +106,72 @@ class ManagerParts extends Component
         $this->render();
     }
 
-    public function clearNotification()
+    public function getPartPns($partId)
     {
-        $this->notificationMessage = '';
+        // Получить все PN для запчасти с указанным ID
+        $pns = Pn::where('part_id', $partId)->pluck('number');
+
+        // Вернуть массив или использовать данные по необходимости
+        return $pns;
+    }
+
+    public function updatePns()
+    {
+        $part = Part::find($this->partId);
+
+        if (!$part) {
+            $this->errorMessage = 'Part not found';
+            return;
+        }
+
+        // Удаляем существующие PNs
+        $part->pns()->delete();
+
+        // Сохраняем новые PNs
+        foreach ($this->selectedPns as $pn) {
+            Pn::create([
+                'number' => $pn,
+                'part_id' => $this->partId,
+            ]);
+        }
+
+        $this->dispatch('showNotification', 'success', 'PNs updated successfully');
+    }
+
+    public function addPn()
+    {
+        $this->validate();
+
+        // Проверяем существование PN
+        if (Pn::where('number', $this->newPn)->exists()) {
+            $this->dispatch('showNotification', 'error', 'PN already exists');
+            return;
+        }
+
+        $part = Part::find($this->partId);
+        $this->updatePartPnsJson($part);
+        
+        // Добавляем новый PN
+        Pn::create([
+            'number' => $this->newPn,
+            'part_id' => $this->partId,
+            'manager_id' => auth()->id(),
+        ]);
+        
+        $this->dispatch('pn-added');
+        $this->dispatch('showNotification', 'success', 'PN added successfully');
+        $this->newPn = null;
+    }
+
+    public function updatePartPnsJson($part)
+    {
+        $pns = Pn::where('part_id', $part->id)->where('manager_id', auth()->id())->pluck('number')->toArray();
+
+        $json = json_encode((object)$pns);
+
+        $part->update([
+            'pns' => $json,
+        ]);
     }
 
     public function showImage($imageUrl)
@@ -139,7 +227,7 @@ class ManagerParts extends Component
         $part = Part::find($partId);
         if ($value > $part->quantity) {
             $this->transferQuantities[$partId] = $part->quantity;
-            session()->flash('warning', 'Запчасть будет исчерпана, требуется пополнение.');
+            $this->dispatch('showNotification', 'warning', 'The spare part will be depleted, replenishment is required');
         }
         $this->updateSendButtonState();
     }
@@ -168,8 +256,7 @@ class ManagerParts extends Component
     public function sendParts()
     {
         if (empty($this->selectedTechnicians)) {
-            $this->notificationType = 'error';
-            $this->notificationMessage = 'Не выбраны техники для передачи запчастей';
+            $this->dispatch('showNotification', 'error', 'Не выбраны техники для передачи запчастей');
             return;
         }
 
@@ -178,8 +265,7 @@ class ManagerParts extends Component
             $technician = Technician::find($technicianId);
 
             if (!$technician) {
-                $this->notificationType = 'error';
-                $this->notificationMessage = "Техник с ID $technicianId не найден";
+                $this->dispatch('showNotification', 'error', 'Техник с ID'.$technicianId.' не найден');
                 continue; // Переходим к следующему технику
             }
 
@@ -188,8 +274,7 @@ class ManagerParts extends Component
                 $part = Part::find($partId);
 
                 if (!$part) {
-                    $this->notificationType = 'error';
-                    $this->notificationMessage = "Запчасть с ID $partId не найдена";
+                    $this->dispatch('showNotification', 'error', 'Запчасть с ID'.$partId.' не найдена');
                     continue; // Переходим к следующей запчасти
                 }
 
@@ -231,9 +316,45 @@ class ManagerParts extends Component
 
         // Закрываем модальное окно и сбрасываем выбранные значения
         $this->dispatch('modal-close');
-        $this->notificationType = 'success';
-        $this->notificationMessage = 'Запчасти успешно переданы выбранным техникам';
+        $this->dispatch('showNotification', 'success', 'Запчасти успешно переданы выбранным техникам');
         $this->reset(['selectedTechnicians', 'partQuantities', 'selectedPartId']);
+    }
+
+    public function getSelectedPartNames()
+    {
+        return Part::whereIn('id', $this->selectedParts)->pluck('name')->toArray();
+    }
+
+    public function updatedSelectedParts()
+    {
+        $this->selectedPartNames = Part::whereIn('id', $this->selectedParts)->pluck('name')->toArray();
+    }
+
+    public function deleteParts()
+    {
+        if (!empty($this->selectedParts)) {
+            $parts = Part::whereIn('id', $this->selectedParts)->get();
+
+            foreach($parts as $part){
+                if ($part->image && Storage::disk('s3')->exists($part->image)) {
+                    Storage::disk('s3')->delete($part->image);
+                }
+
+                // Обновляем запись в базе данных
+                $part->update(['image' => null]);
+            }
+
+            // Удаление записей в technician_parts
+            TechnicianPart::whereIn('part_id', $this->selectedParts)->delete();
+            
+            // Удаляем запчасти
+            Part::whereIn('id', $this->selectedParts)->delete();
+
+            $this->selectedParts = [];
+            $this->dispatch('showNotification', 'success', 'Selected parts deleted successfully!');
+        } else {
+            $this->dispatch('showNotification', 'warning', 'No parts selected for deletion!');
+        }
     }
 
     // Метод для увеличения на единицу
@@ -283,7 +404,9 @@ class ManagerParts extends Component
         }
 
         $this->resetQuantityModal();
-        $this->dispatch('partUpdated');
+        //$this->dispatch('partUpdated');
+        $this->dispatch('part-updated', ['partId' => $part->id, 'newQuantity' => $part->quantity]);
+
     }
 
     public function updateName($partId, $newName)
@@ -291,8 +414,7 @@ class ManagerParts extends Component
         $part = Part::find($partId);
 
         if (!$part) {
-            $this->notificationType = 'error';
-            $this->notificationMessage = 'Part not found';
+            $this->dispatch('showNotification', 'error', 'Part not found');
             return;
         }
 
@@ -300,8 +422,7 @@ class ManagerParts extends Component
         $part->name = $newName;
         $part->save();
 
-        $this->notificationType = 'success';
-        $this->notificationMessage = 'Part name updated successfully';
+        $this->dispatch('showNotification', 'success', 'Part name updated successfully');
     }
 
     public function savePns($partId, $selectedPns)
@@ -310,8 +431,7 @@ class ManagerParts extends Component
         $part = Part::find($partId);
 
         if (!$part) {
-            $this->notificationType = 'error';
-            $this->notificationMessage = 'Part not found';
+            $this->dispatch('showNotification', 'error', 'Part not found');
             return;
         }
 
@@ -333,8 +453,7 @@ class ManagerParts extends Component
         }
 
         // Уведомление об успешной операции
-        $this->notificationType = 'success';
-        $this->notificationMessage = 'PNs updated successfully!';
+        $this->dispatch('showNotification', 'success', 'PNs updated successfully!');
     }
 
     public function updatePartPrice($partId, $newPrice)
@@ -345,8 +464,7 @@ class ManagerParts extends Component
         if ($part && $this->newPrice) {
             // Проверяем, отличается ли новая цена от текущей
             if ($part->price == $newPrice) {
-                $this->notificationMessage = 'Цена не изменена';
-                $this->notificationType = 'info';
+                $this->dispatch('showNotification', 'info', 'Цена не изменена');
                 return; // Выходим из метода, если цена не изменилась
             }
 
@@ -360,11 +478,9 @@ class ManagerParts extends Component
             // Обновляем цену запчасти
             $part->update(['price' => $newPrice]);
 
-            $this->notificationMessage = 'Цена успешно обновлена и записана в историю';
-            $this->notificationType = 'success';
+            $this->dispatch('showNotification', 'success', 'Цена успешно обновлена и записана в историю');
         } else {
-            $this->notificationMessage = 'Цена не была введена';
-            $this->notificationType = 'info';
+            $this->dispatch('showNotification', 'info', 'Цена не была введена');
         }
     }
 

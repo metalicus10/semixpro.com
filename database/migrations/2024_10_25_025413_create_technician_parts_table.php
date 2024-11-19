@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('technician_id')->constrained('users'); // Техники ссылаются на пользователей
             $table->foreignId('manager_id')->constrained('users');
-            $table->foreignId('part_id')->constrained('parts'); // Ссылка на запчасти
+            $table->foreignId('part_id')->constrained('parts')->onDelete('cascade');
             $table->integer('quantity'); // Количество переданных запчастей
             $table->timestamps();
         });

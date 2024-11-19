@@ -1,30 +1,7 @@
 <div wire:init="loadComponent" x-data="{ initialized: false }" x-init="setTimeout(() => initialized = true, 100)"
      class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
     @if($loaded)
-        @if ($notificationMessage)
-            <div
-                class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
-                x-data="{ show: true }"
-                x-init="
-            setTimeout(() => show = false, 3500);
-            setTimeout(() => $wire.clearNotification(), 3500);
-        "
-                x-show="show"
-                x-transition:enter="opacity-0"
-                x-transition:enter-start="opacity-0"
-                x-transition:enter-end="opacity-100"
-                x-transition:leave="opacity-100"
-                x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"
-                :class="{
-            'bg-blue-700': '{{ $notificationType }}' === 'info',
-            'bg-green-500': '{{ $notificationType }}' === 'success',
-            'bg-yellow-500': '{{ $notificationType }}' === 'warning'
-        }"
-            >
-                {{ $notificationMessage }}
-            </div>
-        @endif
+        
 
         <!-- Заголовок страницы и фильтры -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
@@ -79,49 +56,68 @@
 
             <!-- Таблица -->
             <div x-data="{
-                selectedParts: [],
-                partQuantities: {},
-                partStock: @js($parts->pluck('quantity', 'id')),
-                transferPartsModalOpen: false,
-                toggleCheckAll(event) {
-                    this.selectedParts = event.target.checked ? @json($parts->pluck('id')) : [];
-                    this.selectedParts.forEach(partId => {
-                        if (!this.partQuantities[partId]) {
-                            this.partQuantities[partId] = 1;
+                    selectedParts: @entangle('selectedParts'),
+                    selectedPartNames: [],
+                    async fetchSelectedNames() {
+                        if (this.selectedParts.length) {
+                            this.selectedPartNames = await $wire.call('getSelectedPartNames');
+                        } else {
+                            this.selectedPartNames = [];
                         }
-                    });
+                    },
+                    partQuantities: {},
+                    partStock: @js($parts->pluck('quantity', 'id')),
+                    transferPartsModalOpen: false,
+                    deletePartsModalOpen: false,
+                    toggleCheckAll(event) {
+                        this.selectedParts = event.target.checked ? @json($parts->pluck('id')) : [];
+                        this.selectedParts.forEach(partId => {
+                            if (!this.partQuantities[partId]) {
+                                this.partQuantities[partId] = 1;
+                            }
+                        });
 
-                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
-                },
+                        $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                    },
 
-                togglePartSelection(partId) {
-                    if (this.selectedParts.includes(partId)) {
-                        this.selectedParts = this.selectedParts.filter(id => id !== partId);
-                        delete this.partQuantities[partId];
-                    } else {
-                        this.selectedParts.push(partId);
-                        if (!this.partQuantities[partId]) {
-                            this.partQuantities[partId] = 1;
+                    togglePartSelection(partId) {
+                        if (this.selectedParts.includes(partId)) {
+                            this.selectedParts = this.selectedParts.filter(id => id !== partId);
+                            delete this.partQuantities[partId];
+                        } else {
+                            this.selectedParts.push(partId);
+                            if (!this.partQuantities[partId]) {
+                                this.partQuantities[partId] = 1;
+                            }
                         }
-                    }
 
-                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
-                },
-                openModal() {
-                    if (this.selectedParts.length > 0) {
-                        this.transferPartsModalOpen = true;
+                        $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                    },
+                    openModal() {
+                        if (this.selectedParts.length > 0) {
+                            this.transferPartsModalOpen = true;
+                        }
+                    },
+                    openDeleteModal() {
+                        if (this.selectedParts.length > 0) {
+                            this.fetchSelectedNames();
+                            this.deletePartsModalOpen = true;
+                        }
+                    },
+                    closeDeleteModal() {
+                        this.deletePartsModalOpen = false;
+                    },
+                    closeModal() {
+                        this.transferPartsModalOpen = false;
+                    },
+                    limitQuantity(partId) {
+                        if (this.partQuantities[partId] > this.partStock[partId]) {
+                            this.partQuantities[partId] = this.partStock[partId];
+                        }
+                        $dispatch('update-part-quantities', { quantities: this.partQuantities });
                     }
-                },
-                closeModal() {
-                    this.transferPartsModalOpen = false;
-                },
-                limitQuantity(partId) {
-                    if (this.partQuantities[partId] > this.partStock[partId]) {
-                        this.partQuantities[partId] = this.partStock[partId];
-                    }
-                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
-                }
-            }"
+                }"
+                x-init="$watch('selectedParts', () => fetchSelectedNames())"
                  @keydown.escape="closeModal"
                  class="w-full rounded-md bg-gray-300 dark:bg-gray-800 md:border-neutral-300 md:dark:border-neutral-500"
             >
@@ -180,168 +176,131 @@
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0">
                                     <span class="md:hidden font-semibold">SKU:</span> {{ $part->sku }}
                                 </div>
+
                                 <!-- Name -->
                                 <div x-data="{ 
-                                    showPnPopover: false, 
                                     showEditMenu: false,
-                                    showAddMenu: false,
                                     editingName: false, 
-                                    editingPn: false,
-                                    addingPn: false, 
                                     newName: '{{ $part->name }}',
                                     originalName: '{{ $part->name }}',
-                                    selectedPns: @js($part->pns ? $part->pns->pluck('number')->toArray() : []),
-                                    availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
-                                    searchPn: '',
                                     errorMessage: '', 
-                                    newPn: '', 
-                                    savePn() {
-                                        if (!this.newPn.trim()) {
-                                            this.errorMessage = 'PN cannot be empty.';
-                                            return;
-                                        }
-                                        // Проверяем на дублирование
-                                        if (this.selectedPns.includes(this.newPn)) {
-                                            this.errorMessage = 'PN already exists.';
-                                            return;
-                                        }
-                                        this.errorMessage = '';
-                                        this.selectedPns.push(this.newPn);
-                                        this.newPn = '';
-                                        addingPn = false;
-                                    }
-                                }" 
-                                class="w-full md:w-2/12 mb-2 md:mb-0 flex items-center relative">
+                                    showPnPopover: false, 
+                                    editingPn: false, 
+                                    searchPn: '', 
+                                    newPn: '',
+                                    addingPn: false, 
+                                    availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
+                                    selectedPns: @entangle('selectedPns'),
+                                }" @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
+                                class="flex flex-row w-full md:w-2/12 mb-2 md:mb-0 cursor-pointer relative">
+
+                                    <!-- PN -->
+                                    <div class="flex relative">
+        
+                                        <!-- Список существующих PNs -->
+                                        <div class="flex z-30 items-center" x-cloak>
+                                            <!-- Кнопка для открытия поповера -->
+                                            <div class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2 uppercase font-bold text-[10px]"
+                                                @click="showPnPopover = !showPnPopover">
+                                                PN
+                                            </div>
+                                    
+                                            <!-- Поповер для редактирования PNs -->
+                                            <div x-show="showPnPopover" x-transition @click.away="showPnPopover = false" class="flex absolute z-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1">
+                                    
+                                                <!-- Оверлей -->
+                                                <div x-show="editingPn || addingPn || showPnPopover" 
+                                                    class="flex fixed inset-0 bg-black bg-opacity-50 z-30" 
+                                                    @click="editingPn = false; showEditMenu = false; showShowMenu = false; addingPn = false; showPnPopover = false;" 
+                                                    x-cloak>
+                                                </div>
+                                    
+                                                <div class="flex flex-row w-full cursor-pointer z-50" x-cloak>
+                                                    <div @click="addingPn = true; showAddMenu = false; showPnPopover = false" class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                        Add PN
+                                                    </div>
+                                                    <div @click="editingPn = true; showEditMenu = false;" class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                        Edit PN
+                                                    </div>
+                                                    <div @click="showPn = true; showShowMenu = false;" class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                        Show PN
+                                                    </div>
+                                                </div>
+                                    
+                                                
+                                            </div>
+                                        </div>
+                                    
+                                        <!-- Поле ввода нового PN -->
+                                        <div x-show="addingPn" class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1" x-transition 
+                                            @click.away="addingPn = false; newPn = ''; errorMessage = '';"
+                                        >
+                                            <div class="flex flex-row w-full">
+                                                <div class="flex justify-center items-center">
+                                                    <!-- Поле ввода -->
+                                                    <input type="text" wire:model="newPn" placeholder="Enter new PN"
+                                                        class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2">
+                                    
+                                                    <!-- Кнопки действия -->
+                                                    <button wire:click="addPn" class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
+                                                        ✓
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    
+                                        <!-- Режим редактирования PN -->
+                                        <div x-show="editingPn" @click.away="editingPn = false"
+                                            class="fixed inset-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                            x-cloak x-transition>
+                                            <h4 class="text-gray-700 dark:text-gray-400 text-sm font-semibold mb-2">Edit Part Numbers</h4>
+                                            <input type="text" placeholder="Search PN's..." x-model="searchPn"
+                                                class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                                            <div class="flex flex-row justify-between items-center">
+                                                <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                                                    <!-- Если список отфильтрованных PNs пуст -->
+                                                    <template x-if="availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase())).length === 0">
+                                                        <li class="text-gray-600 text-sm mb-1">No PN's</li>
+                                                    </template>
+                                    
+                                                    <!-- Если список отфильтрованных PNs не пуст -->
+                                                    <template x-for="pn in availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase()))" :key="pn">
+                                                        <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                            <input type="checkbox" :value="pn" x-model="selectedPns" class="mr-2">
+                                                            <span x-text="pn"></span>
+                                                        </li>
+                                                    </template>
+                                                </ul>
+                                                <div class="flex justify-end">
+                                                    <button @click="$wire.addPn({{ $part->id }}, selectedPns); editingPn = false;"
+                                                        class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                                                    ✓
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                
                                     <span class="md:hidden font-semibold">Name:</span>
 
-                                    <!-- Синий кружок для PN -->
-                                    <div class="w-6 h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2"
-                                        @click="showPnPopover = !showPnPopover">
-                                        PN
-                                    </div>
-
-                                    <!-- Поповер для PN -->
-                                    <div x-show="showPnPopover"
-                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                        @click.away="showPnPopover = false" 
-                                        x-cloak>
-                                        <h4 class="text-gray-700 dark:text-gray-400 text-sm font-semibold mb-2">Part Numbers</h4>
-                                        <ul>
-                                        @if(!is_null($part->pns))
-                                        @if($part->pns->isNotEmpty())
-                                        <!-- Если массив не пуст -->
-                                            @foreach ($part->pns as $pn)
-                                                <li class="text-gray-600 text-sm mb-1"><span>{{ $pn->number }}</span></li>
-                                            @endforeach
-                                        @else
-                                            <li class="text-gray-600 text-sm mb-1"><span>No PN's</span></li>
-                                        @endif
-                                        @endif
-                                        </ul>
-                                    </div>
-
                                     <!-- Название с подменю -->
-                                    <div class="flex items-center w-full relative">
+                                    <div class="flex items-center w-full">
                                         <!-- Оверлей -->
                                         <div x-show="editingName || editingPn || addingPn" 
-                                            class="fixed inset-0 bg-black bg-opacity-50 z-40" 
-                                            @click="editingName = false; editingPn = false; showEditMenu = false;" 
+                                            class="flex fixed inset-0 bg-black bg-opacity-50 z-30" 
+                                            @click="editingName = false, editingPn = false, addingPn = false;" 
                                             x-cloak>
                                         </div>
 
                                         <!-- Основное отображение -->
-                                        <span x-show="!editingName && !editingPn" 
-                                            @click="showEditMenu = !showEditMenu" 
-                                            class="flex items-center cursor-pointer hover:underline min-h-[30px]">
+                                        <span x-show="!editingName" @click="editingName = true" class="flex z-35 items-center cursor-pointer hover:underline min-h-[30px]">
                                             {{ $part->name }}
                                         </span>
-
-                                        <!-- Подменю -->
-                                        <div x-show="showEditMenu" 
-                                            class="absolute flex flex-row w-full z-50 bg-white dark:bg-gray-800 text-xs border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1" 
-                                            @click.away="showEditMenu = false" 
-                                            x-cloak>
-                                            <div class="flex flex-row w-full">
-                                                <div @click="addingPn = true; showAddMenu = false;" class="w-1/3 p-2 cursor-pointer hover:bg-gray-100 hover:text-black">
-                                                    Add PN
-                                                </div>
-                                                <div @click="editingPn = true; showEditMenu = false;" class="w-1/3 p-2 cursor-pointer hover:bg-gray-100 hover:text-black">
-                                                    Edit PN
-                                                </div>
-                                                <div @click="editingName = true; showEditMenu = false;" class="w-1/3 p-2 cursor-pointer hover:bg-gray-100 hover:text-black">
-                                                    Edit Name
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
-
-                                    <!-- Режим редактирования PN -->
-                                    <div x-show="editingPn"
-                                        class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                        x-cloak>
-                                        <h4 class="text-gray-700 dark:text-gray-400 text-sm font-semibold mb-2">Edit Part Numbers</h4>
-                                        <input type="text" placeholder="Search PN's..." x-model="searchPn"
-                                            class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                        <div class="flex flex-row justify-between items-center">
-                                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
-                                                <!-- Если список отфильтрованных PNs пуст -->
-                                                <template x-if="availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase())).length === 0">
-                                                    <li class="text-gray-600 text-sm mb-1">No PN's</li>
-                                                </template>
-
-                                                <!-- Если список отфильтрованных PNs не пуст -->
-                                                <template x-for="pn in availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase()))" :key="pn">
-                                                    <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
-                                                        <input type="checkbox" :value="pn" x-model="selectedPns" class="mr-2">
-                                                        <span x-text="pn"></span>
-                                                    </li>
-                                                </template>
-                                            </ul>
-                                            <div class="flex justify-end">
-                                                <button @click="$wire.savePns({{ $part->id }}, selectedPns); editingPn = false;"
-                                                    class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
-                                                ✓
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                        <!-- Модальное окно для добавления нового PN -->
-                                        <div x-show="addingPn" 
-                                            class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                            x-cloak @click.away="addingPn = false" >
-                                            <h4 class="text-gray-700 text-sm font-semibold mb-2">Add Part Number</h4>
-                                            
-                                            <!-- Поле ввода -->
-                                            <input type="text" x-model="newPn" placeholder="Enter new PN"
-                                                class="w-full border border-gray-300 rounded-md mb-2 px-2 py-1 text-sm">
-                                            
-                                            <!-- Ошибка -->
-                                            <div x-show="errorMessage" class="text-red-500 text-sm mb-2" x-text="errorMessage"></div>
-                                            
-                                            <!-- Кнопки действия -->
-                                            <div class="flex justify-end space-x-2">
-                                                <button @click="addingPn = false; newPn = ''; errorMessage = '';"
-                                                    class="px-3 py-1 text-sm text-gray-700 bg-white border rounded hover:bg-gray-100">
-                                                    Cancel
-                                                </button>
-                                                <button @click="
-                                                    if (newPn !== '') {
-                                                    selectedPns.push(newPn);
-                                                    $wire.savePns({{ $part->id }}, selectedPns).then(() => {
-                                                        newPn = '';
-                                                        addingPn = false;
-                                                    });
-                                                }
-                                                " class="px-3 py-1 text-sm text-white bg-blue-500 rounded hover:bg-blue-600">
-                                                    Save
-                                                </button>
-                                            </div>
-                                        </div>
 
                                     <!-- Режим редактирования Name -->
                                     <div x-show="editingName" 
-                                        class="flex justify-center items-center w-full relative z-50" 
+                                        class="flex justify-center items-center w-full relative z-40" 
                                         x-cloak>
                                         <input type="text" x-model="newName" 
                                             class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
@@ -354,11 +313,17 @@
                                     </div>
                                 </div>
                                 <!-- Quantity -->
-                                <div class="w-full md:w-1/12 mb-2 md:mb-0">
+                                <div class="w-full md:w-1/12 mb-2 md:mb-0"
+                                    @part-updated="event => {
+                                        if (event.detail.partId === {{ $part->id }}) {
+                                            $el.textContent = event.detail.newQuantity;
+                                        }
+                                    }"
+                                >
                                     <span class="md:hidden font-semibold">Quantity:</span> {{ $part->quantity }}
                                 </div>
 
-                                <div class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
+                                <div class="flex flex-row w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
                                     x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
                                     <!-- Кликабельная ссылка с ценой запчасти -->
@@ -429,11 +394,33 @@
                                 <div class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
                                     <!-- Миниатюра -->
                                     <span class="md:hidden font-semibold">Image:</span>
-                                    <div x-data class="gallery h-12 w-12">
+                                    <div x-data="{ isUploading: false, uploadProgress: 0 }" class="gallery h-12 w-12 relative">
+                                        @if(is_null($part->image))
+                                            <span class="w-[48px] h-[48px]">
+                                                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="48" height="48" viewBox="0 0 256 256" xml:space="preserve">
+                                                    <defs>
+                                                    </defs>
+                                                    <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;" transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)" >
+                                                        <path d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round" />
+                                                        <path d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round" />
+                                                        <path d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z" style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;" transform=" matrix(1 0 0 1 0 0) " stroke-linecap="round" />
+                                                    </g>
+                                                </svg>
+                                            </span>
+                                        @else
                                         <img
                                             src="{{ $part->image }}" alt="{{ $part->name }}"
                                             @click="$dispatch('lightbox', '{{ $part->image }}')"
-                                            @click.stop class="object-cover rounded cursor-zoom-in">
+                                            @click.stop class="object-cover rounded cursor-zoom-in"
+                                        >
+                                        @endif
+                                        <!-- Кнопка загрузки изображения -->
+                                        <label for="upload-image-{{ $part->id }}" class="absolute bottom-0 right-0 bg-blue-500 text-white rounded-full p-1 cursor-pointer">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 21v-2a4 4 0 00-8 0v2m4-7a4 4 0 110-8 4 4 0 010 8z" />
+                                            </svg>
+                                        </label>
+                                        <input type="file" id="upload-image-{{ $part->id }}" class="hidden" @change="$wire.upload('newImage', $event.target.files[0])">
                                     </div>
                                 </div>
                                 <div id="brand-item-{{ $part->id }}" class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
@@ -589,7 +576,7 @@
                         class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
                         @click="openModal" x-show="selectedParts.length > 0"
                     >
-                        Send part
+                        Send parts
                     </button>
 
                     <!-- Flowbite-стилизованное модальное окно -->
@@ -680,6 +667,62 @@
                                     <button type="submit"
                                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
                                             :disabled="!isSendButtonEnabled()">Подтвердить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div x-data="{ deletePartsModalOpen: false }" x-bind:class="{ 'overflow-hidden': deletePartsModalOpen }">
+
+                    <button
+                        class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                        @click="openDeleteModal" x-show="selectedParts.length > 0"
+                    >
+                        Delete parts
+                    </button>
+        
+                    <!-- Flowbite-стилизованное модальное окно -->
+                    <div x-show="deletePartsModalOpen"
+                        class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
+                        style="display: none;">
+                        <div class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
+                            <!-- Заголовок модального окна -->
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Запчасти для удаления</h3>
+                                <button @click="closeDeleteModal"
+                                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                                        aria-label="Close">
+                                    <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd"
+                                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                            clip-rule="evenodd"></path>
+                                    </svg>
+                                </button>
+                            </div>
+        
+                            <!-- Содержимое модального окна -->
+                            <form wire:submit.prevent="deleteParts">
+                                <div class="space-y-4">
+                                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                                        <template x-for="name in selectedPartNames" :key="name">
+                                            <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                <span x-text="name"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+        
+                                <!-- Кнопки действия -->
+                                <div class="flex items-center justify-end mt-6 space-x-4">
+                                    <button type="button" @click="closeDeleteModal, deletePartsModalOpen = false; document.body.classList.remove('overflow-hidden')"
+                                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        Отменить
+                                    </button>
+                                    <button type="button" @click="$wire.deleteParts().then(() => closeDeleteModal())"
+                                        class="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800">
+                                        Подтвердить
                                     </button>
                                 </div>
                             </form>

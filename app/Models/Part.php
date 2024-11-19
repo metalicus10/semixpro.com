@@ -11,10 +11,6 @@ class Part extends Model
 {
     use HasFactory;
 
-    protected $casts = [
-        'pns' => 'array',
-    ];
-
     /**
      * The attributes that are mass assignable.
      *
