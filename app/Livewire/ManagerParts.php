@@ -15,11 +15,16 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\ImageManager;
 use Livewire\Component;
 use Illuminate\Support\Facades\Storage;
+use Livewire\WithFileUploads;
 
 class ManagerParts extends Component
 {
+    use WithFileUploads;
+
     public $brands;
     public $technicians;
     public $selectedTechnicians;
@@ -42,9 +47,8 @@ class ManagerParts extends Component
     public $isPriceHistoryModalOpen = false;
     public $errorMessage = '';
     public $fullImage;
+    public $imgUrl;
     public $startDate, $endDate;
-    //public $notificationMessage = '';
-    //public $notificationType = 'info';
     public $managerPartUrlModalVisible = false;
     public $managerPartSupplier = '';
     public $managerPartUrl = '';
@@ -53,8 +57,10 @@ class ManagerParts extends Component
     public $availablePns = [];
     public $selectedPartNames = [];
     public $selectedParts = [];
-    
+
     public $partId;
+    public $newImage;
+    public $showImageModal = false;
     public $newPn;
     public $searchPn = '';
 
@@ -75,20 +81,6 @@ class ManagerParts extends Component
     public function mount()
     {
         $this->loadSuppliers();
-        //$this->selectedPns = $partPns->pluck('number')->toArray();
-        //$this->availablePns = Pn::pluck('number')->toArray();
-    }
-
-    public function handlePnsUpdated($props)
-    {
-        // Обработка события
-        //$this->dispatch('notification', ['type' => 'success', 'message' => 'PNs updated for part ID: ' . $partId]);
-
-        $this->notificationType = $props['type'];
-        $this->notificationMessage = $props['message'];
-        
-        // Обновление данных, если нужно
-        //$this->parts = $this->getFilteredParts();
     }
 
     public function loadComponent()
@@ -150,14 +142,14 @@ class ManagerParts extends Component
 
         $part = Part::find($this->partId);
         $this->updatePartPnsJson($part);
-        
+
         // Добавляем новый PN
         Pn::create([
             'number' => $this->newPn,
             'part_id' => $this->partId,
             'manager_id' => auth()->id(),
         ]);
-        
+
         $this->dispatch('pn-added');
         $this->dispatch('showNotification', 'success', 'PN added successfully');
         $this->newPn = null;
@@ -346,7 +338,7 @@ class ManagerParts extends Component
 
             // Удаление записей в technician_parts
             TechnicianPart::whereIn('part_id', $this->selectedParts)->delete();
-            
+
             // Удаляем запчасти
             Part::whereIn('id', $this->selectedParts)->delete();
 
@@ -519,9 +511,67 @@ class ManagerParts extends Component
     {
         $part = Part::find($partId);
         $part->brands()->sync($selectedBrands);
-        
+
         // Обновляем данные в представлении
         $this->dispatch('brandsUpdated');
+    }
+
+    public function openImageModal($partId)
+    {
+        $this->partId = $partId;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal()
+    {
+        $this->reset(['showImageModal', 'selectedPartId', 'newImage']);
+    }
+
+    public function uploadImage()
+    {
+        $this->validate([
+            'newImage' => 'required|image|max:5200',
+        ]);
+
+        $userId = auth()->id();
+        $path = 'partsImages/' . $userId;
+        // Получаем запчасть
+        $part = Part::find($this->partId);
+
+        if (!$part) {
+            $this->dispatch('showNotification', 'error', 'Part not found');
+            return;
+        }
+
+        // Удаляем старое изображение, если оно есть
+        if ($part->image) {
+            Storage::disk('s3')->delete($part->image);
+        }
+
+        if ($this->newImage)
+        {
+            $tempPath = $this->newImage->getRealPath();
+            $tempImg = Storage::disk('s3')->get($tempPath);
+            $manager = new ImageManager(Driver::class);
+            $processedImage = $manager->read($tempImg)
+                ->resize(1024, 1024, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                })
+                ->toWebp(quality: 60);
+            $fileName = $path. '/' . uniqid() . '.webp';
+            Storage::disk('s3')->put($fileName, $processedImage);
+            $this->imgUrl = Storage::disk('s3')->url($fileName);
+        }
+
+        // Обновляем модель
+        $part->update(['image' => $this->imgUrl]);
+
+        $this->dispatch('showNotification', 'success', 'Image updated successfully!');
+        $this->dispatch('imageUpdated', ['partId' => $this->partId]);
+
+        // Сбрасываем состояние
+        $this->reset('newImage');
     }
 
     // Сброс модального окна
