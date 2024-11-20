@@ -189,7 +189,8 @@
                                     originalName: '{{ $part->name }}',
                                     errorMessage: '',
                                     showPnPopover: false,
-                                    editingPn: false,
+                                    deletePn: false,
+                                    showingPn: false,
                                     searchPn: '',
                                     newPn: '',
                                     addingPn: false,
@@ -215,23 +216,23 @@
                                                  class="flex absolute z-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1">
 
                                                 <!-- Оверлей -->
-                                                <div x-show="editingPn || addingPn || showPnPopover"
+                                                <div x-show="deletePn || addingPn || showPnPopover || showingPn"
                                                      class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
-                                                     @click="editingPn = false; showEditMenu = false; showShowMenu = false; addingPn = false; showPnPopover = false;"
+                                                     @click="deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
                                                      x-cloak>
                                                 </div>
 
                                                 <div class="flex flex-row w-full cursor-pointer z-50" x-cloak>
                                                     <div
-                                                        @click="addingPn = true; showAddMenu = false; showPnPopover = false"
+                                                        @click="addingPn = true; deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; showPnPopover = false;"
                                                         class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
                                                         Add PN
                                                     </div>
-                                                    <div @click="editingPn = true; showEditMenu = false;"
+                                                    <div @click="deletePn = true; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
                                                          class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                                        Edit PN
+                                                        Del PN
                                                     </div>
-                                                    <div @click="showPn = true; showShowMenu = false;"
+                                                    <div @click="showingPn = true; deletePn = false; showEditMenu = false; showPnsList = false; addingPn = false; showPnPopover = false;"
                                                          class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
                                                         Show PN
                                                     </div>
@@ -241,10 +242,37 @@
                                             </div>
                                         </div>
 
+                                        <!-- Список PN запчасти -->
+                                        <div x-show="showingPn"
+                                            class="flex flex-col absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-52 p-1"
+                                            x-transition
+                                            @click.away="showingPn = false;"
+                                        >
+                                            <div class="flex flex-row w-full">
+                                                <div class="w-full flex justify-center items-center">
+                                                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto w-52"
+                                                        x-ref="pnList"
+                                                        
+                                                    >
+                                                        @php $pnsArray = json_decode($part->pns, true); @endphp
+                                                        @if (!empty($pnsArray))
+                                                            @foreach ($pnsArray as $pn)
+                                                                <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" @click.stop>
+                                                                    <span class="ml-2">{{ $pn }}</span>
+                                                                </li>
+                                                            @endforeach
+                                                        @else
+                                                            <p>No PN's</p>
+                                                        @endif
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <!-- Поле ввода нового PN -->
                                         <div x-show="addingPn"
                                              class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                             x-transition
+                                             x-transition x-cloak
                                              @click.away="addingPn = false; newPn = ''; errorMessage = '';"
                                         >
                                             <div class="flex flex-row w-full">
@@ -262,37 +290,48 @@
                                             </div>
                                         </div>
 
-                                        <!-- Режим редактирования PN -->
-                                        <div x-show="editingPn" @click.away="editingPn = false"
-                                             class="fixed inset-0 z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                             x-cloak x-transition>
-                                            <h4 class="text-gray-700 dark:text-gray-400 text-sm font-semibold mb-2">Edit
-                                                Part Numbers</h4>
-                                            <input type="text" placeholder="Search PN's..." x-model="searchPn"
-                                                   class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
-                                            <div class="flex flex-row justify-between items-center">
-                                                <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
-                                                    <!-- Если список отфильтрованных PNs пуст -->
-                                                    <template
-                                                        x-if="availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase())).length === 0">
-                                                        <li class="text-gray-600 text-sm mb-1">No PN's</li>
-                                                    </template>
+                                        <!-- Режим удаления PN -->
+                                        <div x-show="deletePn"
+                                             class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                             x-cloak x-transition
+                                             @click.away="deletePn = false;"
+                                        >
+                                            <!-- Поле поиска -->
+                                            <div class="mb-2" @click.stop>
+                                                <input type="text" x-model="searchPn"
+                                                    placeholder="Search brands..."
+                                                    class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
+                                            </div>
 
-                                                    <!-- Если список отфильтрованных PNs не пуст -->
-                                                    <template
-                                                        x-for="pn in availablePns.filter(pn => pn.toLowerCase().includes(searchPn.toLowerCase()))"
-                                                        :key="pn">
-                                                        <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
-                                                            <input type="checkbox" :value="pn" x-model="selectedPns"
-                                                                   class="mr-2">
-                                                            <span x-text="pn"></span>
-                                                        </li>
-                                                    </template>
+                                            <div class="flex flex-row justify-evenly items-center" @click.stop>
+                                                <!-- Список брендов с мульти-выбором -->
+                                                <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto">
+                                                    @php $pns = $this->getPartPns($part->id); @endphp
+                                                    @if (!empty($pns))
+                                                        @foreach ($pns as $pn)
+                                                            <template
+                                                                x-if="!searchPn || '{{ strtolower($pn->number) }}'.includes(searchPn.toLowerCase())">
+                                                                <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" @click.stop>
+                                                                    <input type="checkbox" value="{{ $pn->id }}"
+                                                                        x-model="selectedPns"
+                                                                        class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                                        @click.stop>
+                                                                    <label class="ml-2">{{ $pn->number }}</label>
+                                                                </li>
+                                                            </template>
+                                                        @endforeach
+                                                    @else
+                                                        <p>No PN's</p>
+                                                    @endif
                                                 </ul>
-                                                <div class="flex justify-end">
-                                                    <button
-                                                        @click="$wire.addPn({{ $part->id }}, selectedPns); editingPn = false;"
-                                                        class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+
+                                                <!-- Кнопка подтверждения -->
+                                                <div class="justify-self-center inline-flex self-center items-center">
+                                                    <button @click="$wire.set('selectedPns', selectedPns).then(() => {
+                                                                    $wire.deletePns({{ $part->id }}, selectedPns);
+                                                                    deletePn = false;
+                                                                });"
+                                                            class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
                                                         ✓
                                                     </button>
                                                 </div>
@@ -305,9 +344,9 @@
                                     <!-- Название с подменю -->
                                     <div class="flex items-center w-full">
                                         <!-- Оверлей -->
-                                        <div x-show="editingName || editingPn || addingPn"
+                                        <div x-show="editingName || deletePn || addingPn"
                                              class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
-                                             @click="editingName = false, editingPn = false, addingPn = false;"
+                                             @click="editingName = false, deletePn = false, addingPn = false;"
                                              x-cloak>
                                         </div>
 
@@ -413,7 +452,8 @@
                                     </div>
                                 </div>
                                 <div class="w-full md:w-1/12 mb-2 md:mb-0"><span
-                                        class="md:hidden font-semibold">Total:</span>${{ $part->total }}</div>
+                                    class="md:hidden font-semibold">Total:</span>${{ $part->total }}
+                                </div>
                                 <div class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
                                     <!-- Миниатюра -->
                                     <span class="md:hidden font-semibold">Image:</span>
@@ -465,42 +505,45 @@
                                     </div>
                                 </div>
                                 <div id="brand-item-{{ $part->id }}"
-                                     class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
-                                     x-data="{ showPopover: false, selectedBrands: @json($part->brands->pluck('id')), search: '', popoverX: 0, popoverY: 0 }"
+                                    class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer parent-container"
+                                    x-data="{ showPopover: false, selectedBrands: @json($part->brands->pluck('id')), search: '', popoverX: 0, popoverY: 0 }"
 
-                                     @click.away="showPopover = false"
-                                     @mousedown.stop
-                                     @click="
-                                            $nextTick(() => {
-                                                const parent = $el.closest('.parent-container');
-                                                const elementOffsetLeft = $el.offsetLeft;
-                                                const elementOffsetTop = $el.offsetTop;
+                                    @click.away="showPopover = false"
+                                    @mousedown.stop
+                                    @click="
+                                        const { clientX, clientY } = $event; // Получаем координаты клика
+                                        
+                                        $nextTick(() => {
+                                            popoverX = Math.min(clientX, window.innerWidth - 250);
+                                            popoverY = Math.min(clientY, window.innerHeight - 200);
 
-                                                popoverX = elementOffsetLeft / parent.offsetWidth ;
-                                                popoverY = elementOffsetTop / parent.offsetHeight ;
-
-                                                showPopover = true;
-                                            });
-                                        ">
+                                            showPopover = true; // Показываем поповер
+                                        });
+                                    "
+                                    >
 
                                     <!-- Текущие бренды -->
-                                    <div>
+                                    <div class="flex flex-col max-h-24">
                                         <span class="md:hidden font-semibold">Brand:</span>
-                                        @if(count($part->brands) == 0)
-                                            <div class="px-3 py-2">---</div>
-                                        @else
-                                            @foreach($part->brands as $brand)
-                                                <span>{{ $brand->name }}{{ !$loop->last ? ', ' : '' }}</span>
-                                            @endforeach
-                                        @endif
+                                        <div class="overflow-y-auto">
+                                            @if(count($part->brands) == 0)
+                                                <div class="px-3 py-2">---</div>
+                                            @else
+                                                @foreach($part->brands as $brand)
+                                                    <span>{{ $brand->name }}{{ !$loop->last ? ', ' : '' }}</span>
+                                                @endforeach
+                                            @endif
+                                        </div>
                                     </div>
 
                                     <!-- Поповер с мульти-выбором брендов -->
                                     <div x-show="showPopover"
-                                         class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                         :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                         class="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                         :style="`top: ${popoverY}px; left: ${popoverX}px;`"
+                                         x-init="const onScroll = () => showPopover = false; window.addEventListener('scroll', onScroll)"
                                          @click.outside="showPopover = false"
-                                         x-transition>
+                                         x-transition
+                                    >
 
                                         <!-- Поле поиска -->
                                         <div class="mb-2" @click.stop>
@@ -509,13 +552,13 @@
                                                    class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
                                         </div>
 
-                                        <div class="flex flex-row justify-between items-center">
+                                        <div class="flex flex-row justify-evenly items-center" @click.stop>
                                             <!-- Список брендов с мульти-выбором -->
-                                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto">
                                                 @foreach ($brands as $brand)
                                                     <template
                                                         x-if="!search || '{{ strtolower($brand->name) }}'.includes(search.toLowerCase())">
-                                                        <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                        <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600" @click.stop>
                                                             <input type="checkbox" value="{{ $brand->id }}"
                                                                    x-model="selectedBrands"
                                                                    class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
@@ -527,7 +570,7 @@
                                             </ul>
 
                                             <!-- Кнопка подтверждения -->
-                                            <div class="flex justify-end">
+                                            <div class="justify-self-center inline-flex self-center items-center">
                                                 <button @click="$wire.set('selectedBrands', selectedBrands).then(() => {
                                                                 $wire.updatePartBrands({{ $part->id }}, selectedBrands);
                                                                 showPopover = false;
@@ -942,41 +985,59 @@
         </div>
 
         <!-- Модальное окно для редактирования URL -->
-        @if($managerPartUrlModalVisible)
-            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-                <div class="bg-white p-6 rounded shadow-md w-1/3">
-                    <h2 class="text-xl font-semibold mb-4">Редактировать ссылку</h2>
+    @if($managerPartUrlModalVisible)
+        <div 
+            x-data
+            x-init="document.body.classList.add('overflow-hidden')"
+            x-on:close-modal.window="document.body.classList.remove('overflow-hidden')"
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-t-lg shadow-md w-full max-w-md h-[60%] overflow-y-auto md:rounded-lg md:max-h-[80%]">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-900">Редактировать ссылку</h2>
+                    <button wire:click="$set('managerPartUrlModalVisible', false)"
+                            class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
 
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2"
-                               for="selectedSupplier">Supplier:</label>
-                        <select wire:model="managerPartSupplier" id="selectedSupplier"
-                                class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                            <option value="">Select Supplier</option>
-                            @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->name }}">{{ $supplier->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('selectedSupplier') <span class="text-red-500">{{ $message }}</span> @enderror
-                    </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="selectedSupplier">Supplier:</label>
+                    <select wire:model="managerPartSupplier" id="selectedSupplier"
+                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Select Supplier</option>
+                        @foreach ($suppliers as $supplier)
+                            <option value="{{ $supplier->name }}">{{ $supplier->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('selectedSupplier') 
+                        <span class="text-red-500 text-sm">{{ $message }}</span> 
+                    @enderror
+                </div>
 
-                    <div class="mb-4">
-                        <label class="block text-gray-700 text-sm font-bold mb-2" for="managerPartUrl">URL:</label>
-                        <input wire:model="managerPartUrl" type="text" id="managerPartUrl"
-                               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-                    </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="managerPartUrl">URL:</label>
+                    <input wire:model="managerPartUrl" type="text" id="managerPartUrl"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter URL">
+                </div>
 
-                    <div class="flex justify-end">
-                        <button wire:click="$set('managerPartUrlModalVisible', false)"
-                                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded mr-2">Отмена
-                        </button>
-                        <button wire:click="saveManagerPartUrl"
-                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">OK
-                        </button>
-                    </div>
+                <div class="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2">
+                    <button wire:click="$set('managerPartUrlModalVisible', false)"
+                            class="w-full md:w-auto bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                        Отмена
+                    </button>
+                    <button wire:click="saveManagerPartUrl"
+                            class="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                        OK
+                    </button>
                 </div>
             </div>
-        @endif
+        </div>
+    @endif
 
         <!-- Общий Lightbox для всех изображений -->
         <div class="lightbox fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center"

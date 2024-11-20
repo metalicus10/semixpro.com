@@ -63,6 +63,7 @@ class ManagerParts extends Component
     public $showImageModal = false;
     public $newPn;
     public $searchPn = '';
+    public $partPns;
 
     protected $rules = [
         'newPn' => 'required|string|max:255|unique:pns,number',
@@ -101,33 +102,32 @@ class ManagerParts extends Component
     public function getPartPns($partId)
     {
         // Получить все PN для запчасти с указанным ID
-        $pns = Pn::where('part_id', $partId)->pluck('number');
+        $pns = Pn::where('part_id', $partId)->get();
 
         // Вернуть массив или использовать данные по необходимости
         return $pns;
     }
 
-    public function updatePns()
+    public function deletePns($partId, $selectedPns)
     {
-        $part = Part::find($this->partId);
+        $part = Part::find($partId);
 
         if (!$part) {
-            $this->errorMessage = 'Part not found';
+            $this->dispatch('showNotification', 'error', 'Part not found');
             return;
         }
 
-        // Удаляем существующие PNs
-        $part->pns()->delete();
+        if (!empty($selectedPns)) {
+            // Удаляем выбранные PN из таблицы pns
+            $part->pns()->whereIn('id', $selectedPns)->get()->each->delete();
 
-        // Сохраняем новые PNs
-        foreach ($this->selectedPns as $pn) {
-            Pn::create([
-                'number' => $pn,
-                'part_id' => $this->partId,
-            ]);
+            // Обновляем JSON в колонке parts.pns
+            $this->updatePartPnsJson($part);
+
+            $this->dispatch('showNotification', 'success', 'PNs deleted successfully');
+        } else {
+            $this->dispatch('showNotification', 'error', 'No PNs selected for deletion');
         }
-
-        $this->dispatch('showNotification', 'success', 'PNs updated successfully');
     }
 
     public function addPn()
@@ -201,6 +201,7 @@ class ManagerParts extends Component
             $partsQuery->where(function ($query) {
                 $query->where('name', 'like', '%' . $this->search . '%')
                     ->orWhere('sku', 'like', '%' . $this->search . '%')
+                    ->orWhere('pns', 'like', '%' . $this->search . '%')
                     ->orWhereHas('category', function ($q) {
                         $q->where('name', 'like', '%' . $this->search . '%');
                     })
@@ -566,6 +567,7 @@ class ManagerParts extends Component
 
         // Обновляем модель
         $part->update(['image' => $this->imgUrl]);
+        $this->closeImageModal();
 
         $this->dispatch('showNotification', 'success', 'Image updated successfully!');
         $this->dispatch('imageUpdated', ['partId' => $this->partId]);
