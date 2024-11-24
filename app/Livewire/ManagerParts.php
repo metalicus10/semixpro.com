@@ -9,6 +9,7 @@ use App\Models\Supplier;
 use App\Models\PartTransfer;
 use App\Models\Shipment;
 use App\Models\Technician;
+use App\Models\Warehouse;
 use App\Models\TechnicianPart;
 use App\Models\TechnicianPartUsage;
 use App\Models\User;
@@ -26,6 +27,7 @@ class ManagerParts extends Component
     use WithFileUploads;
 
     public $brands;
+    public $warehouses;
     public $technicians;
     public $selectedTechnicians;
     public $categories;
@@ -65,6 +67,8 @@ class ManagerParts extends Component
     public $searchPn = '';
     public $partPns;
 
+    public $warehousesWithParts;
+
     protected $rules = [
         'newPn' => 'required|string|max:255|unique:pns,number',
     ];
@@ -76,7 +80,8 @@ class ManagerParts extends Component
         'update-part-quantities' => 'updatePartQuantities',
         'open-price-modal' => 'openPriceModal',
         'pnsAdded' => 'handlePnsUpdated',
-        'refreshParts' => '$refresh'
+        'refreshParts' => '$refresh',
+        'defaultWarehouseUpdated' => 'refreshComponent',
     ];
 
     public function mount()
@@ -97,6 +102,30 @@ class ManagerParts extends Component
     public function refreshComponent()
     {
         $this->render();
+    }
+
+    public function updateTabOrder(array $order)
+    {
+        foreach ($order as $tab) {
+            Warehouse::where('id', $tab['id'])->update(['position' => $tab['position']]);
+        }
+
+        $this->warehouses = Warehouse::with(['parts' => function ($query) {
+            $query->orderBy('name'); // Упорядочивание запчастей по имени или другому критерию
+        }])->where('manager_id', auth()->id())
+          ->orderBy('position')
+          ->get();
+
+        $this->dispatch('notification', ['type' => 'success', 'message' => 'Tab order updated successfully']);
+        $this->dispatch('partUpdated');
+    }
+
+    public function getWarehousesWithParts()
+    {
+        $managerId = auth()->id();
+        $this->warehousesWithParts = Warehouse::where('manager_id', $managerId)
+        ->with('parts') // Загружаем связанные запчасти
+        ->get();
     }
 
     public function getPartPns($partId)
@@ -180,9 +209,20 @@ class ManagerParts extends Component
     {
         // Начальный запрос для выборки запчастей, связанный с пользователем
         $userId = auth()->user()->id;
-        $partsQuery = Part::whereHas('category', function ($query) use ($userId) {
-            $query->where('manager_id', $userId);
-        })->with('category', 'brands', 'pns');
+        $partsQuery = Part::where(function ($query) use ($userId) {
+            // Учитываем запчасти, которые связаны с категорией текущего менеджера
+            $query->whereHas('category', function ($query) use ($userId) {
+                $query->where('manager_id', $userId);
+            });
+        })
+        ->where(function ($query) use ($userId) {
+            // Учитываем запчасти без склада или запчасти, привязанные к складам текущего менеджера
+            $query->whereNull('warehouse_id')
+                  ->orWhereHas('warehouse', function ($query) use ($userId) {
+                      $query->where('manager_id', $userId);
+                  });
+        })
+        ->with('category', 'brands', 'pns', 'warehouse');
 
         // Фильтр по категории
         if ($this->selectedCategory) {
@@ -576,6 +616,15 @@ class ManagerParts extends Component
         $this->reset('newImage');
     }
 
+    public function renameWarehouse($warehouseId, $newName)
+    {
+        $warehouse = Warehouse::find($warehouseId);
+        if ($warehouse) {
+            $warehouse->update(['name' => $newName]);
+            $this->dispatch('partUpdated');
+        }
+    }
+
     // Сброс модального окна
     public function resetQuantityModal()
     {
@@ -596,9 +645,16 @@ class ManagerParts extends Component
         $userId = Auth::id();
         $this->technicians = Technician::where('manager_id', $userId)->where('is_active', true)->get();
         $parts = $this->getFilteredParts();
-        $managerData = User::with(['categories', 'brands'])->find($userId);
+        $managerData = User::with([
+            'categories',
+            'brands',
+            'warehouses' => function ($query) {
+                $query->orderBy('position');
+            }
+        ])->find($userId);
         $this->categories = $managerData->categories;
         $this->brands = $managerData->brands;
+        $this->warehouses = $managerData->warehouses;
 
         return view('livewire.manager.manager-parts', [
             'parts' => $parts, 'categories' => $this->categories, 'technicians' => $this->technicians,

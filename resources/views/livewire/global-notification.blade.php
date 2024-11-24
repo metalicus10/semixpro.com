@@ -1,7 +1,18 @@
-<div x-data="{ visible: @entangle('visible'), type: @entangle('type'), message: @entangle('message') }"
+<div x-data="{ visible: false, type: '', message: '' }"
+    x-init="
+        $watch('visible', value => {
+            if (value) {
+                setTimeout(() => visible = false, 5000);
+            }
+        });
+    "
+    @notification.window="
+        type = $event.detail.type;
+        message = $event.detail.message;
+        visible = true;
+    "
     x-show="visible"
-    @hide-notification.window="setTimeout(() => visible = false, $event.detail.timeout || 5000)"
-    class="fixed flex justify-center left-1/2 transform -translate-x-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 top-[15%] w-1/2"
+    class="fixed flex justify-center left-1/2 transform -translate-x-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-[9999] top-[15%] w-1/2"
     :class="{
         'bg-green-500 text-white': type === 'success',
         'bg-red-500 text-white': type === 'error',
@@ -16,5 +27,5 @@
     x-transition:leave-end="opacity-0"
     style="display: none;"
 >
-    {{ $message }}
+    <span x-text="message"></span>
 </div>

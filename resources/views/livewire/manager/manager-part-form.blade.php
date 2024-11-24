@@ -1,4 +1,4 @@
-<div class="container mx-auto">
+<div class="">
     @if ($notificationMessage)
         <div
             class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
@@ -25,7 +25,7 @@
     @endif
 
     <!-- Кнопки для открытия модальных окон -->
-    <div class="mb-8">
+    <div class="mb-1 w-full md:w-auto">
         <button wire:click="openPartModal" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
             Add new part
         </button>

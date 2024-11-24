@@ -16,6 +16,7 @@ return new class extends Migration
             $table->unsignedBigInteger('manager_id');
             $table->string('name');
             $table->string('location')->nullable();
+            $table->integer('position')->default(0);
             $table->timestamps();
 
             // Связь с менеджером

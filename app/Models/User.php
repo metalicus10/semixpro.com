@@ -90,6 +90,11 @@ class User extends Authenticatable
         return $this->hasMany(Brand::class, 'manager_id', 'id');
     }
 
+    public function warehouses()
+    {
+        return $this->hasMany(Warehouse::class, 'manager_id', 'id');
+    }
+
     public function pns()
     {
         return $this->hasMany(Pn::class, 'manager_id', 'id');

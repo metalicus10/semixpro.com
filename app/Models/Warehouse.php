@@ -12,5 +12,11 @@ class Warehouse extends Model
     protected $fillable = [
         'name',
         'manager_id',
+        'position',
     ];
+
+    public function parts()
+    {
+        return $this->hasMany(Part::class);
+    }
 }

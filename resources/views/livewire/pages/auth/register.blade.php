@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -46,6 +47,12 @@ new #[Layout('layouts.guest')] class extends Component
         if ($managerRole) {
             $user->addRole($managerRole);
         }
+
+        Warehouse::create([
+            'manager_id' => $user->id(),
+            'name' => 'Main',
+            'is_default' => 1,
+        ]);
 
         event(new Registered($user));
 

@@ -115,6 +115,7 @@ class ManagerPartForm extends Component
         $this->validate([
             'partName' => 'required|string|max:255',
             'sku' => 'required|string|max:255',
+            'selectedWarehouse' => 'required|exists:warehouses,id',
             'selectedBrands' => 'nullable|array|exists:brands,id',
             'quantity' => 'required|integer|min:1',
             'price' => 'nullable|numeric|min:0',
@@ -126,9 +127,8 @@ class ManagerPartForm extends Component
 
         $this->price = $this->price !== null ? (float) $this->price : null;
         
-        if (Pn::where('number', $this->pn)->exists()) {
-            $this->notificationType = 'error';
-            $this->notificationMessage = 'Part number already exists';
+        if (Pn::where('number', $this->pn)->exists() && $this->pn != null) {
+            $this->dispatch('showNotification', 'error', 'Part number already exists');
             return;
         }
 
@@ -164,6 +164,7 @@ class ManagerPartForm extends Component
         $part = Part::create([
             'name' => $this->partName,
             'sku' => $this->sku,
+            'warehouse_id' => $this->selectedWarehouse,
             'quantity' => $this->quantity,
             'price' => $this->price,
             'image' => $this->imgUrl,
@@ -172,16 +173,18 @@ class ManagerPartForm extends Component
             'total' => $this->quantity * $this->price,
         ]);
 
-        Pn::create([
-            'number' => $this->pn,
-            'part_id' => $part->id,
-        ]);
+        if($this->pn != null)
+        {
+            Pn::create([
+                'number' => $this->pn,
+                'part_id' => $part->id,
+            ]);
+        }
 
         // Привязываем выбранные бренды к запчасти
         $part->brands()->sync($this->selectedBrands);
 
-        $this->notificationType = 'success';
-        $this->notificationMessage = 'The spare part has been added successfully';
+        $this->dispatch('showNotification', 'success', 'The spare part has been added successfully');
         $this->reset(['partName', 'sku', 'selectedBrands', 'quantity', 'image', 'selectedCategory', 'price', 'url']);
         $this->showPartModal = false; // Закрываем модальное окно
 

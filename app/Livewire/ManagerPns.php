@@ -62,9 +62,6 @@ class ManagerPns extends Component
             ]);
         }
 
-        $this->notificationType = 'success';
-        $this->notificationMessage = 'PNs updated successfully';
-
         $this->dispatch('notification', ['type' => 'success', 'message' => 'PNs updated successfully']);
     }
 

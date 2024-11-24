@@ -17,7 +17,7 @@ class ManagerWarehouses extends Component
     public $parts;
     public $errorMessage;
 
-    protected $listeners = ['defaultWarehouseUpdated' => 'render'];
+    protected $listeners = ['defaultWarehouseUpdated' => 'render', 'partUpdated' => 'render'];
 
     protected $rules = [
         'newWarehouseName' => 'required|string|max:255',
@@ -33,13 +33,13 @@ class ManagerWarehouses extends Component
             $query->where('manager_id', $userId);
         })->get();
 
-        $this->warehouses = Warehouse::where('manager_id', $userId)->get();
+        $this->warehouses = Warehouse::where('manager_id', $userId)->orderBy('position')->get();
     }
 
     public function createWarehouse()
     {
         if (empty($this->newWarehouseName)) {
-            $this->errorMessage = 'Please enter a warehouse name.';
+            $this->dispatch('showNotification', 'error', 'Please enter a warehouse name');
             return;
         }
     
@@ -53,7 +53,8 @@ class ManagerWarehouses extends Component
         // Сброс имени склада и сообщения об ошибке
         $this->newWarehouseName = '';
         $this->errorMessage = '';
-        $this->warehouses = Warehouse::where('manager_id', Auth::id())->get();
+        //$this->warehouses = Warehouse::where('manager_id', Auth::id())->get();
+        $this->dispatch('notification', ['type' => 'success', 'message' => 'Warehouse created successfully']);
     }
 
     public function setDefaultWarehouse($warehouseId)
@@ -65,6 +66,7 @@ class ManagerWarehouses extends Component
         Warehouse::where('id', $warehouseId)->update(['is_default' => true]);
 
         // Обновление локального свойства
+        $this->dispatch('notification', ['type' => 'success', 'message' => 'Warehouse set as Default']);
         $this->dispatch('defaultWarehouseUpdated', $warehouseId);
     }
 
@@ -83,6 +85,8 @@ class ManagerWarehouses extends Component
         }
         
         $this->reset(['partToMove', 'destinationWarehouse']);
+        $this->dispatch('partUpdated');
+        $this->dispatch('notification', ['type' => 'success', 'message' => 'Parts moved successfully']);
     }
 
     public function render()

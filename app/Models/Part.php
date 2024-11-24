@@ -19,6 +19,7 @@ class Part extends Model
     protected $fillable = [
         'name',
         'sku',
+        'warehouse_id',
         'quantity',
         'price',
         'image',
@@ -81,7 +82,7 @@ class Part extends Model
 
     public function warehouse()
     {
-        return $this->belongsTo(Warehouse::class);
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
 
     public function pns()
