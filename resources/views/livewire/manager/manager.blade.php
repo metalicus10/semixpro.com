@@ -1,8 +1,8 @@
 <!-- Main Content Area -->
 <div>
     <!-- Dynamically loaded content based on the selected tab -->
-    <div x-show="currentTab === 'dashboard'">
-        @livewire('manager-dashboard', [], key('manager-dashboard'))
+    <div x-show="currentTab === 'nomenclatures'">
+        @livewire('manager-nomenclatures', [], key('manager-nomenclatures'))
     </div>
     <div x-show="currentTab === 'warehouses'">
         @livewire('manager-warehouses', [], key('manager-warehouses'))
