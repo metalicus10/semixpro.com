@@ -48,7 +48,7 @@ class ManagerParts extends Component
     public $showQuantityModal = false;
     public $isPriceHistoryModalOpen = false;
     public $errorMessage = '';
-    public $fullImage;
+    //public $fullImage;
     public $imgUrl;
     public $startDate, $endDate;
     public $managerPartUrlModalVisible = false;
@@ -104,26 +104,34 @@ class ManagerParts extends Component
         $this->render();
     }
 
-    public function updateTabOrder(array $order)
+    public function updateTabOrder(array $newOrder)
     {
-        foreach ($order as $tab) {
-            Warehouse::where('id', $tab['id'])->update(['position' => $tab['position']]);
+        foreach ($newOrder as $order) {
+            Warehouse::where('id', $order['id'])->update(['position' => $order['position']]);
         }
 
-        $this->warehouses = Warehouse::with(['parts' => function ($query) {
-            $query->orderBy('name'); // Упорядочивание запчастей по имени или другому критерию
-        }])->where('manager_id', auth()->id())
-          ->orderBy('position')
-          ->get();
+        $userId = auth()->id();
 
-        $this->dispatch('notification', ['type' => 'success', 'message' => 'Tab order updated successfully']);
-        $this->dispatch('partUpdated');
+        // Обновляем список складов и запчастей
+        $managerData = User::with([
+            'warehouses' => function ($query) {
+                $query->with('parts')->orderBy('position');
+            }
+        ])->find($userId);
+
+        $this->warehouses = $managerData->warehouses;
+
+        $this->dispatch('tabsUpdated', [
+            'tabs' => $this->warehouses->toArray()
+        ]);
+
+        $this->dispatch('showNotification', 'success', 'Tab order and parts updated successfully');
     }
 
     public function getWarehousesWithParts()
     {
         $managerId = auth()->id();
-        $this->warehousesWithParts = Warehouse::where('manager_id', $managerId)
+        return Warehouse::where('manager_id', $managerId)
         ->with('parts') // Загружаем связанные запчасти
         ->get();
     }
@@ -159,7 +167,7 @@ class ManagerParts extends Component
         }
     }
 
-    public function addPn()
+    public function addPn($partId)
     {
         $this->validate();
 
@@ -169,15 +177,15 @@ class ManagerParts extends Component
             return;
         }
 
-        $part = Part::find($this->partId);
-        $this->updatePartPnsJson($part);
+        $part = Part::find($partId);
 
         // Добавляем новый PN
         Pn::create([
             'number' => $this->newPn,
-            'part_id' => $this->partId,
+            'part_id' => $partId,
             'manager_id' => auth()->id(),
         ]);
+        $this->updatePartPnsJson($part);
 
         $this->dispatch('pn-added');
         $this->dispatch('showNotification', 'success', 'PN added successfully');
@@ -187,7 +195,6 @@ class ManagerParts extends Component
     public function updatePartPnsJson($part)
     {
         $pns = Pn::where('part_id', $part->id)->where('manager_id', auth()->id())->pluck('number')->toArray();
-
         $json = json_encode((object)$pns);
 
         $part->update([
@@ -649,7 +656,7 @@ class ManagerParts extends Component
             'categories',
             'brands',
             'warehouses' => function ($query) {
-                $query->orderBy('position');
+                $query->with('parts')->orderBy('position');
             }
         ])->find($userId);
         $this->categories = $managerData->categories;
@@ -659,7 +666,7 @@ class ManagerParts extends Component
         return view('livewire.manager.manager-parts', [
             'parts' => $parts, 'categories' => $this->categories, 'technicians' => $this->technicians,
             'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen,
-            'selectedPartId' => $this->selectedPartId
+            'selectedPartId' => $this->selectedPartId, 'warehouses' => $this->warehouses,
         ])
             ->layout('layouts.app');
     }

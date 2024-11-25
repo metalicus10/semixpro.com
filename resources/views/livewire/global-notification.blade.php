@@ -1,12 +1,12 @@
-<div x-data="{ visible: false, type: '', message: '' }"
+<div x-data="{ visible: @entangle('visible'), type: @entangle('type'), message: @entangle('message') }"
     x-init="
         $watch('visible', value => {
             if (value) {
-                setTimeout(() => visible = false, 5000);
+                setTimeout(() => visible = false, 3500);
             }
         });
     "
-    @notification.window="
+    @shownotification.window="
         type = $event.detail.type;
         message = $event.detail.message;
         visible = true;

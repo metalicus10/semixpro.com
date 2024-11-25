@@ -6,11 +6,16 @@ use Livewire\Component;
 
 class GlobalNotification extends Component
 {
-    public $type;      // Тип уведомления: success, error, warning, info
-    public $message;   // Текст уведомления
+    public $type = '';      // Тип уведомления: success, error, warning, info
+    public $message = '';   // Текст уведомления
     public $visible = false; // Флаг видимости уведомления
 
     protected $listeners = ['showNotification'];
+
+    public function mount($message = '')
+    {
+        $this->message = $message;
+    }
 
     public function showNotification($type, $message)
     {

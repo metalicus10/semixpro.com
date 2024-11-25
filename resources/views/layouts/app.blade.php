@@ -227,7 +227,7 @@
 
     <div class="p-1 sm:ml-64">
         <div class="p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900 mt-14">
-            @livewire('global-notification')
+            <livewire:global-notification />
             {{ $slot }}
         </div>
     </div>

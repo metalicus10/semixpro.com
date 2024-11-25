@@ -42,19 +42,53 @@ class ManagerWarehouses extends Component
             $this->dispatch('showNotification', 'error', 'Please enter a warehouse name');
             return;
         }
-    
+
         $this->validate(['newWarehouseName' => 'required|string|max:255']);
-        
+
         Warehouse::create([
             'manager_id' => Auth::id(),
             'name' => $this->newWarehouseName,
         ]);
-    
+
         // Сброс имени склада и сообщения об ошибке
+        $this->dispatch('showNotification', 'success', 'Warehouse '.$this->newWarehouseName.' created successfully');
         $this->newWarehouseName = '';
         $this->errorMessage = '';
-        //$this->warehouses = Warehouse::where('manager_id', Auth::id())->get();
-        $this->dispatch('notification', ['type' => 'success', 'message' => 'Warehouse created successfully']);
+        $this->mount();
+    }
+
+    public function deleteWarehouse($warehouseId)
+    {
+        $warehouse = Warehouse::find($warehouseId);
+
+        if (!$warehouse) {
+            $this->dispatch('showNotification', 'error', 'Warehouse not found');
+            return;
+        }
+
+        if ($warehouse->name === 'No warehouse') {
+            $this->dispatch('showNotification', 'error', 'Cannot delete "No warehouse".');
+            return;
+        }
+
+        // Проверяем, есть ли запчасти на складе
+        $hasParts = $warehouse->parts()->exists();
+
+        /*if ($hasParts) {
+            // Перемещаем запчасти в склад "No warehouse"
+            $noWarehouse = Warehouse::firstOrCreate([
+                'name' => 'No warehouse',
+                'manager_id' => auth()->id(),
+            ]);
+
+            $warehouse->parts()->update(['warehouse_id' => $noWarehouse->id]);
+        }*/
+
+        // Удаляем склад
+        $warehouse->delete();
+
+        $this->dispatch('showNotification', 'success', 'Warehouse deleted successfully');
+        $this->mount(); // Перезагружаем данные
     }
 
     public function setDefaultWarehouse($warehouseId)
@@ -66,8 +100,8 @@ class ManagerWarehouses extends Component
         Warehouse::where('id', $warehouseId)->update(['is_default' => true]);
 
         // Обновление локального свойства
-        $this->dispatch('notification', ['type' => 'success', 'message' => 'Warehouse set as Default']);
-        $this->dispatch('defaultWarehouseUpdated', $warehouseId);
+        $this->dispatch('showNotification', 'success', 'Warehouse set as Default');
+        $this->mount();
     }
 
     public function movePart()
@@ -83,10 +117,12 @@ class ManagerWarehouses extends Component
                 $part->save();
             }
         }
-        
+
         $this->reset(['partToMove', 'destinationWarehouse']);
+        $this->dispatch('reset-selected-parts');
+        $this->dispatch('showNotification', 'success', 'Parts moved successfully');
         $this->dispatch('partUpdated');
-        $this->dispatch('notification', ['type' => 'success', 'message' => 'Parts moved successfully']);
+        $this->mount();
     }
 
     public function render()
