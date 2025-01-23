@@ -2,26 +2,28 @@
 
 namespace App\Livewire;
 
+use App\Models\ActionLog;
+use App\Models\NomenclatureVersion;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 use Livewire\Component;
 use App\Models\Nomenclature;
 use Illuminate\Support\Facades\Auth;
 
 class ManagerNomenclatures extends Component
 {
-    public $nomenclatures = [];
-    public $selectedNomenclatures = [];
-    public $availablePns = [];
-    public $selectedPns = [];
-    public $newPn;
+    public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [];
+    public $manager_id, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
+    public $editingNomenclature = null, $idToDelete;
+    public bool $showArchived = false;
 
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
         'sku' => '',
-        'pns' => '',
         'name' => '',
         'category' => '',
         'supplier' => '',
-        'brand' => [],
         'url' => ['url' => '', 'text' => ''],
         'manager_id' => '',
     ];
@@ -29,97 +31,135 @@ class ManagerNomenclatures extends Component
     public function mount()
     {
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-        ->with('pns')
-        ->get()
-        ->toArray();
-    }
+        ->with('category', 'supplier')->get()->toArray();
 
-    public function deleteNomenclature()
-    {
-        Nomenclature::whereIn('sku', $this->selectedNomenclatures)->delete();
-        $this->selectedNomenclatures = [];
+        $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
+            ->where('manager_id', $this->manager_id)
+            ->with('category', 'supplier')->get()->toArray();
     }
 
     public function addNomenclature()
     {
         $validatedData = $this->validate([
             'newNomenclature.sku' => 'required|string|max:255|unique:nomenclatures,sku',
-            'newNomenclature.pns' => 'nullable|json', // PN может быть пустым
             'newNomenclature.name' => 'required|string|max:255',
-            'newNomenclature.category' => 'nullable|string|max:255', // Необязательное поле
-            'newNomenclature.supplier' => 'nullable|string|max:255', // Необязательное поле
-            'newNomenclature.brand' => 'nullable|string', // Необязательное поле
-            'newNomenclature.url.url' => 'nullable|url', // Необязательное поле
-            'newNomenclature.url.text' => 'nullable|string|max:255', // Необязательное поле
+            'newNomenclature.category' => 'nullable|string|max:255',
+            'newNomenclature.supplier' => 'nullable|string|max:255',
+            'newNomenclature.url.url' => 'nullable|url',
+            'newNomenclature.url.text' => 'nullable|string|max:255',
+            'newNomenclature.image' => 'nullable|image|max:2048',
         ]);
 
-        $validatedData['newNomenclature']['pns'] = json_decode($validatedData['newNomenclature']['pns'] ?? '[]', true);
         $validatedData['newNomenclature']['manager_id'] = Auth::id();
 
+        if ($this->image) {
+
+            //$tempPath = $this->image->getRealPath();
+            //$tempImg = Storage::disk('public')->get($tempPath);
+
+            $manager = new ImageManager(Driver::class);
+
+            $processedImage = $manager->read($this->image)
+                ->resize(null, null)
+                ->toWebp(quality: 60);
+
+            $imagePath = 'nomenclatures/' . Auth::id();
+            // Генерируем уникальное имя для файла
+            $fileName = $imagePath. '/' . uniqid() . '.webp';
+
+            // Сохраняем закодированное изображение в local storage
+            Storage::disk('public')->put($fileName, $processedImage);
+            //$this->image = Storage::disk('public')->url($fileName);
+
+            $validatedData['newNomenclature']['image'] = $fileName;
+        }
+
         // Создаём запись в БД
-        Nomenclature::create($validatedData['newNomenclature']);
+        $nomenclature = Nomenclature::create($validatedData['newNomenclature']);
 
         // Добавляем в локальный массив для отображения
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
         $this->reset('newNomenclature');
         $this->dispatch('showNotification', 'success', 'New nomenclature created successfully');
+        $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $nomenclature->name);
     }
 
-    public function addPn($nomenclatureId)
+    public function updatedNomenclature()
     {
-        $this->validate();
-
-        // Проверяем существование PN
-        if (Pn::where('number', $this->newPn)->exists()) {
-            $this->dispatch('showNotification', 'error', 'PN already exists');
-            return;
-        }
-
-        $nomenclature = Nomenclature::find($nomenclatureId);
-
-        // Добавляем новый PN
-        Pn::create([
-            'number' => $this->newPn,
-            'part_id' => $nomenclatureId,
-            'manager_id' => auth()->id(),
+        $this->editingNomenclature->update([
+            'name' => $this->name,
         ]);
-        $this->updatePartPnsJson($nomenclature);
 
-        $this->dispatch('pn-added');
-        $this->dispatch('showNotification', 'success', 'PN added successfully');
-        $this->newPn = null;
+        // Логируем изменения
+        $changes = $this->editingNomenclature->getChanges();
+        unset($changes['updated_at']); // Убираем техническое поле
+
+        if (!empty($changes)) {
+            $nomenclature = NomenclatureVersion::create([
+                'nomenclature_id' => $this->editingNomenclature->id,
+                'changes' => json_encode($changes),
+                'user_id' => auth()->id(),
+            ]);
+            $this->WriteActionLog('update', 'nomenclature', $this->editingNomenclature->id, $this->editingNomenclature->name);
+        }
     }
 
-    public function updatePartPnsJson($nomenclature)
+    public function archiveNomenclature($id)
     {
-        $pns = Pn::where('nomenclature_id', $nomenclature->id)->where('manager_id', auth()->id())->pluck('number')->toArray();
-        $json = json_encode((object)$pns);
+        $nomenclature = Nomenclature::findOrFail($id);
+        $nomenclature->is_archived = true;
+        $nomenclature->archived_at = now();
+        $nomenclature->save();
 
-        $nomenclature->update([
-            'pns' => $json,
+        $this->dispatch('showNotification', 'success', 'Номенклатура заархивирована.');
+
+        $this->WriteActionLog('archive', 'nomenclature', $nomenclature->id, $nomenclature->name);
+    }
+
+    public function restoreNomenclature($id)
+    {
+        $nomenclature = Nomenclature::findOrFail($id);
+        $nomenclature->is_archived = false;
+        $nomenclature->archived_at = null;
+        $nomenclature->save();
+
+        $this->dispatch('showNotification', 'success', 'Номенклатура восстановлена успешно!');
+
+        $this->WriteActionLog('restore', 'nomenclature', $nomenclature->id, $nomenclature->name);
+    }
+
+    public function confirmDeleteNomenclature($id)
+    {
+        $this->idToDelete = $id;
+    }
+
+    public function deleteNomenclature()
+    {
+        if ($this->idToDelete) {
+            $nomenclature = Nomenclature::find($this->idToDelete)->first();
+
+            if ($nomenclature->image && Storage::disk('public')->exists($nomenclature->image)) {
+                Storage::disk('public')->delete($nomenclature->image);
+            }
+
+            Nomenclature::find($this->idToDelete)->delete();
+            $this->dispatch('showNotification', 'info', 'Номенклатура удалена!');
+
+            $this->idToDelete = null;
+            $this->dispatch('nomenclatureUpdated');
+            $this->WriteActionLog('delete', 'nomenclature', $nomenclature->id, $nomenclature->name);
+        }
+    }
+
+    public function WriteActionLog($actionType, $target_type, $target_id, $name)
+    {
+        ActionLog::create([
+            'action_type' => $actionType,
+            'target_type' => $target_type,
+            'target_id' => $target_id,
+            'description' => 'Category '.$actionType.': ' . $name,
+            'user_id' => auth()->id(),
         ]);
-    }
-
-    public function deletePns($nomenclatureId, $selectedPns)
-    {
-        $nomenclature = Nomenclature::find($nomenclatureId);
-
-        if (!$nomenclature) {
-            $this->dispatch('showNotification', 'error', 'Nomenclature not found');
-            return;
-        }
-
-        if (!empty($selectedPns)) {
-            // Удаляем выбранные PN из таблицы pns
-            $nomenclature->pns()->whereIn('id', $selectedPns)->get()->each->delete();
-
-            // Обновляем JSON в колонке parts.pns
-            $this->updatePartPnsJson($nomenclature);
-
-            $this->dispatch('showNotification', 'success', 'PNs deleted successfully');
-        } else {
-            $this->dispatch('showNotification', 'error', 'No PNs selected for deletion');
-        }
     }
 
     public function render()

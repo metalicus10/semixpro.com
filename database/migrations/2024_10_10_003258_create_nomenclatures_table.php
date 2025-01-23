@@ -13,15 +13,14 @@ return new class extends Migration
     {
         Schema::create('nomenclatures', function (Blueprint $table) {
             $table->id();
-            $table->string('sku')->unique();
-            $table->json('pn'); // JSON для Part Numbers
             $table->string('name');
-            $table->string('category');
-            $table->string('supplier');
-            $table->json('brand'); // JSON для брендов
-            $table->json('url'); // JSON для URL
-            $table->unsignedBigInteger('manager_id');
-            $table->foreign('manager_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('category_id')->references('id')->on('categories')->onDelete('cascade');
+            $table->unsignedBigInteger('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
+            $table->unsignedBigInteger('manager_id')->references('id')->on('users')->onDelete('cascade');
+            $table->json('url');
+            $table->integer('version')->default(1);
+            $table->boolean('is_archived')->default(false);
+            $table->timestamp('archived_at')->nullable();
             $table->timestamps();
         });
     }

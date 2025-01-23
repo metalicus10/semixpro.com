@@ -11,18 +11,17 @@ class Nomenclature extends Model
 
     protected $fillable = [
         'sku',
-        'pn',
         'name',
-        'category',
-        'supplier',
-        'brand',
         'url',
+        'category_id',
+        'supplier_id',
         'manager_id',
+        'is_archived',
+        'archived_at',
+        'image',
     ];
 
     protected $casts = [
-        'pn' => 'array',
-        'brand' => 'array',
         'url' => 'array',
     ];
 
@@ -31,8 +30,26 @@ class Nomenclature extends Model
         return $this->belongsTo(User::class, 'manager_id');
     }
 
-    public function pns()
+    public function category()
     {
-        return $this->hasMany(Pn::class, 'nomenclature_id', 'id');
+        return $this->belongsTo(Category::class);
     }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function parts()
+    {
+        return $this->hasMany(Part::class);
+    }
+
+    public function archive()
+    {
+        $this->is_archived = true;
+        $this->archived_at = now();
+        $this->save();
+    }
+
 }
