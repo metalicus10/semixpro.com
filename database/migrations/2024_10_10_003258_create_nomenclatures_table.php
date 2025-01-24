@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('nomenclatures', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->unsignedBigInteger('category_id')->references('id')->on('categories')->onDelete('cascade');
-            $table->unsignedBigInteger('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
-            $table->unsignedBigInteger('manager_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreignId('category_id')->constrained()->onDelete('restrict');
+            $table->foreignId('brand_id')->nullable()->constrained()->onDelete('restrict');
+            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('restrict');
+            $table->foreignId('manager_id')->constrained('users')->onDelete('restrict');
             $table->json('url');
             $table->integer('version')->default(1);
             $table->boolean('is_archived')->default(false);

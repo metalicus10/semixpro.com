@@ -92,6 +92,8 @@ class ManagerCategories extends Component
             ]);
         }
 
+        $this->dispatch('update-categories');
+
         $this->closeCategoryModal();
         $this->loadCategories();
     }
@@ -104,7 +106,6 @@ class ManagerCategories extends Component
         $this->categoryId = $category->id;
         $this->categoryName = $category->name;
         $this->showCategoryModal = true;
-        $this->loadCategories();
     }
 
     // Удаление категории
@@ -112,8 +113,11 @@ class ManagerCategories extends Component
     {
         Category::destroy($this->categoryToDelete);
         $this->closeDeleteModal();
+
+        $this->dispatch('update-categories');
+
         $this->loadCategories();
-        session()->flash('message', 'Category deleted successfully.');
+        $this->dispatch('showNotification', 'info', 'Category deleted successfully');
     }
 
     public function confirmDeleteCategory($id)

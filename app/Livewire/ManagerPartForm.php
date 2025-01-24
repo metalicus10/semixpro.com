@@ -31,7 +31,7 @@ class ManagerPartForm extends Component
     public $categories;
     public $quantity;
     public $image;
-    public $selectedCategory;
+    public $selectedNomenclature, $selectedCategory;
     public array $selectedBrands = [];
     public $showCategoryModal = false;
     public $showPartModal = false;
@@ -115,6 +115,7 @@ class ManagerPartForm extends Component
         $this->validate([
             'partName' => 'required|string|max:255',
             'sku' => 'required|string|max:255',
+            'selectedNomenclature' => 'required|exists:nomenclatures,id',
             'selectedWarehouse' => 'required|exists:warehouses,id',
             'selectedBrands' => 'nullable|array|exists:brands,id',
             'quantity' => 'required|integer|min:1',
@@ -126,7 +127,7 @@ class ManagerPartForm extends Component
         ]);
 
         $this->price = $this->price !== null ? (float) $this->price : null;
-        
+
         if (Pn::where('number', $this->pn)->exists() && $this->pn != null) {
             $this->dispatch('showNotification', 'error', 'Part number already exists');
             return;
@@ -136,39 +137,36 @@ class ManagerPartForm extends Component
         $userId = auth()->id();
 
         // Путь для сохранения изображений
-        $path = 'partsImages/' . $userId;
-        $fileName = null;
+        $path = 'images/parts/' . $userId;
 
         if ($this->image) {
-        
+
             $tempPath = $this->image->getRealPath();
-            $tempImg = Storage::disk('s3')->get($tempPath);
-        
+            $tempImg = Storage::disk('public')->get($tempPath);
+
             $manager = new ImageManager(Driver::class);
-            
+
             $processedImage = $manager->read($tempImg)
-            ->resize(1024, 1024, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            })
+            ->resize(1024, 1024)
             ->toWebp(quality: 60);
 
             // Генерируем уникальное имя для файла
             $fileName = $path. '/' . uniqid() . '.webp';
 
-            // Сохраняем закодированное изображение в S3
-            $result = Storage::disk('s3')->put($fileName, $processedImage);
-            $this->imgUrl = Storage::disk('s3')->url($fileName);
+            // Сохраняем закодированное изображение в local
+            $result = Storage::disk('public')->put($fileName, $processedImage);
+            $this->imgUrl = Storage::disk('public')->url($fileName);
         }
 
         $part = Part::create([
             'name' => $this->partName,
             'sku' => $this->sku,
+            'nomenclature_id' => $this->selectedNomenclature,
             'warehouse_id' => $this->selectedWarehouse,
+            'category_id' => $this->selectedCategory,
             'quantity' => $this->quantity,
             'price' => $this->price,
             'image' => $this->imgUrl,
-            'category_id' => $this->selectedCategory,
             'url' => json_encode(['url' => $this->url, 'text' => $this->text ?? '']),
             'total' => $this->quantity * $this->price,
         ]);

@@ -1,7 +1,7 @@
-<div wire:init="loadComponent" x-data="{ initialized: false }" x-init="setTimeout(() => initialized = true, 100)"
+<div
      class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
-    @if($loaded)
-    <div x-show="initialized">
+
+    <div>
         <div class="flex justify-between items-center mb-6">
             <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Categories</h1>
         </div>
@@ -47,7 +47,6 @@
             </div>
         </div>
     </div>
-    @endif
     <!-- Модальное окно для добавления/редактирования категории -->
     @if($showCategoryModal)
         <div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center">

@@ -1,29 +1,4 @@
-<div class="">
-    @if ($notificationMessage)
-        <div
-            class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
-            x-data="{ show: true }"
-            x-init="
-            setTimeout(() => show = false, 3500);
-            setTimeout(() => $wire.clearNotification(), 3500);
-        "
-            x-show="show"
-            x-transition:enter="opacity-0"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="opacity-100"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            :class="{
-            'bg-blue-700': '{{ $notificationType }}' === 'info',
-            'bg-green-500': '{{ $notificationType }}' === 'success',
-            'bg-yellow-500': '{{ $notificationType }}' === 'warning'
-        }"
-        >
-            {{ $notificationMessage }}
-        </div>
-    @endif
-
+<div>
     <!-- Кнопки для открытия модальных окон -->
     <div class="mb-1 w-full md:w-auto">
         <button wire:click="openPartModal" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
@@ -68,7 +43,19 @@
 
                 <h2 class="text-xl font-bold mb-4">Add Part</h2>
 
-                <!-- Шаг 1: Выбор склада -->
+                <!-- Шаг 1: Выбор номенклатуры -->
+                <div class="mb-4">
+                    <select wire:model="selectedNomenclature"
+                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
+                        <option value="">Select Warehouse</option>
+                        @foreach ($warehouses as $warehouse)
+                            <option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('selectedWarehouse') <span class="text-red-500">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Шаг 2: Выбор склада -->
                 <div class="mb-4">
                     <select wire:model="selectedWarehouse"
                             class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
@@ -78,9 +65,9 @@
                         @endforeach
                     </select>
                     @error('selectedWarehouse') <span class="text-red-500">{{ $message }}</span> @enderror
-                </div>          
+                </div>
 
-                <!-- Шаг 1: Выбор категории -->
+                <!-- Шаг 3: Выбор категории -->
                 <div class="mb-4">
                     <select wire:model="selectedCategory"
                             class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500">
@@ -92,7 +79,7 @@
                     @error('selectedCategory') <span class="text-red-500">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Шаг 2: Ввод наименования -->
+                <!-- Шаг 4: Ввод наименования -->
                 <div class="mb-4">
                     <input type="text" wire:model="partName"
                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -100,7 +87,7 @@
                     @error('partName') <span class="text-red-500">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Шаг 3: Ввод артикула -->
+                <!-- Шаг 5: Ввод артикула -->
                 <div class="mb-4">
                     <input type="text" wire:model="sku"
                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -108,7 +95,7 @@
                     @error('sku') <span class="text-red-500">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Шаг 4: Ввод количества -->
+                <!-- Шаг 6: Ввод количества -->
                 <div class="mb-4">
                     <input type="number" wire:model="quantity"
                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -116,7 +103,7 @@
                     @error('quantity') <span class="text-red-500">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Шаг 5: Ввод цены -->
+                <!-- Шаг 7: Ввод цены -->
                 <div class="mb-4">
                     <input type="text" wire:model="price"
                            class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"

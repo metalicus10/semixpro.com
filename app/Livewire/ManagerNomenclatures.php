@@ -3,20 +3,27 @@
 namespace App\Livewire;
 
 use App\Models\ActionLog;
+use App\Models\Category;
 use App\Models\NomenclatureVersion;
+use App\Models\Supplier;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Livewire\Component;
 use App\Models\Nomenclature;
 use Illuminate\Support\Facades\Auth;
+use Livewire\WithFileUploads;
 
 class ManagerNomenclatures extends Component
 {
+    use WithFileUploads;
+
     public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [];
     public $manager_id, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
     public $editingNomenclature = null, $idToDelete;
     public bool $showArchived = false;
+
+    protected $listeners = ['update-categories' => 'updateCategories'];
 
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
@@ -30,12 +37,26 @@ class ManagerNomenclatures extends Component
 
     public function mount()
     {
+        $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
+        $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
         ->with('category', 'supplier')->get()->toArray();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)
             ->with('category', 'supplier')->get()->toArray();
+    }
+
+    public function updateCategories()
+    {
+        $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
+        $this->dispatch('refreshCategorySelect');
+    }
+
+    public function updateSuppliers()
+    {
+        $this->categories = Supplier::where('manager_id', Auth::id())->get()->toArray();
+        $this->dispatch('refreshSupplierSelect');
     }
 
     public function addNomenclature()
@@ -63,7 +84,7 @@ class ManagerNomenclatures extends Component
                 ->resize(null, null)
                 ->toWebp(quality: 60);
 
-            $imagePath = 'nomenclatures/' . Auth::id();
+            $imagePath = 'images/nomenclatures/' . Auth::id();
             // Генерируем уникальное имя для файла
             $fileName = $imagePath. '/' . uniqid() . '.webp';
 
