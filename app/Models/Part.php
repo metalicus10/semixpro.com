@@ -27,6 +27,7 @@ class Part extends Model
         'total',
         'url',
         'pns',
+        'nomenclature_id',
     ];
 
     public static function boot()
@@ -90,4 +91,8 @@ class Part extends Model
         return $this->hasMany(Pn::class, 'part_id', 'id');
     }
 
+    public function nomenclature()
+    {
+        return $this->belongsTo(Nomenclature::class, 'nomenclature_id');
+    }
 }

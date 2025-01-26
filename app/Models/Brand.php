@@ -20,4 +20,9 @@ class Brand extends Model
         return $this->belongsToMany(Part::class, 'brand_part');
     }
 
+    public function nomenclatures()
+    {
+        return $this->belongsToMany(Nomenclature::class, 'brand_nomenclature', 'brand_id', 'nomenclature_id');
+    }
+
 }

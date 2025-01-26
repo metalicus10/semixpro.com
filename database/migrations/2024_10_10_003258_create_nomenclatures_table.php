@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('restrict');
             $table->foreignId('manager_id')->constrained('users')->onDelete('restrict');
             $table->json('url');
+            $table->string('image')->nullable();
             $table->integer('version')->default(1);
             $table->boolean('is_archived')->default(false);
             $table->timestamp('archived_at')->nullable();

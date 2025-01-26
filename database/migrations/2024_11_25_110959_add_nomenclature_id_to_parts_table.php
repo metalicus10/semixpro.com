@@ -22,8 +22,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('parts', function (Blueprint $table) {
-            $table->dropForeign(['nomenclature_id']); // Удаляем внешний ключ
-            $table->dropColumn('nomenclature_id'); // Удаляем колонку
+            //$table->dropForeign(['nomenclature_id']);
+            $table->dropColumn('nomenclature_id');
         });
     }
 };

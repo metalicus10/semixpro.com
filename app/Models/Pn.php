@@ -23,6 +23,6 @@ class Pn extends Model
 
     public function nomenclature()
     {
-        return $this->belongsTo(Nomenclature::class);
+        return $this->belongsTo(Nomenclature::class, 'nomenclature_id');
     }
 }

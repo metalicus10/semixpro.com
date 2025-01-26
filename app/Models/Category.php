@@ -24,4 +24,9 @@ class Category extends Model
     {
         return $this->hasMany(Part::class, 'category_id');
     }
+
+    public function nomenclatures()
+    {
+        return $this->hasMany(Nomenclature::class, 'category_id');
+    }
 }
