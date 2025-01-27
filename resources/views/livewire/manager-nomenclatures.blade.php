@@ -170,6 +170,12 @@ x-data="{
                     </div>
                 </div>
             </template>
+            <template x-if="nomenclatures.length === 0">
+            <div
+                class="text-sm text-center text-gray-600 dark:text-gray-400 bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                No nomenclatures available
+            </div>
+            </template>
         </div>
     </div>
 

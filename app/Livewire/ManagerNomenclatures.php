@@ -33,6 +33,7 @@ class ManagerNomenclatures extends Component
         'supplier' => '',
         'url' => ['url' => '', 'text' => ''],
         'manager_id' => '',
+        'image' => '',
     ];
 
     public function mount()
