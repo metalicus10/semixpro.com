@@ -91,7 +91,7 @@ class Part extends Model
         return $this->hasMany(Pn::class, 'part_id', 'id');
     }
 
-    public function nomenclature()
+    public function nomenclatures()
     {
         return $this->belongsTo(Nomenclature::class, 'nomenclature_id');
     }

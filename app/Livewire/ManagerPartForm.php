@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Brand;
+use App\Models\Nomenclature;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -26,12 +27,13 @@ class ManagerPartForm extends Component
     public $sku;
     public $pn;
     public $brand;
+    public $nomenclatures;
     public $brands;
     public $warehouses;
     public $categories;
     public $quantity;
     public $image;
-    public $selectedNomenclature, $selectedCategory;
+    public $selectedNomenclature, $selectedCategory, $selectedWarehouse;
     public array $selectedBrands = [];
     public $showCategoryModal = false;
     public $showPartModal = false;
@@ -40,7 +42,6 @@ class ManagerPartForm extends Component
     public $notificationType = 'info';
     public $imgUrl = null;
     public $url = null;
-    public $selectedWarehouse;
 
     protected $listeners = ['categoryUpdated' => 'refreshCategories', 'brandUpdated' => 'refreshBrands', 'defaultWarehouseUpdated' => 'refreshWarehouses'];
 
@@ -58,6 +59,7 @@ class ManagerPartForm extends Component
     {
         $defaultWarehouse = Warehouse::where('manager_id', Auth::id())->where('is_default', true)->first();
         $this->selectedWarehouse = $defaultWarehouse ? $defaultWarehouse->id : null;
+        $this->refreshNomenclatures();
         $this->refreshWarehouses();
         $this->refreshBrands();
         $this->refreshCategories();
@@ -66,6 +68,11 @@ class ManagerPartForm extends Component
     public function clearNotification()
     {
         $this->notificationMessage = '';
+    }
+
+    public function refreshNomenclatures()
+    {
+        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get();
     }
 
     public function refreshWarehouses()
