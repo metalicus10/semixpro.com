@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::create('nomenclatures', function (Blueprint $table) {
             $table->id();
+            $table->string('nn')->unique();
             $table->string('name');
             $table->foreignId('category_id')->constrained()->onDelete('restrict');
             $table->foreignId('brand_id')->nullable()->constrained()->onDelete('restrict');
             $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('restrict');
             $table->foreignId('manager_id')->constrained('users')->onDelete('restrict');
-            $table->json('url');
             $table->string('image')->nullable();
             $table->integer('version')->default(1);
             $table->boolean('is_archived')->default(false);

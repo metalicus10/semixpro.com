@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('parts', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->charset('utf8mb4')->collation('utf8mb4_unicode_ci');
-            $table->string('sku')->unique()->charset('utf8mb4')->collation('utf8mb4_unicode_ci'); // Артикул
+            $table->string('sku')->unique();
+            $table->string('name');
             $table->integer('quantity')->default(0);
-            $table->foreignId('category_id')->constrained('categories');
+            $table->foreignId('nomenclature_id')->constrained('nomenclatures');
             $table->foreignId('manager_id')->constrained('users')->onDelete('cascade');
+            $table->json('url')->nullable();
             $table->timestamps();
         });
     }

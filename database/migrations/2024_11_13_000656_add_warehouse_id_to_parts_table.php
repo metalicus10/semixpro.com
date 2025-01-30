@@ -12,10 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('parts', function (Blueprint $table) {
-            $table->unsignedBigInteger('warehouse_id')->nullable()->after('id');
-    
+            $table->unsignedBigInteger('warehouse_id')->nullable()->after('quantity');
+
             // Добавление связи с таблицей warehouses
-            $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('set null');
+            $table->foreignId('warehouse_id')->constrained('warehouses');
         });
     }
 
