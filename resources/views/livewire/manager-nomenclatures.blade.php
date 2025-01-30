@@ -1,68 +1,69 @@
 <div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden"
-x-data="{
-    nomenclatures: @entangle('nomenclatures'),
-    newNomenclature: @entangle('newNomenclature'),
-    selectedNomenclatures: @entangle('selectedNomenclatures'),
-    archived_nomenclatures: @entangle('archived_nomenclatures') || [],
-    categories: @entangle('categories') || [],
-    suppliers: @entangle('suppliers') || [],
-    showModal: false,
-    editingMode: false,
-    name: '', image: '', brand_id: '', category_id: '', supplier_id: '',
-    selectedNomenclatures: [],
-    selectedImage: null,
-    openNomenclatureModal(mode, nomenclature = null) {
-        this.editingMode = mode === 'edit';
-        if (this.editingMode && nomenclature) {
-            this.editingNomenclature = nomenclature.id;
-            this.name = nomenclature.name;
-            this.category_id = nomenclature.category_id;
-            this.supplier_id = nomenclature.supplier_id;
-        } else {
-            this.resetForm();
-        }
-        this.showModal = true;
-    },
-    closeNomenclatureDelModal() {
-        this.confirmDeleteNomenclatureId = null;
-        this.isNomenclatureDelModalOpen = false;
-    },
-    resetForm() {
-        this.editingNomenclature = null;
-        this.name = '';
-        this.category_id = '';
-        this.supplier_id = '';
-        this.image = null;
-        this.selectedImage = null;
-    },
-    toggleCheckAll(event) {
-        this.selectedNomenclatures = event.target.checked ? this.nomenclatures.map(n => n.id) : [];
-    },
-    toggleNomenclatureSelection(id) {
-        if (this.selectedNomenclatures.includes(id)) {
-            this.selectedNomenclatures = this.selectedNomenclatures.filter(id => id !== id);
-        } else {
-            this.selectedNomenclatures.push(id);
-        }
-    },
-    archiveNomenclature(nomenclature) {
-        $wire.archiveNomenclature(nomenclature);
-    },
-    restoreNomenclature(nomenclature) {
-        $wire.restoreNomenclature(nomenclature);
-        this.showArchived = false;
-    },
-    previewImage(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.selectedImage = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    },
-}">
+    x-data="{
+        nomenclatures: @entangle('nomenclatures'),
+        newNomenclature: @entangle('newNomenclature'),
+        selectedNomenclatures: @entangle('selectedNomenclatures'),
+        archived_nomenclatures: @entangle('archived_nomenclatures') || [],
+        categories: @entangle('categories') || [],
+        suppliers: @entangle('suppliers') || [],
+        showModal: false,
+        editingMode: false,
+        name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '',
+        selectedNomenclatures: [],
+        selectedImage: null,
+        openNomenclatureModal(mode, nomenclature = null) {
+            this.editingMode = mode === 'edit';
+            if (this.editingMode && nomenclature) {
+                this.editingNomenclature = nomenclature.id;
+                this.name = nomenclature.name;
+                this.category_id = nomenclature.category_id;
+                this.supplier_id = nomenclature.supplier_id;
+            } else {
+                this.resetForm();
+            }
+            this.showModal = true;
+        },
+        closeNomenclatureDelModal() {
+            this.confirmDeleteNomenclatureId = null;
+            this.isNomenclatureDelModalOpen = false;
+        },
+        resetForm() {
+            this.editingNomenclature = null;
+            this.name = '';
+            this.category_id = '';
+            this.supplier_id = '';
+            this.image = null;
+            this.selectedImage = null;
+        },
+        toggleCheckAll(event) {
+            this.selectedNomenclatures = event.target.checked ? this.nomenclatures.map(n => n.id) : [];
+        },
+        toggleNomenclatureSelection(id) {
+            if (this.selectedNomenclatures.includes(id)) {
+                this.selectedNomenclatures = this.selectedNomenclatures.filter(id => id !== id);
+            } else {
+                this.selectedNomenclatures.push(id);
+            }
+        },
+        archiveNomenclature(nomenclature) {
+            $wire.archiveNomenclature(nomenclature);
+        },
+        restoreNomenclature(nomenclature) {
+            $wire.restoreNomenclature(nomenclature);
+            this.showArchived = false;
+        },
+        previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.selectedImage = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        },
+    }"
+>
     <div class="flex justify-between items-center mb-6">
         <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Nomenclature</h1>
         <!-- Добавить новую номенклатуру -->
@@ -81,9 +82,11 @@ x-data="{
                        :checked="selectedNomenclatures.length === nomenclatures.length"
                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
             </div>
+            <div class="flex-1 px-4 py-2">SKU</div>
             <div class="flex-1 px-4 py-2">Наименование</div>
             <div class="flex-1 px-4 py-2">Категория</div>
             <div class="flex-1 px-4 py-2">Поставщик</div>
+            <div class="flex-1 px-4 py-2">Брэнд</div>
             <div class="flex-1 px-4 py-2">Изображение</div>
             <div class="flex-1 px-4 py-2">Действия</div>
         </div>
@@ -147,7 +150,15 @@ x-data="{
                     <!-- Supplier -->
                     <div class="flex-1 px-4 py-2" x-text="nomenclature.supplier.name"></div>
                     <!-- Image -->
-                    <div class="flex-1 px-4 py-2">Image</div>
+                    <div class="flex-1 px-4 py-2">
+                        <span class="md:hidden font-semibold">Изображение: </span>
+                        <template x-if="nomenclature.image !== null">
+                            <img :src="'{{ asset('storage') }}' + '/images/nomenclatures/' + nomenclature.image" alt="Изображение" class="w-24 h-auto object-cover rounded">
+                        </template>
+                        <template x-if="nomenclature.image === null">
+                            <span class="text-gray-500">Нет изображения</span>
+                        </template>
+                    </div>
                     <!-- Actions -->
                     <div class="flex-1 px-4 py-2">Buttons</div>
                 </div>

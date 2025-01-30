@@ -1,6 +1,4 @@
-<div wire:init="loadComponent" x-data="{ initialized: false }" x-init="setTimeout(() => initialized = true, 100)"
-     class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
-    @if($loaded)
+<div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
 
         <!-- Заголовок страницы и фильтры -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
@@ -544,8 +542,8 @@
                                                                 <!-- Основное отображение -->
                                                                 <span x-show="!editingName" @click="editingName = true"
                                                                       class="flex z-35 items-center cursor-pointer hover:underline min-h-[30px]">
-                                                                {{ $part->name }}
-                                                            </span>
+                                                                    {{ $part->name }}
+                                                                </span>
                                                             </div>
                                                             <!-- Режим редактирования Name -->
                                                             <div x-show="editingName"
@@ -1330,5 +1328,5 @@
                 </div>
             </div>
 
-            @endif
         </div>
+</div>
