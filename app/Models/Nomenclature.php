@@ -11,7 +11,6 @@ class Nomenclature extends Model
 
     protected $fillable = [
         'name',
-        'url',
         'category_id',
         'supplier_id',
         'manager_id',
@@ -20,9 +19,9 @@ class Nomenclature extends Model
         'image',
     ];
 
-    protected $casts = [
+    /*protected $casts = [
         'url' => 'array',
-    ];
+    ];*/
 
     public function manager()
     {

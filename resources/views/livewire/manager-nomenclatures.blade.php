@@ -18,8 +18,6 @@ x-data="{
             this.name = nomenclature.name;
             this.category_id = nomenclature.category_id;
             this.supplier_id = nomenclature.supplier_id;
-            this.url.url = nomenclature.url.url;
-            this.url.text = nomenclature.url.text;
         } else {
             this.resetForm();
         }
@@ -87,7 +85,6 @@ x-data="{
             <div class="flex-1 px-4 py-2">Категория</div>
             <div class="flex-1 px-4 py-2">Поставщик</div>
             <div class="flex-1 px-4 py-2">Изображение</div>
-            <div class="flex-1 px-4 py-2">URL</div>
             <div class="flex-1 px-4 py-2">Действия</div>
         </div>
 
@@ -104,7 +101,7 @@ x-data="{
                         <label for="checkbox-table-search-nomenclature.id"
                                class="sr-only">checkbox</label>
                     </div>
-                    <div class="hidden sm:block md:w-1/8 mb-0 mr-5">
+                    <div class="hidden sm:block px-4 py-2">
                         <input type="checkbox" :value="nomenclature.id"
                                @click="toggleNomenclatureSelection(nomenclature.id)"
                                :checked="selectedNomenclatures.includes(nomenclature.id)"
@@ -120,7 +117,7 @@ x-data="{
                         originalName: '',
                         errorMessage: '',
                     }"
-                        class="flex flex-row w-full mb-2 relative"
+                        class="flex-1"
                     >
 
                         <div class="flex relative">
@@ -143,23 +140,16 @@ x-data="{
                                 </div>
                             </div>
                         </div>
-                        <div class="flex-1 px-4 py-2" x-text="nomenclature.pn"></div>
-                        <div class="flex-1 px-4 py-2" x-text="nomenclature.name"></div>
-                        <!-- Category -->
-                        <div class="flex-1 px-4 py-2" x-text="nomenclature.category"></div>
-                        <!-- Supplier -->
-                        <div class="flex-1 px-4 py-2" x-text="nomenclature.supplier"></div>
-                        <!-- Brand -->
-                        <div class="flex-1 px-4 py-2">
-                            <template x-for="brand in nomenclature.brand" :key="brand">
-                                <span class="inline-block bg-gray-200 text-gray-800 text-xs font-medium mr-1 px-2 py-1 rounded dark:bg-gray-700 dark:text-gray-300" x-text="brand"></span>
-                            </template>
-                        </div>
-                        <!-- URL -->
-                        <div class="flex-1 px-4 py-2">
-                            <a :href="nomenclature.url.url" x-text="nomenclature.url.text" class="text-blue-500 hover:underline"></a>
-                        </div>
+                        <div class="px-4 py-2" x-text="nomenclature.name"></div>
                     </div>
+                    <!-- Category -->
+                    <div class="flex-1 px-4 py-2" x-text="nomenclature.category"></div>
+                    <!-- Supplier -->
+                    <div class="flex-1 px-4 py-2" x-text="nomenclature.supplier"></div>
+                    <!-- Image -->
+                    <div class="flex-1 px-4 py-2">Image</div>
+                    <!-- Actions -->
+                    <div class="flex-1 px-4 py-2">Buttons</div>
                 </div>
             </template>
             <template x-if="nomenclatures.length === 0">
@@ -230,23 +220,6 @@ x-data="{
                                 </template>
                             </select>
                             <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.supplier" x-text="$wire.errors?.newNomenclature?.supplier"></p>
-                        </div>
-
-                        <!-- URL -->
-                        <div>
-                            <label for="url" class="block text-sm font-medium">URL</label>
-                            <input type="url" id="url" x-model="newNomenclature.url.url"
-                                placeholder="https://example.com"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.url?.url" x-text="$wire.errors?.newNomenclature?.url?.url"></p>
-                        </div>
-
-                        <div>
-                            <label for="url_text" class="block text-sm font-medium">Текст ссылки</label>
-                            <input type="text" id="url_text" x-model="newNomenclature.url.text"
-                                placeholder="Текст ссылки (например, 'Amazon')"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.url?.text" x-text="$wire.errors?.newNomenclature?.url?.text"></p>
                         </div>
 
                         <!-- Image -->

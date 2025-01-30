@@ -28,9 +28,8 @@ class ManagerNomenclatures extends Component
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
         'name' => '',
-        'category' => '',
-        'supplier' => '',
-        'url' => ['url' => '', 'text' => ''],
+        'category_id' => '',
+        'supplier_id' => '',
         'manager_id' => '',
         'image' => '',
     ];
@@ -65,8 +64,6 @@ class ManagerNomenclatures extends Component
             'newNomenclature.name' => 'required|string|max:255',
             'newNomenclature.category' => 'nullable|string|max:255',
             'newNomenclature.supplier' => 'nullable|string|max:255',
-            'newNomenclature.url.url' => 'nullable|url',
-            'newNomenclature.url.text' => 'nullable|string|max:255',
             'newNomenclature.image' => 'nullable|image|max:2048',
         ]);
 
