@@ -10,7 +10,6 @@ class Nomenclature extends Model
     use HasFactory;
 
     protected $fillable = [
-        'sku',
         'name',
         'url',
         'category_id',

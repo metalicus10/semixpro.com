@@ -27,7 +27,6 @@ class ManagerNomenclatures extends Component
 
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
-        'sku' => '',
         'name' => '',
         'category' => '',
         'supplier' => '',
@@ -63,7 +62,6 @@ class ManagerNomenclatures extends Component
     public function addNomenclature()
     {
         $validatedData = $this->validate([
-            'newNomenclature.sku' => 'required|string|max:255|unique:nomenclatures,sku',
             'newNomenclature.name' => 'required|string|max:255',
             'newNomenclature.category' => 'nullable|string|max:255',
             'newNomenclature.supplier' => 'nullable|string|max:255',
