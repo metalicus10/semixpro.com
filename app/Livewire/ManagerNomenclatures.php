@@ -62,8 +62,8 @@ class ManagerNomenclatures extends Component
     {
         $validatedData = $this->validate([
             'newNomenclature.name' => 'required|string|max:255',
-            'newNomenclature.category' => 'nullable|string|max:255',
-            'newNomenclature.supplier' => 'nullable|string|max:255',
+            'newNomenclature.category_id' => 'nullable|string|max:255',
+            'newNomenclature.supplier_id' => 'nullable|string|max:255',
             'newNomenclature.image' => 'nullable|image|max:2048',
         ]);
 

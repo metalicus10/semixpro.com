@@ -143,9 +143,9 @@ x-data="{
                         <div class="px-4 py-2" x-text="nomenclature.name"></div>
                     </div>
                     <!-- Category -->
-                    <div class="flex-1 px-4 py-2" x-text="nomenclature.category"></div>
+                    <div class="flex-1 px-4 py-2" x-text="nomenclature.category.name"></div>
                     <!-- Supplier -->
-                    <div class="flex-1 px-4 py-2" x-text="nomenclature.supplier"></div>
+                    <div class="flex-1 px-4 py-2" x-text="nomenclature.supplier.name"></div>
                     <!-- Image -->
                     <div class="flex-1 px-4 py-2">Image</div>
                     <!-- Actions -->
