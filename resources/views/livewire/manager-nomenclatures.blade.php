@@ -8,14 +8,13 @@ x-data="{
     suppliers: @entangle('suppliers') || [],
     showModal: false,
     editingMode: false,
-    name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '',
+    name: '', image: '', brand_id: '', category_id: '', supplier_id: '',
     selectedNomenclatures: [],
     selectedImage: null,
     openNomenclatureModal(mode, nomenclature = null) {
         this.editingMode = mode === 'edit';
         if (this.editingMode && nomenclature) {
             this.editingNomenclature = nomenclature.id;
-            this.sku = nomenclature.sku;
             this.name = nomenclature.name;
             this.category_id = nomenclature.category_id;
             this.supplier_id = nomenclature.supplier_id;
@@ -32,7 +31,6 @@ x-data="{
     },
     resetForm() {
         this.editingNomenclature = null;
-        this.sku = '';
         this.name = '';
         this.category_id = '';
         this.supplier_id = '';
@@ -40,13 +38,13 @@ x-data="{
         this.selectedImage = null;
     },
     toggleCheckAll(event) {
-        this.selectedNomenclatures = event.target.checked ? this.nomenclatures.map(n => n.sku) : [];
+        this.selectedNomenclatures = event.target.checked ? this.nomenclatures.map(n => n.id) : [];
     },
-    toggleNomenclatureSelection(sku) {
-        if (this.selectedNomenclatures.includes(sku)) {
-            this.selectedNomenclatures = this.selectedNomenclatures.filter(id => id !== sku);
+    toggleNomenclatureSelection(id) {
+        if (this.selectedNomenclatures.includes(id)) {
+            this.selectedNomenclatures = this.selectedNomenclatures.filter(id => id !== id);
         } else {
-            this.selectedNomenclatures.push(sku);
+            this.selectedNomenclatures.push(id);
         }
     },
     archiveNomenclature(nomenclature) {
@@ -85,7 +83,6 @@ x-data="{
                        :checked="selectedNomenclatures.length === nomenclatures.length"
                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
             </div>
-            <div class="flex-1 px-4 py-2">SKU</div>
             <div class="flex-1 px-4 py-2">Наименование</div>
             <div class="flex-1 px-4 py-2">Категория</div>
             <div class="flex-1 px-4 py-2">Поставщик</div>
@@ -114,11 +111,6 @@ x-data="{
                                class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                         <label for="checkbox-table-search-nomenclature.id"
                                class="sr-only">checkbox</label>
-                    </div>
-                    <!-- SKU -->
-                    <div class="flex-1 px-4 py-2">
-                        <span class="md:hidden font-semibold">SKU:</span>
-                        <div class="flex-1" x-text="nomenclature.sku"></div>
                     </div>
                     <!-- Name -->
                     <div x-data="{
@@ -202,17 +194,6 @@ x-data="{
 
                 <form x-on:submit.prevent="$wire.addNomenclature()">
                     <div class="grid grid-cols-2 gap-6 text-gray-500 dark:text-gray-400">
-                        <!-- SKU -->
-                        <div>
-                            <label for="sku" class="block text-sm font-medium">SKU <span class="relative top-0 text-red-600">*</span></label>
-                            <input type="text" id="sku" x-model="newNomenclature.sku"
-                                placeholder="Введите SKU" required=""
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.sku" x-text="$wire.errors?.newNomenclature?.sku"></p>
-                            @error('sku')
-                                <span class="text-red-500 text-sm">{{ $message }}</span>
-                            @enderror
-                        </div>
 
                         <!-- Name -->
                         <div>
