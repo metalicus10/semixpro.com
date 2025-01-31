@@ -10,6 +10,7 @@ class Nomenclature extends Model
     use HasFactory;
 
     protected $fillable = [
+        'nn',
         'name',
         'category_id',
         'supplier_id',
@@ -33,7 +34,7 @@ class Nomenclature extends Model
         return $this->belongsTo(Category::class);
     }
 
-    public function supplier()
+    public function suppliers()
     {
         return $this->belongsTo(Supplier::class);
     }

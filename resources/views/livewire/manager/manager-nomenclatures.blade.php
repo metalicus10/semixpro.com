@@ -8,7 +8,7 @@
         suppliers: @entangle('suppliers') || [],
         showModal: false,
         editingMode: false,
-        name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '',
+        nn:'', name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '',
         selectedNomenclatures: [],
         selectedImage: null,
         openNomenclatureModal(mode, nomenclature = null) {
@@ -29,6 +29,7 @@
         },
         resetForm() {
             this.editingNomenclature = null;
+            this.nn = '';
             this.name = '';
             this.category_id = '';
             this.supplier_id = '';
@@ -82,7 +83,7 @@
                        :checked="selectedNomenclatures.length === nomenclatures.length"
                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
             </div>
-            <div class="flex-1 px-4 py-2">SKU</div>
+            <div class="flex-1 px-4 py-2">NN</div>
             <div class="flex-1 px-4 py-2">Наименование</div>
             <div class="flex-1 px-4 py-2">Категория</div>
             <div class="flex-1 px-4 py-2">Поставщик</div>
@@ -195,6 +196,14 @@
 
                 <form x-on:submit.prevent="$wire.addNomenclature()">
                     <div class="grid grid-cols-2 gap-6 text-gray-500 dark:text-gray-400">
+                        <!-- NN -->
+                        <div>
+                            <label for="nn" class="block text-sm font-medium">Номер номенклатуры <span class="relative top-0 text-red-600">*</span></label>
+                            <input type="text" id="nn" x-model="newNomenclature.nn"
+                                   placeholder="Введите номер" required=""
+                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
+                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.nn" x-text="$wire.errors?.newNomenclature?.nn"></p>
+                        </div>
 
                         <!-- Name -->
                         <div>
@@ -208,7 +217,7 @@
                         <!-- Category -->
                         <div>
                             <label for="category" class="block text-sm font-medium">Категория <span class="relative top-0 text-red-600">*</span></label>
-                            <select id="category" x-model="newNomenclature.category" x-on:refresh-category-select.window="this.categories = $wire.categories"
+                            <select id="category" x-model="newNomenclature.category_id" x-on:refresh-category-select.window="this.categories = $wire.categories"
                                     class="required:border-red-500 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                                     placeholder="Выберите категорию" required="">
                                 <option value="">Выберите категорию</option>
@@ -222,12 +231,12 @@
                         <!-- Supplier -->
                         <div>
                             <label for="supplier" class="block text-sm font-medium">Поставщик</label>
-                            <select id="supplier" x-model="newNomenclature.supplier" x-on:refresh-supplier-select.window="this.suppliers = $wire.suppliers"
+                            <select id="supplier" x-model="newNomenclature.supplier_id" x-on:refresh-supplier-select.window="this.suppliers = $wire.suppliers"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                                     placeholder="Выберите поставщика">
                                 <option value="">Выберите поставщика</option>
                                 <template x-for="(supplier, index) in suppliers" :key="supplier.id">
-                                    <option value="supplier.id" x-text="supplier.name"></option>
+                                    <option :value="supplier.id" x-text="supplier.name"></option>
                                 </template>
                             </select>
                             <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.supplier" x-text="$wire.errors?.newNomenclature?.supplier"></p>

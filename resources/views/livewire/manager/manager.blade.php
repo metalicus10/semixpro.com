@@ -1,31 +1,29 @@
-<!-- Main Content Area -->
 <div>
-    <!-- Dynamically loaded content based on the selected tab -->
-    <div x-show="currentTab === 'nomenclatures'">
-        @livewire('manager-nomenclatures', [], key('manager-nomenclatures'))
-    </div>
-    <div x-show="currentTab === 'warehouses'">
-        @livewire('manager-warehouses', [], key('manager-warehouses'))
-    </div>
-    <div x-show="currentTab === 'categories'">
-        @livewire('manager-categories', [], key('manager-categories'))
-    </div>
-    <div x-show="currentTab === 'brands'">
-        @livewire('manager-brands', [], key('manager-brands'))
-    </div>
-    <div x-show="currentTab === 'suppliers'">
-        @livewire('manager-suppliers', [], key('manager-suppliers'))
-    </div>
-    <div x-show="currentTab === 'parts'">
-        @livewire('manager-parts', [], key('manager-parts'))
-    </div>
-    <div x-show="currentTab === 'statistics'">
-        @livewire('manager-statistics', [], key('manager-statistics'))
-    </div>
-    <div x-show="currentTab === 'technicians'">
-        @livewire('manager-technicians', [], key('manager-technicians'))
-    </div>
-    <div x-show="currentTab === 'profile'">
-        @livewire('manager-profile', [], key('manager-profile'))
-    </div>
+    <template x-if="currentTab === 'nomenclatures'">
+        <livewire:manager-nomenclatures :key="'manager-nomenclature-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'warehouses'">
+        <livewire:manager-warehouses :key="'manager-warehouses-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'categories'">
+        <livewire:manager-categories :key="'manager-categories-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'brands'">
+        <livewire:manager-brands :key="'manager-brands-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'suppliers'">
+        <livewire:manager-suppliers :key="'manager-suppliers-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'parts'">
+        <livewire:manager-parts :key="'manager-parts-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'statistics'">
+        <livewire:manager-statistics :key="'manager-statistics-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'technicians'">
+        <livewire:manager-technicians :key="'manager-technicians-'.auth()->id()" />
+    </template>
+    <template x-if="currentTab === 'profile'">
+        <livewire:manager-profile :key="'manager-profile-'.auth()->id()" />
+    </template>
 </div>

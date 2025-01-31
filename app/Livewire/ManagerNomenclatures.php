@@ -19,7 +19,7 @@ class ManagerNomenclatures extends Component
     use WithFileUploads;
 
     public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [];
-    public $manager_id, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
+    public $manager_id, $nn, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
     public $editingNomenclature = null, $idToDelete;
     public bool $showArchived = false;
 
@@ -27,6 +27,7 @@ class ManagerNomenclatures extends Component
 
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
+        'nn' => '',
         'name' => '',
         'category_id' => '',
         'supplier_id' => '',
@@ -39,11 +40,11 @@ class ManagerNomenclatures extends Component
         $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-        ->with('category', 'supplier')->get()->toArray();
+        ->with('category', 'suppliers')->get()->toArray();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)
-            ->with('category', 'supplier')->get()->toArray();
+            ->with('category', 'suppliers')->get()->toArray();
     }
 
     public function updateCategories()
@@ -54,13 +55,14 @@ class ManagerNomenclatures extends Component
 
     public function updateSuppliers()
     {
-        $this->categories = Supplier::where('manager_id', Auth::id())->get()->toArray();
+        $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->dispatch('refreshSupplierSelect');
     }
 
     public function addNomenclature()
     {
         $validatedData = $this->validate([
+            'newNomenclature.nn' => 'required|string|max:255',
             'newNomenclature.name' => 'required|string|max:255',
             'newNomenclature.category_id' => 'nullable|string|max:255',
             'newNomenclature.supplier_id' => 'nullable|string|max:255',
@@ -70,7 +72,7 @@ class ManagerNomenclatures extends Component
         $validatedData['newNomenclature']['manager_id'] = Auth::id();
 
         if ($this->image) {
-
+            dd($this->image);
             //$tempPath = $this->image->getRealPath();
             //$tempImg = Storage::disk('public')->get($tempPath);
 
@@ -80,7 +82,7 @@ class ManagerNomenclatures extends Component
                 ->resize(null, null)
                 ->toWebp(quality: 60);
 
-            $imagePath = 'images/nomenclatures/' . Auth::id();
+            $imagePath = '/images/nomenclatures/' . Auth::id();
             // Генерируем уникальное имя для файла
             $fileName = $imagePath. '/' . uniqid() . '.webp';
 
@@ -181,6 +183,6 @@ class ManagerNomenclatures extends Component
 
     public function render()
     {
-        return view('livewire.manager-nomenclatures');
+        return view('livewire.manager.manager-nomenclatures')->layout('layouts.app');
     }
 }
