@@ -72,7 +72,6 @@ class ManagerNomenclatures extends Component
         $validatedData['newNomenclature']['manager_id'] = Auth::id();
 
         if ($this->image) {
-            dd($this->image);
             //$tempPath = $this->image->getRealPath();
             //$tempImg = Storage::disk('public')->get($tempPath);
 

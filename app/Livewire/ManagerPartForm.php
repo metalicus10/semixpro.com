@@ -127,7 +127,6 @@ class ManagerPartForm extends Component
             'selectedBrands' => 'nullable|array|exists:brands,id',
             'quantity' => 'required|integer|min:1',
             'price' => 'nullable|numeric|min:0',
-            'image' => 'nullable|image|max:5200',
             'selectedCategory' => 'required|exists:categories,id',
             'url' => 'nullable|url',
             'pn' => 'nullable|string|max:255',
@@ -144,9 +143,9 @@ class ManagerPartForm extends Component
         $userId = auth()->id();
 
         // Путь для сохранения изображений
-        $path = 'images/parts/' . $userId;
+        $path = '/images/parts/' . $userId;
 
-        if ($this->image) {
+        /*if ($this->image) {
 
             $tempPath = $this->image->getRealPath();
             $tempImg = Storage::disk('public')->get($tempPath);
@@ -163,7 +162,7 @@ class ManagerPartForm extends Component
             // Сохраняем закодированное изображение в local
             $result = Storage::disk('public')->put($fileName, $processedImage);
             $this->imgUrl = Storage::disk('public')->url($fileName);
-        }
+        }*/
 
         $part = Part::create([
             'name' => $this->partName,
@@ -171,9 +170,9 @@ class ManagerPartForm extends Component
             'nomenclature_id' => $this->selectedNomenclature,
             'warehouse_id' => $this->selectedWarehouse,
             'category_id' => $this->selectedCategory,
+            'manager_id' => $userId,
             'quantity' => $this->quantity,
             'price' => $this->price,
-            'image' => $this->imgUrl,
             'url' => json_encode(['url' => $this->url, 'text' => $this->text ?? '']),
             'total' => $this->quantity * $this->price,
         ]);

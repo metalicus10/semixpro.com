@@ -74,28 +74,28 @@
     </div>
 
     <!-- Таблица с номенклатурами -->
-    <div class="overflow-x-auto">
+    <div class="w-full overflow-x-auto">
         <!-- Заголовки -->
-        <div class="hidden md:flex text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b dark:bg-gray-700 dark:text-gray-400">
-            <div class="px-4 py-2">
+        <div class="hidden md:flex grid grid-cols-8 gap-4 text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b dark:bg-gray-700 dark:text-gray-400">
+            <div class="text-center p-2">
                 <input type="checkbox"
                        @click="toggleCheckAll($event)"
                        :checked="selectedNomenclatures.length === nomenclatures.length"
                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
             </div>
-            <div class="flex-1 px-4 py-2">NN</div>
-            <div class="flex-1 px-4 py-2">Наименование</div>
-            <div class="flex-1 px-4 py-2">Категория</div>
-            <div class="flex-1 px-4 py-2">Поставщик</div>
-            <div class="flex-1 px-4 py-2">Брэнд</div>
-            <div class="flex-1 px-4 py-2">Изображение</div>
-            <div class="flex-1 px-4 py-2">Действия</div>
+            <div class=" p-2">NN</div>
+            <div class=" p-2">Наименование</div>
+            <div class=" p-2">Категория</div>
+            <div class=" p-2">Поставщик</div>
+            <div class=" p-2">Брэнд</div>
+            <div class="text-center p-2">Изображение</div>
+            <div class=" p-2">Действия</div>
         </div>
 
         <!-- Список номенклатур -->
         <div x-data>
             <template x-for="nomenclature in nomenclatures" :key="nomenclature.id">
-                <div class="flex items-center text-sm border-b dark:border-gray-600 dark:text-gray-300">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 text-sm border-b dark:border-gray-600 dark:text-gray-300">
                     <!-- Checkbox -->
                     <div class="block sm:hidden absolute top-5 right-5 mb-2">
                         <input type="checkbox" :value="nomenclature.id"
@@ -113,6 +113,11 @@
                         <label for="checkbox-table-search-nomenclature.id"
                                class="sr-only">checkbox</label>
                     </div>
+                    <!-- NN -->
+                    <div class="flex items-center px-2">
+                        <span class="md:hidden font-semibold">NN: </span>
+                        <span x-text="nomenclature.nn"></span>
+                    </div>
                     <!-- Name -->
                     <div x-data="{
                         showEditMenu: false,
@@ -121,20 +126,20 @@
                         originalName: '',
                         errorMessage: '',
                     }"
-                        class="flex-1"
+                        class="flex flex-col items-start"
                     >
-
+                        <span class="md:hidden font-semibold">Название: </span>
                         <div class="flex relative">
                             <!-- Название -->
                             <div class="flex flex-col w-full">
                                 <!-- Отображение названия -->
                                 <div x-show="!editingName" @click="editingName = true"
                                     class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                    <span x-text="originalName"></span>
+                                    <span x-text="nomenclature.name"></span>
                                 </div>
 
                                 <!-- Редактирование названия -->
-                                <div x-show="editingName" class="flex items-center" x-cloak>
+                                <div x-show="editingName" class="flex items-center gap-2" x-cloak>
                                     <input type="text" x-model="newName"
                                         class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2">
                                     <button @click="if (newName !== originalName) { $wire.updateName(newName); originalName = newName; } editingName = false;"
@@ -144,17 +149,22 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="px-4 py-2" x-text="nomenclature.name"></div>
                     </div>
                     <!-- Category -->
-                    <div class="flex-1 px-4 py-2" x-text="nomenclature.category.name"></div>
+                    <div class="flex items-center px-2">
+                        <span class="md:hidden font-semibold">Категория: </span>
+                        <span x-text="nomenclature.category.name"></span>
+                    </div>
                     <!-- Supplier -->
-                    <div class="flex-1 px-4 py-2" x-text="nomenclature.supplier.name"></div>
+                    <div class="flex items-center px-2">
+                        <span class="md:hidden font-semibold">Поставщик: </span>
+                        <span x-text="nomenclature.suppliers.name"></span>
+                    </div>
                     <!-- Image -->
-                    <div class="flex-1 px-4 py-2">
+                    <div class="flex justify-center items-center">
                         <span class="md:hidden font-semibold">Изображение: </span>
                         <template x-if="nomenclature.image !== null">
-                            <img :src="'{{ asset('storage') }}' + '/images/nomenclatures/' + nomenclature.image" alt="Изображение" class="w-24 h-auto object-cover rounded">
+                            <img :src="'{{ asset('storage') }}/' + nomenclature.image" alt="Изображение" class="w-16 h-16 object-cover rounded">
                         </template>
                         <template x-if="nomenclature.image === null">
                             <span class="text-gray-500">Нет изображения</span>

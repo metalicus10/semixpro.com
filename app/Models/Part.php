@@ -24,6 +24,7 @@ class Part extends Model
         'price',
         'image',
         'category_id',
+        'manager_id',
         'total',
         'url',
         'pns',
