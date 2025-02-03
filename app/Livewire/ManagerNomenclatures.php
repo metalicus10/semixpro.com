@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\ActionLog;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\NomenclatureVersion;
 use App\Models\Supplier;
@@ -31,6 +32,7 @@ class ManagerNomenclatures extends Component
         'name' => '',
         'category_id' => '',
         'supplier_id' => '',
+        'brand_id' => '',
         'manager_id' => '',
         'image' => '',
     ];
@@ -39,8 +41,9 @@ class ManagerNomenclatures extends Component
     {
         $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
+        $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-        ->with('category', 'suppliers')->get()->toArray();
+        ->with('category', 'suppliers', 'brands')->get()->toArray();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)
@@ -59,6 +62,12 @@ class ManagerNomenclatures extends Component
         $this->dispatch('refreshSupplierSelect');
     }
 
+    public function updateBrands()
+    {
+        $this->suppliers = Brand::where('manager_id', Auth::id())->get()->toArray();
+        $this->dispatch('refreshBrandSelect');
+    }
+
     public function addNomenclature()
     {
         $validatedData = $this->validate([
@@ -66,6 +75,7 @@ class ManagerNomenclatures extends Component
             'newNomenclature.name' => 'required|string|max:255',
             'newNomenclature.category_id' => 'nullable|string|max:255',
             'newNomenclature.supplier_id' => 'nullable|string|max:255',
+            'newNomenclature.brand_id' => 'nullable|string|max:255',
             'newNomenclature.image' => 'nullable|image|max:2048',
         ]);
 

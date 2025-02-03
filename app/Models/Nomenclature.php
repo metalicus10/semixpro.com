@@ -39,6 +39,11 @@ class Nomenclature extends Model
         return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 
+    public function brands()
+    {
+        return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
     public function parts()
     {
         return $this->hasMany(Part::class);
