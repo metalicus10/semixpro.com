@@ -9,10 +9,10 @@
                 <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by
                     Cat:</label>
                 <select wire:model.live="selectedCategory" id="category"
-                        class="w-28 ml-2 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 text-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">All cats</option>
                     @foreach ($categories as $cat)
-                        <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        <option class="text-gray-400" value="{{ $cat->id }}">{{ $cat->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -21,10 +21,10 @@
                 <label for="brand" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by
                     Brand:</label>
                 <select wire:model.live="selectedBrand" id="brand"
-                        class="w-28 ml-2 p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 text-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">All brands</option>
                     @foreach ($brands as $brand)
-                        <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                        <option class="text-gray-400" value="{{ $brand->id }}">{{ $brand->name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -37,7 +37,7 @@
         <div class="relative w-full"
              x-data="{
                     tabs: window.tabs || [],
-                    parts: {},
+                    parts: @entangle('parts'),
                     activeTab: null,
                     init() {
                         const defaultTab = this.tabs.find(tab => tab.is_default === 1);
@@ -219,8 +219,8 @@
 
                 <!-- Таблица -->
                 <div x-data="{
-                            selectedParts: @entangle('selectedParts'),
-                            selectedPartNames: [],
+                      selectedParts: @entangle('selectedParts'),
+                      selectedPartNames: [],
                             async fetchSelectedNames() {
                                 if (this.selectedParts.length) {
                                     this.selectedPartNames = await $wire.call('getSelectedPartNames');
@@ -279,7 +279,7 @@
                                 }
                                 $dispatch('update-part-quantities', { quantities: this.partQuantities });
                             }
-                        }"
+                }"
                      x-init="$watch('selectedParts', () => fetchSelectedNames())"
                      @keydown.escape="closeModal"
                      class="w-full rounded-md bg-gray-300 dark:bg-gray-800 md:border-neutral-300 md:dark:border-neutral-500"
@@ -297,9 +297,6 @@
                             </div>
                             <div class="px-4 py-2">SKU</div>
                             <div class="flex-1 px-4 py-2">Наименование</div>
-                            <div class="flex-1 px-4 py-2">Категория</div>
-                            <div class="flex-1 px-4 py-2">Поставщик</div>
-                            <div class="flex-1 px-4 py-2">Брэнд</div>
                             <div class="px-4 py-2">Quantity</div>
                             <div class="px-4 py-2">Price</div>
                             <div class="flex-1 px-4 py-2">Total</div>
@@ -323,612 +320,164 @@
                         <!-- Строки таблицы -->
                         <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                             @foreach($warehouses as $warehouse)
-                                <div class="" x-show="activeTab === {{$warehouse->id}}">
-                                    @forelse ($parts as $part)
-                                        @if(is_null($part->warehouse?->id))
-                                        @else
-                                            @if($warehouse->id === $part->warehouse->id)
-                                                <div
-                                                    class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 pt-5 md:pt-2 relative"
+                                <div x-show="activeTab === {{$warehouse->id}}">
+                                    @foreach ($parts as $part)
+                                        @if($warehouse->id === $part->warehouse->id)
+                                            <div class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 pt-5 md:pt-2 relative">
+                                                <!-- Checkbox -->
+                                                <div class="block sm:hidden absolute top-5 right-5 mb-2">
+                                                    <input type="checkbox" :value="part.id"
+                                                           @click="togglePartSelection(part.id)"
+                                                           :checked="selectedParts.includes(part.id)"
+                                                           class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                                    <label for="checkbox-table-search-{{ $part->id }}"
+                                                           class="sr-only">checkbox</label>
+                                                </div>
+                                                <div class="hidden sm:block md:w-1/12 mb-0">
+                                                    <input type="checkbox" :value="{{ $part->id }}"
+                                                           @click="togglePartSelection({{ $part->id }})"
+                                                           :checked="selectedParts.includes({{ $part->id }})"
+                                                           class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                                    <label for="checkbox-table-search-{{ $part->id }}"
+                                                           class="sr-only">checkbox</label>
+                                                </div>
+
+                                                <!-- SKU -->
+                                                <div class="w-full md:w-1/12 mb-2 md:mb-0">
+                                                    <span class="md:hidden font-semibold">SKU:</span>
+                                                    {{ $part->sku }}
+                                                </div>
+
+                                                <!-- Name -->
+                                                <div x-data="{
+                                                                    showEditMenu: false,
+                                                                    editingName: false,
+                                                                    newName: '{{ $part->name }}',
+                                                                    originalName: '{{ $part->name }}',
+                                                                    errorMessage: '',
+                                                                    showPnPopover: false,
+                                                                    deletePn: false,
+                                                                    showingPn: false,
+                                                                    searchPn: '',
+                                                                    newPn: '',
+                                                                    addingPn: false,
+                                                                    availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
+                                                                    selectedPns: @entangle('selectedPns'),
+                                                                }"
+                                                     @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
+                                                     class="flex flex-row w-full md:w-2/12 mb-2 md:mb-0 cursor-pointer relative"
                                                 >
-                                                    <!-- Checkbox -->
-                                                    <div class="block sm:hidden absolute top-5 right-5 mb-2">
-                                                        <input type="checkbox" :value="{{ $part->id }}"
-                                                               @click="togglePartSelection({{ $part->id }})"
-                                                               :checked="selectedParts.includes({{ $part->id }})"
-                                                               class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                        <label for="checkbox-table-search-{{ $part->id }}"
-                                                               class="sr-only">checkbox</label>
-                                                    </div>
-                                                    <div class="hidden sm:block md:w-1/12 mb-0">
-                                                        <input type="checkbox" :value="{{ $part->id }}"
-                                                               @click="togglePartSelection({{ $part->id }})"
-                                                               :checked="selectedParts.includes({{ $part->id }})"
-                                                               class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                        <label for="checkbox-table-search-{{ $part->id }}"
-                                                               class="sr-only">checkbox</label>
-                                                    </div>
-                                                    <!-- SKU -->
-                                                    <div class="w-full md:w-1/12 mb-2 md:mb-0">
-                                                        <span class="md:hidden font-semibold">SKU:</span>
-                                                        {{ $part->sku }}
-                                                    </div>
-                                                    <!-- Name -->
-                                                    <div x-data="{
-                                                                showEditMenu: false,
-                                                                editingName: false,
-                                                                newName: '{{ $part->name }}',
-                                                                originalName: '{{ $part->name }}',
-                                                                errorMessage: '',
-                                                                showPnPopover: false,
-                                                                deletePn: false,
-                                                                showingPn: false,
-                                                                searchPn: '',
-                                                                newPn: '',
-                                                                addingPn: false,
-                                                                availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
-                                                                selectedPns: @entangle('selectedPns'),
-                                                            }"
-                                                         @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
-                                                         class="flex flex-row w-full md:w-2/12 mb-2 md:mb-0 cursor-pointer relative"
-                                                    >
 
-                                                        <!-- PN -->
-                                                        <div class="flex relative">
+                                                    <!-- PN -->
+                                                    <livewire:components.pn :part="$part"/>
 
-                                                            <!-- Список существующих PNs -->
-                                                            <div class="flex z-30 items-center" x-cloak>
-                                                                <!-- Кнопка для открытия поповера -->
-                                                                <div
-                                                                    class="w-4 h-4 md:w-6 md:h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2 uppercase font-bold text-[8px] md:text-[10px]"
-                                                                    @click="showPnPopover = !showPnPopover">
-                                                                    PN
-                                                                </div>
+                                                    <span class="flex items-center md:hidden font-semibold">Name:</span>
 
-                                                                <!-- Поповер для редактирования PNs -->
-                                                                <div x-show="showPnPopover" x-transition
-                                                                     @click.away="showPnPopover = false"
-                                                                     class="flex absolute z-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1">
-
-                                                                    <!-- Оверлей -->
-                                                                    <div
-                                                                        x-show="deletePn || addingPn || showPnPopover || showingPn"
-                                                                        class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
-                                                                        @click="deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
-                                                                        x-cloak>
-                                                                    </div>
-
-                                                                    <div
-                                                                        class="flex flex-row w-full cursor-pointer z-50"
-                                                                        x-cloak>
-                                                                        <div
-                                                                            @click="addingPn = true; deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; showPnPopover = false;"
-                                                                            class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                                                            Add PN
-                                                                        </div>
-                                                                        <div
-                                                                            @click="deletePn = true; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
-                                                                            class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                                                            Del PN
-                                                                        </div>
-                                                                        <div
-                                                                            @click="showingPn = true; deletePn = false; showEditMenu = false; showPnsList = false; addingPn = false; showPnPopover = false;"
-                                                                            class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                                                            Show PN
-                                                                        </div>
-                                                                    </div>
-
-
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- Список PN запчасти -->
-                                                            <div x-show="showingPn"
-                                                                 class="flex flex-col absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-52 p-1"
-                                                                 x-transition
-                                                                 @click.away="showingPn = false;"
-                                                            >
-                                                                <div class="flex flex-row w-full">
-                                                                    <div
-                                                                        class="w-full flex justify-center items-center">
-                                                                        <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto w-52"
-                                                                            x-ref="pnList"
-
-                                                                        >
-                                                                            @php $pnsArray = json_decode($part->pns, true); @endphp
-                                                                            @if (!empty($pnsArray))
-                                                                                @foreach ($pnsArray as $pn)
-                                                                                    <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                                                        @click.stop>
-                                                                                            <span
-                                                                                                class="ml-2">{{ $pn }}</span>
-                                                                                    </li>
-                                                                                @endforeach
-                                                                            @else
-                                                                                <p>No PN's</p>
-                                                                            @endif
-                                                                        </ul>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- Поле ввода нового PN -->
-                                                            <div x-show="addingPn"
-                                                                 class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                                                 x-transition x-cloak
-                                                                 @click.away="addingPn = false; newPn = ''; errorMessage = '';"
-                                                            >
-                                                                <div class="flex flex-row w-full">
-                                                                    <div class="flex justify-center items-center">
-                                                                        <!-- Поле ввода -->
-                                                                        <input type="text" wire:model="newPn"
-                                                                               placeholder="Enter new PN"
-                                                                               class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2">
-
-                                                                        <!-- Кнопки действия -->
-                                                                        <button wire:click="addPn"
-                                                                                class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
-                                                                            ✓
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- Режим удаления PN -->
-                                                            <div x-show="deletePn"
-                                                                 class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                                                 x-cloak x-transition
-                                                                 @click.away="deletePn = false; searchPn='';"
-                                                            >
-                                                                <!-- Поле поиска -->
-                                                                <div class="mb-2" @click.stop>
-                                                                    <input type="text" x-model="searchPn"
-                                                                           placeholder="Search brands..."
-                                                                           class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
-                                                                </div>
-
-                                                                <!-- PN -->
-                                                                <div
-                                                                    class="flex flex-row justify-evenly items-center"
-                                                                    @click.stop>
-                                                                    <!-- Список PN с мульти-выбором -->
-                                                                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto">
-                                                                        @php $pns = $this->getPartPns($part->id); @endphp
-                                                                        @if (!empty($pns))
-                                                                            @foreach ($pns as $pn)
-                                                                                <template
-                                                                                    x-if="!searchPn || '{{ strtolower($pn->number) }}'.includes(searchPn.toLowerCase())">
-                                                                                    <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                                                        @click.stop>
-                                                                                        <input type="checkbox"
-                                                                                               value="{{ $pn->id }}"
-                                                                                               x-model="selectedPns"
-                                                                                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                                                               @click.stop>
-                                                                                        <label
-                                                                                            class="ml-2">{{ $pn->number }}</label>
-                                                                                    </li>
-                                                                                </template>
-                                                                            @endforeach
-                                                                        @else
-                                                                            <p>No PN's</p>
-                                                                        @endif
-                                                                    </ul>
-
-                                                                    <!-- Кнопка подтверждения -->
-                                                                    <div
-                                                                        class="justify-self-center inline-flex self-center items-center">
-                                                                        <button @click="$wire.set('selectedPns', selectedPns).then(() => {
-                                                                                        $wire.deletePns({{ $part->id }}, selectedPns);
-                                                                                        deletePn = false;
-                                                                                    });"
-                                                                                class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
-                                                                            ✓
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <span
-                                                            class="flex items-center md:hidden font-semibold">Name:</span>
-
-                                                        <!-- Название с подменю -->
-                                                        <div class="flex items-center w-full">
-                                                            <!-- Оверлей -->
-                                                            <div x-show="editingName || deletePn || addingPn"
-                                                                 class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
-                                                                 @click="editingName = false, deletePn = false, addingPn = false;"
-                                                                 x-cloak>
-                                                            </div>
-
-                                                            <!-- Основное отображение -->
-                                                            <span x-show="!editingName" @click="editingName = true"
-                                                                  class="flex z-35 items-center cursor-pointer hover:underline min-h-[30px]">
-                                                                    {{ $part->name }}
-                                                                </span>
-                                                        </div>
-                                                        <!-- Режим редактирования Name -->
-                                                        <div x-show="editingName"
-                                                             class="flex justify-center items-center w-full relative z-40"
+                                                    <!-- Название с подменю -->
+                                                    <div class="flex items-center w-full">
+                                                        <!-- Оверлей -->
+                                                        <div x-show="editingName || deletePn || addingPn"
+                                                             class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
+                                                             @click="editingName = false, deletePn = false, addingPn = false;"
                                                              x-cloak>
-                                                            <input type="text" x-model="newName"
-                                                                   class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
-                                                                   @keydown.enter="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
-                                                                   @keydown.escape="editingName = false">
-                                                            <button
-                                                                @click="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
-                                                                class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
-                                                                ✓
-                                                            </button>
                                                         </div>
-                                                    </div>
-                                                    <!-- Quantity -->
-                                                    <div class="w-full md:w-1/12 mb-2 md:mb-0"
-                                                         @part-updated="event => {
-                                                            if (event.detail.partId === {{ $part->id }}) {
-                                                                $el.textContent = event.detail.newQuantity;
-                                                            }
-                                                        }"
-                                                    >
-                                                            <span
-                                                                class="md:hidden font-semibold">Quantity:</span> {{ $part->quantity }}
-                                                    </div>
-                                                    <!-- Price -->
-                                                    <div
-                                                        class="flex flex-row w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
-                                                        x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
-                                                        <!-- Кликабельная ссылка с ценой запчасти -->
-                                                        <span class="md:hidden font-semibold">Price:</span>
-                                                        <a id="price-item-{{ $part->id }}"
-                                                           @click="
-                                                                $nextTick(() => {
-                                                                    editing = false; // Сбрасываем редактирование при открытии
-                                                                    newPrice = '{{ $part->price }}'; // Устанавливаем текущее значение
-                                                                    const parent = $el.closest('.parent-container');
-                                                                    const elementOffsetLeft = $el.offsetLeft;
-                                                                    const elementOffsetTop = $el.offsetTop;
-
-                                                                    popoverX = elementOffsetLeft / parent.offsetWidth;
-                                                                    popoverY = elementOffsetTop / parent.offsetHeight;
-
-                                                                    showPopover = true;
-                                                                });
-                                                            "
-                                                           class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
-                                                            ${{ $part->price }}
-                                                        </a>
-
-                                                        <!-- Поповер с динамическим позиционированием -->
-                                                        <div x-show="showPopover" x-transition role="tooltip"
-                                                             class="absolute z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                                             :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
-                                                             @click.away="showPopover = false">
-
-                                                            <div class="flex flex-row w-full">
-                                                                <!-- Кнопка Edit -->
-                                                                <button x-show="!editing"
-                                                                        @click.prevent="editing = true; $nextTick(() => { $refs.priceInput.focus() })"
-                                                                        class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                                                    Edit
-                                                                </button>
-
-                                                                <!-- Поле ввода новой цены и кнопка подтверждения -->
-                                                                <div x-show="editing"
-                                                                     class="flex justify-center items-center"
-                                                                     x-transition>
-                                                                    <input type="number" x-ref="priceInput"
-                                                                           x-model="newPrice"
-                                                                           class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
-                                                                           placeholder="{{ $part->price }}">
-                                                                    <button @click="
-                                                                        if (newPrice !== '{{ $part->price }}') {
-                                                                            $wire.set('newPrice', newPrice)
-                                                                            .then(() => {
-                                                                                $wire.updatePartPrice({{ $part->id }}, newPrice);
-                                                                            });
-                                                                        }
-                                                                        showPopover = false;
-                                                                        editing = false;
-                                                                    "
-                                                                            class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
-                                                                        ✓
-                                                                    </button>
-                                                                </div>
-
-                                                                <!-- Кнопка для открытия истории цен -->
-                                                                <button x-show="!editing"
-                                                                        @click="$dispatch('open-price-modal', { partId: {{ $part->id }} })"
-                                                                        class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                                                                    History
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <!-- Total -->
-                                                    <div class="w-full md:w-1/12 mb-2 md:mb-0">
-                                                        <span class="md:hidden font-semibold">Total:</span>
-                                                        ${{ $part->total }}
-                                                    </div>
-                                                    <!-- Image -->
-                                                    <div
-                                                        class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
-                                                        <!-- Миниатюра -->
-                                                        <span class="md:hidden font-semibold">Image:</span>
-                                                        <div x-data="{ isUploading: false, uploadProgress: 0 }"
-                                                             class="gallery w-14 relative">
-                                                            @if(is_null($part->image))
-                                                                <div class="flex flex-row">
-                                                                    <span class="w-[56px] h-[56px]">
-                                                                        <svg xmlns="http://www.w3.org/2000/svg"
-                                                                             xmlns:xlink="http://www.w3.org/1999/xlink"
-                                                                             version="1.1" width="56"
-                                                                             height="56" viewBox="0 0 256 256"
-                                                                             xml:space="preserve">
-                                                                            <defs>
-                                                                            </defs>
-                                                                            <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
-                                                                               transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
-                                                                                <path
-                                                                                    d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z"
-                                                                                    style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                    transform=" matrix(1 0 0 1 0 0) "
-                                                                                    stroke-linecap="round"/>
-                                                                                <path
-                                                                                    d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z"
-                                                                                    style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                    transform=" matrix(1 0 0 1 0 0) "
-                                                                                    stroke-linecap="round"/>
-                                                                                <path
-                                                                                    d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z"
-                                                                                    style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                    transform=" matrix(1 0 0 1 0 0) "
-                                                                                    stroke-linecap="round"/>
-                                                                            </g>
-                                                                        </svg>
+                                                        <!-- Основное отображение -->
+                                                        <span x-show="!editingName" @click="editingName = true"
+                                                              class="flex z-35 items-center cursor-pointer hover:underline min-h-[30px]">
+                                                                        {{ $part->name }}
                                                                     </span>
-                                                            @else
-                                                                    <div class="flex flex-row">
-                                                                        <img
-                                                                            src="{{ $part->image }}"
-                                                                            alt="{{ $part->name }}"
-                                                                            @click="$dispatch('lightbox', '{{ $part->image }}')"
-                                                                            @click.stop
-                                                                            class="object-cover rounded cursor-zoom-in"
-                                                                        >
-                                                            @endif
-                                                                            <div x-data="{ showTooltip: false }"
-                                                                                 @mouseenter="showTooltip = true"
-                                                                                 @mouseleave="showTooltip = false"
-                                                                                 @click.away="showTooltip = false"
-                                                                            >
-                                                                                <!-- Поповер -->
-                                                                                <div x-show="showTooltip"
-                                                                                     x-transition
-                                                                                     class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 lowercase text-white rounded shadow-lg">
-                                                                                    Change Image
-                                                                                </div>
-                                                                                <!-- Кнопка загрузки изображения -->
-                                                                                <div
-                                                                                    for="upload-image-{{ $part->id }}"
-                                                                                    wire:click="openImageModal({{ $part->id }})"
-                                                                                    class="text-white rounded-full p-1 cursor-pointer h-[20px]">
-                                                                                    <svg
-                                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                                        xmlns:xlink="http://www.w3.org/1999/xlink"
-                                                                                        class="h-4 w-4"
-                                                                                        version="1.1" width="256"
-                                                                                        height="256"
-                                                                                        viewBox="0 0 256 256"
-                                                                                        xml:space="preserve">
-                                                                                    <defs>
-                                                                                    </defs>
-                                                                                        <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
-                                                                                           transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
-                                                                                            <circle cx="45" cy="45"
-                                                                                                    r="45"
-                                                                                                    style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(75,174,79); fill-rule: nonzero; opacity: 1;"
-                                                                                                    transform="  matrix(1 0 0 1 0 0) "/>
-                                                                                            <path
-                                                                                                d="M 33.255 35.073 L 43 25.329 V 58.83 c 0 1.104 0.896 2 2 2 s 2 -0.896 2 -2 V 25.329 l 9.744 9.744 c 0.391 0.391 0.902 0.586 1.414 0.586 s 1.023 -0.195 1.414 -0.586 c 0.781 -0.781 0.781 -2.047 0 -2.828 L 46.415 19.087 c -0.092 -0.093 -0.194 -0.176 -0.303 -0.249 c -0.027 -0.018 -0.057 -0.029 -0.084 -0.046 c -0.084 -0.051 -0.168 -0.1 -0.259 -0.138 c -0.038 -0.016 -0.079 -0.023 -0.118 -0.037 c -0.084 -0.029 -0.166 -0.06 -0.255 -0.077 C 45.266 18.514 45.134 18.5 45 18.5 s -0.266 0.014 -0.395 0.04 c -0.088 0.018 -0.171 0.049 -0.255 0.077 c -0.039 0.014 -0.08 0.021 -0.118 0.037 c -0.091 0.038 -0.176 0.088 -0.259 0.138 c -0.027 0.016 -0.058 0.028 -0.084 0.046 c -0.109 0.073 -0.211 0.156 -0.303 0.249 L 30.427 32.245 c -0.781 0.781 -0.781 2.047 0 2.828 C 31.208 35.854 32.475 35.854 33.255 35.073 z"
-                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;"
-                                                                                                transform=" matrix(1 0 0 1 0 0) "
-                                                                                                stroke-linecap="round"/>
-                                                                                            <path
-                                                                                                d="M 58.158 67.5 H 31.841 c -1.104 0 -2 0.896 -2 2 s 0.896 2 2 2 h 26.317 c 1.104 0 2 -0.896 2 -2 S 59.263 67.5 58.158 67.5 z"
-                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(255,255,255); fill-rule: nonzero; opacity: 1;"
-                                                                                                transform=" matrix(1 0 0 1 0 0) "
-                                                                                                stroke-linecap="round"/>
-                                                                                        </g>
-                                                                                    </svg>
-                                                                                </div>
-                                                                                <div wire:loading
-                                                                                     wire:target="uploadImage"
-                                                                                     class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-                                                                                    <div class="text-white text-lg">
-                                                                                        Uploading...
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                    </div>
-                                                                </div>
-                                                        </div>
-                                                        <!-- Brand -->
-                                                        <div id="brand-item-{{ $part->id }}"
-                                                             class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer parent-container"
-                                                             x-data="{ showPopover: false, selectedBrands: @json($part->brands->pluck('id')), search: '', popoverX: 0, popoverY: 0 }"
-
-                                                             @click.away="showPopover = false"
-                                                             @mousedown.stop
-                                                             @click="
-                                                                    const { clientX, clientY } = $event; // Получаем координаты клика
-
-                                                                    $nextTick(() => {
-                                                                        popoverX = Math.min(clientX, window.innerWidth - 250);
-                                                                        popoverY = Math.min(clientY, window.innerHeight - 200);
-
-                                                                        showPopover = true; // Показываем поповер
-                                                                    });
-                                                                "
-                                                        >
-
-                                                            <!-- Текущие бренды -->
-                                                            <div class="flex flex-col h-24 justify-center p-1">
-                                                                <span class="md:hidden font-semibold">Brand:</span>
-                                                                <div class="overscroll-contain overflow-y-auto">
-                                                                    @if(count($part->brands) == 0)
-                                                                        <div class="px-3 py-2">---</div>
-                                                                    @else
-                                                                        @foreach($part->brands as $brand)
-                                                                            <span>{{ $brand->name }}{{ !$loop->last ? ', ' : '' }}</span>
-                                                                        @endforeach
-                                                                    @endif
-                                                                </div>
-                                                            </div>
-
-                                                            <!-- Поповер с мульти-выбором брендов -->
-                                                            <div x-show="showPopover"
-                                                                 class="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                                                 :style="`top: ${popoverY}px; left: ${popoverX}px;`"
-                                                                 x-init="const onScroll = () => showPopover = false; window.addEventListener('scroll', onScroll)"
-                                                                 @click.outside="showPopover = false"
-                                                                 x-transition
-                                                            >
-
-                                                                <!-- Поле поиска -->
-                                                                <div class="mb-2" @click.stop>
-                                                                    <input type="text" x-model="search"
-                                                                           placeholder="Search brands..."
-                                                                           class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
-                                                                </div>
-
-                                                                <div
-                                                                    class="flex flex-row justify-evenly items-center"
-                                                                    @click.stop>
-                                                                    <!-- Список брендов с мульти-выбором -->
-                                                                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto">
-                                                                        @foreach ($brands as $brand)
-                                                                            <template
-                                                                                x-if="!search || '{{ strtolower($brand->name) }}'.includes(search.toLowerCase())">
-                                                                                <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                                                    @click.stop>
-                                                                                    <input type="checkbox"
-                                                                                           value="{{ $brand->id }}"
-                                                                                           x-model="selectedBrands"
-                                                                                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                                                           @click.stop>
-                                                                                    <label
-                                                                                        class="ml-2">{{ $brand->name }}</label>
-                                                                                </li>
-                                                                            </template>
-                                                                        @endforeach
-                                                                    </ul>
-
-                                                                    <!-- Кнопка подтверждения -->
-                                                                    <div
-                                                                        class="justify-self-center inline-flex self-center items-center">
-                                                                        <button @click="$wire.set('selectedBrands', selectedBrands).then(() => {
-                                                                                    $wire.updatePartBrands({{ $part->id }}, selectedBrands);
-                                                                                    showPopover = false;
-                                                                                });"
-                                                                                class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
-                                                                            ✓
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        @php
-                                                            $urlData = json_decode($part->url, true);
-                                                        @endphp
-                                                            <!-- URL -->
-                                                        <div
-                                                            class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer font-semibold"
-                                                            x-data="{ clickCount: 0 }"
-                                                            @click="
-                                                                    clickCount++;
-                                                                    setTimeout(() => {
-                                                                        if (clickCount === 1) {
-                                                                            // Одиночный клик - проверка на наличие ссылки
-                                                                            if ('{{ $urlData['url'] ?? '' }}') {
-                                                                                window.open('{{ $urlData['url'] ?? '' }}', '_blank');
-                                                                            }
-                                                                        } else if (clickCount === 2) {
-                                                                            // Двойной клик - открытие модального окна для редактирования
-                                                                            $wire.openManagerPartUrlModal({{ $part->id }});
-                                                                        }
-                                                                        clickCount = 0; // Сброс счетчика
-                                                                    }, 300); // Таймаут для определения двойного клика
-                                                                "
-                                                        >
-                                                            @if(isset($urlData['text']) && $urlData['text'] !== '')
-                                                                <!-- Отображение текста, если он есть -->
-                                                                <span class="md:hidden font-semibold">URL:</span>
-                                                                {{ $urlData['text'] }}
-                                                            @elseif(isset($urlData['url']) && $urlData['url'] !== '')
-                                                                <!-- Отображение URL, если текст отсутствует, но есть URL -->
-                                                                <span class="md:hidden font-semibold">URL:</span>
-                                                                {{ $urlData['url'] }}
-                                                            @else
-                                                                <!-- Отображение иконки, если URL пуст -->
-                                                                <span class="text-gray-500" title="Edit URL">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg"
-                                                                         class="h-5 w-5 inline-block" fill="none"
-                                                                         viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                                              stroke-width="2"
-                                                                              d="M15.232 5.232l3.536 3.536M9 13h.01M6 9l5 5-3 3h6l-1.293-1.293a1 1 0 010-1.414l7.42-7.42a2.828 2.828 0 10-4-4l-7.42 7.42a1 1 0 01-1.414 0L6 9z"/>
-                                                                    </svg>
-                                                                </span>
-                                                            @endif
-                                                        </div>
-                                                        <!-- Actions -->
-                                                        <div class="flex flex-col w-full md:w-2/12 flex">
-                                                            <!-- Кнопки действий -->
-                                                            <div class="flex flex-row w-full"><span
-                                                                    class="md:hidden font-semibold">Actions:</span>
-                                                            </div>
-                                                            <div class="flex flex-row w-full justify-evenly">
-                                                                <button wire:click="incrementPart({{ $part->id }})"
-                                                                        @click.stop title="Add one"
-                                                                        class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
-                                                                    +
-                                                                </button>
-                                                                <button
-                                                                    wire:click="openQuantityModal({{ $part->id }}, 'add')"
-                                                                    @click.stop
-                                                                    title="Add some"
-                                                                    class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
-                                                                    ++
-                                                                </button>
-                                                            </div>
-                                                            <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
-                                                            <div class="flex flex-row w-full justify-evenly">
-                                                                <button wire:click="decrementPart({{ $part->id }})"
-                                                                        @click.stop
-                                                                        title="Remove one"
-                                                                        class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
-                                                                    -
-                                                                </button>
-                                                                <button
-                                                                    wire:click="openQuantityModal({{ $part->id }}, 'subtract')"
-                                                                    @click.stop
-                                                                    title="Remove some"
-                                                                    class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
-                                                                    --
-                                                                </button>
-                                                            </div>
-                                                        </div>
                                                     </div>
-                                                    @endif
-                                                    @endif
-                                                    @empty
-                                                    <div
-                                                        class="text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                                        No spare parts available
+                                                    <!-- Режим редактирования Name -->
+                                                    <div x-show="editingName"
+                                                         class="flex justify-center items-center w-full relative z-40"
+                                                         x-cloak>
+                                                        <input type="text" x-model="newName"
+                                                               class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
+                                                               @keydown.enter="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
+                                                               @keydown.escape="editingName = false">
+                                                        <button
+                                                            @click="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
+                                                            class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                                                            ✓
+                                                        </button>
                                                     </div>
-                                    @endforelse
+                                                </div>
+
+                                                <!-- Quantity -->
+                                                <div class="w-full md:w-1/12 mb-2 md:mb-0"
+                                                     @part-updated="event => {
+                                                         if (event.detail.partId === {{ $part->id }}) {
+                                                            $el.textContent = event.detail.newQuantity;
+                                                         }
+                                                     }"
+                                                >
+                                                    <span class="md:hidden font-semibold">Quantity:</span> {{ $part->quantity }}
+                                                </div>
+
+                                                <!-- Price -->
+                                                <livewire:components.price :part="$part"/>
+
+                                                <!-- Total -->
+                                                <div class="w-full md:w-1/12 mb-2 md:mb-0">
+                                                    <span class="md:hidden font-semibold">Total:</span>
+                                                    ${{ $part->total }}
+                                                </div>
+
+                                                <!-- Image -->
+                                                <div
+                                                    class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
+                                                    <!-- Миниатюра -->
+                                                    <span class="md:hidden font-semibold">Image:</span>
+                                                    <livewire:components.image :part="$part"/>
+                                                </div>
+
+                                                <!-- URL -->
+                                                @php
+                                                    $urlData = json_decode($part->url, true);
+                                                @endphp
+                                                <livewire:components.url :urlData="$urlData" :part="$part"/>
+
+                                                <!-- Actions -->
+                                                <div class="flex flex-col w-full md:w-2/12 flex">
+                                                    <!-- Кнопки действий -->
+                                                    <div class="flex flex-row w-full"><span
+                                                            class="md:hidden font-semibold">Actions:</span>
+                                                    </div>
+                                                    <div class="flex flex-row w-full justify-evenly">
+                                                        <button wire:click="incrementPart({{ $part->id }})"
+                                                                @click.stop title="Add one"
+                                                                class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                            +
+                                                        </button>
+                                                        <button
+                                                            wire:click="openQuantityModal({{ $part->id }}, 'add')"
+                                                            @click.stop
+                                                            title="Add some"
+                                                            class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                            ++
+                                                        </button>
+                                                    </div>
+                                                    <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
+                                                    <div class="flex flex-row w-full justify-evenly">
+                                                        <button wire:click="decrementPart({{ $part->id }})"
+                                                                @click.stop
+                                                                title="Remove one"
+                                                                class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                            -
+                                                        </button>
+                                                        <button
+                                                            wire:click="openQuantityModal({{ $part->id }}, 'subtract')"
+                                                            @click.stop
+                                                            title="Remove some"
+                                                            class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                            --
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
                                 </div>
                             @endforeach
 
@@ -1210,42 +759,6 @@
                     </div>
                 </div>
             @endif
-
-            <div x-data="{ showImageModal: @entangle('showImageModal') }">
-                <!-- Modal Backdrop -->
-                <div x-show="showImageModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
-                     x-transition.opacity
-                     x-cloak></div>
-
-                <!-- Modal Content -->
-                <div x-show="showImageModal"
-                     class="fixed inset-0 flex items-center justify-center z-50 p-4">
-                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
-                        <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Upload Image</h3>
-
-                        <!-- File Input -->
-                        <div class="mb-4">
-                            <input type="file" wire:model="newImage"
-                                   class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
-                            @error('newImage') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="flex justify-end space-x-4">
-                            <button type="button"
-                                    @click="showImageModal = false; $wire.closeImageModal();"
-                                    class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
-                                Cancel
-                            </button>
-                            <button type="button"
-                                    wire:click="uploadImage"
-                                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                Upload
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Модальное окно для редактирования URL -->
             @if($managerPartUrlModalVisible)

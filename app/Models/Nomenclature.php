@@ -41,7 +41,7 @@ class Nomenclature extends Model
 
     public function brands()
     {
-        return $this->belongsTo(Brand::class, 'brand_id');
+        return $this->belongsToMany(Brand::class, 'brand_nomenclature');
     }
 
     public function parts()

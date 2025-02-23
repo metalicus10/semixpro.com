@@ -202,16 +202,6 @@ class ManagerParts extends Component
         ]);
     }
 
-    public function showImage($imageUrl)
-    {
-        $this->fullImage = $imageUrl;
-    }
-
-    public function closeImage()
-    {
-        $this->fullImage = null;
-    }
-
     public function getFilteredParts()
     {
         // Начальный запрос для выборки запчастей, связанный с пользователем
@@ -229,7 +219,7 @@ class ManagerParts extends Component
                       $query->where('manager_id', $userId);
                   });
         })
-        ->with('category', 'brands', 'pns', 'warehouse');
+        ->with('nomenclatures', 'category', 'brands', 'pns', 'warehouse');
 
         // Фильтр по категории
         if ($this->selectedCategory) {
@@ -553,74 +543,6 @@ class ManagerParts extends Component
 
         $this->managerPartUrlModalVisible = false;
         $this->refreshComponent();
-    }
-
-    public function updatePartBrands($partId, $selectedBrands)
-    {
-        $part = Part::find($partId);
-        $part->brands()->sync($selectedBrands);
-
-        // Обновляем данные в представлении
-        $this->dispatch('brandsUpdated');
-    }
-
-    public function openImageModal($partId)
-    {
-        $this->partId = $partId;
-        $this->showImageModal = true;
-    }
-
-    public function closeImageModal()
-    {
-        $this->reset(['showImageModal', 'selectedPartId', 'newImage']);
-    }
-
-    public function uploadImage()
-    {
-        $this->validate([
-            'newImage' => 'required|image|max:5200',
-        ]);
-
-        $userId = auth()->id();
-        $path = 'partsImages/' . $userId;
-        // Получаем запчасть
-        $part = Part::find($this->partId);
-
-        if (!$part) {
-            $this->dispatch('showNotification', 'error', 'Part not found');
-            return;
-        }
-
-        // Удаляем старое изображение, если оно есть
-        if ($part->image) {
-            Storage::disk('s3')->delete($part->image);
-        }
-
-        if ($this->newImage)
-        {
-            $tempPath = $this->newImage->getRealPath();
-            $tempImg = Storage::disk('s3')->get($tempPath);
-            $manager = new ImageManager(Driver::class);
-            $processedImage = $manager->read($tempImg)
-                ->resize(1024, 1024, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                })
-                ->toWebp(quality: 60);
-            $fileName = $path. '/' . uniqid() . '.webp';
-            Storage::disk('s3')->put($fileName, $processedImage);
-            $this->imgUrl = Storage::disk('s3')->url($fileName);
-        }
-
-        // Обновляем модель
-        $part->update(['image' => $this->imgUrl]);
-        $this->closeImageModal();
-
-        $this->dispatch('showNotification', 'success', 'Image updated successfully!');
-        $this->dispatch('imageUpdated', ['partId' => $this->partId]);
-
-        // Сбрасываем состояние
-        $this->reset('newImage');
     }
 
     public function renameWarehouse($warehouseId, $newName)

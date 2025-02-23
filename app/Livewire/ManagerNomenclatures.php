@@ -43,7 +43,7 @@ class ManagerNomenclatures extends Component
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-        ->with('category', 'suppliers', 'brands')->get()->toArray();
+        ->with('category', 'suppliers', 'brands')->get();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)
@@ -130,6 +130,29 @@ class ManagerNomenclatures extends Component
             ]);
             $this->WriteActionLog('update', 'nomenclature', $this->editingNomenclature->id, $this->editingNomenclature->name);
         }
+    }
+
+    public function updateNomenclature($id, $newName)
+    {
+        $nomenclature = Nomenclature::find($id);
+
+        if (!$nomenclature) {
+            session()->flash('error', 'Номенклатура не найдена.');
+            return;
+        }
+
+        // Обновляем только имя
+        $nomenclature->update(['name' => $newName]);
+
+        // Логируем изменения имени
+        NomenclatureVersion::create([
+            'nomenclature_id' => $nomenclature->id,
+            'changes' => json_encode(['name' => $newName]),
+            'user_id' => auth()->id(),
+        ]);
+
+        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, $newName);
+        $this->dispatch('showNotification', 'success', 'Название номенклатуры обновлено.');
     }
 
     public function archiveNomenclature($id)
