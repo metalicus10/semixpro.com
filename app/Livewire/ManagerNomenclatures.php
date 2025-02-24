@@ -43,7 +43,7 @@ class ManagerNomenclatures extends Component
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-        ->with('category', 'suppliers', 'brands')->get();
+        ->with('category', 'suppliers', 'brands')->get()->toArray();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)

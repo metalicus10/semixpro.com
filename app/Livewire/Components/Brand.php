@@ -9,12 +9,12 @@ use Livewire\Component;
 
 class Brand extends Component
 {
-    public $nomenclatures, $nomenclature;
+    public $nomenclature;
     public $brands, $currentBrands, $selectedBrands = [];
 
-    public function mount($brands, $nomenclature)
+    public function mount(Nomenclature $nomenclature)
     {
-        $this->nomenclature = (object) $nomenclature;
+        $this->nomenclature = $nomenclature;
         $this->selectedBrands = $this->nomenclature->brands()->pluck('brands.id')->toArray();
     }
 
@@ -33,10 +33,13 @@ class Brand extends Component
         $nomenclature = Nomenclature::where('id', $nomenclatureId)->firstOrFail();
         $nomenclature->brands()->sync($this->selectedBrands);
 
-        $this->selectedBrands = $nomenclature->brands()->pluck('brands.id')->toArray();
         $this->dispatch('brandsUpdated', $nomenclatureId);
     }
 
+    public function getUpdatedBrands($nomenclatureId)
+    {
+        return Nomenclature::find($nomenclatureId)->brands()->pluck('brands.id')->toArray();
+    }
 
     public function render()
     {

@@ -182,6 +182,8 @@ class ManagerPartForm extends Component
             Pn::create([
                 'number' => $this->pn,
                 'part_id' => $part->id,
+                'manager_id' => auth()->id(),
+                'nomenclature_id ' => json_encode([$part->nomenclature_id]),
             ]);
         }
 

@@ -31,7 +31,7 @@
         </div>
     </div>
 
-    <livewire:manager-part-form/>
+    <livewire:manager-part-form />
 
     <div class="flex flex-row space-x-4">
         <div class="relative w-full"
@@ -116,9 +116,9 @@
                         this.newTabName = '';
                     }
                 }"
-             x-init="init(); checkScroll();"
-             @resize.window="checkScroll"
-             @tabs-updated.window="(event) => {
+                 x-init="init(); checkScroll();"
+                 @resize.window="checkScroll"
+                 @tabs-updated.window="(event) => {
                     updateTabs(event.detail.tabs);
                 }"
         >
@@ -320,20 +320,24 @@
                         <!-- Строки таблицы -->
                         <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                             @foreach($warehouses as $warehouse)
-                                <div x-show="activeTab === {{$warehouse->id}}">
-                                    @foreach ($parts as $part)
-                                        @if($warehouse->id === $part->warehouse->id)
+                                @php
+                                    $filteredParts = $parts->where('warehouse_id', $warehouse->id);
+                                @endphp
+
+                                @if($filteredParts->isNotEmpty())
+                                    <div x-show="activeTab === {{$warehouse->id}}">
+                                        @foreach ($filteredParts as $part)
                                             <div class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 pt-5 md:pt-2 relative">
                                                 <!-- Checkbox -->
-                                                <div class="block sm:hidden absolute top-5 right-5 mb-2">
-                                                    <input type="checkbox" :value="part.id"
-                                                           @click="togglePartSelection(part.id)"
-                                                           :checked="selectedParts.includes(part.id)"
+                                                <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
+                                                    <input type="checkbox" :value="{{ $part->id }}"
+                                                           @click="togglePartSelection({{ $part->id }})"
+                                                           :checked="selectedParts.includes({{ $part->id }})"
                                                            class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                                     <label for="checkbox-table-search-{{ $part->id }}"
                                                            class="sr-only">checkbox</label>
                                                 </div>
-                                                <div class="hidden sm:block md:w-1/12 mb-0">
+                                                <div class="hidden sm:block md:w-1/12 mb-0" wire:ignore>
                                                     <input type="checkbox" :value="{{ $part->id }}"
                                                            @click="togglePartSelection({{ $part->id }})"
                                                            :checked="selectedParts.includes({{ $part->id }})"
@@ -350,26 +354,26 @@
 
                                                 <!-- Name -->
                                                 <div x-data="{
-                                                                    showEditMenu: false,
-                                                                    editingName: false,
-                                                                    newName: '{{ $part->name }}',
-                                                                    originalName: '{{ $part->name }}',
-                                                                    errorMessage: '',
-                                                                    showPnPopover: false,
-                                                                    deletePn: false,
-                                                                    showingPn: false,
-                                                                    searchPn: '',
-                                                                    newPn: '',
-                                                                    addingPn: false,
-                                                                    availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
-                                                                    selectedPns: @entangle('selectedPns'),
-                                                                }"
+                                                        showEditMenu: false,
+                                                        editingName: false,
+                                                        newName: '{{ $part->name }}',
+                                                        originalName: '{{ $part->name }}',
+                                                        errorMessage: '',
+                                                        showPnPopover: false,
+                                                        deletePn: false,
+                                                        showingPn: false,
+                                                        searchPn: '',
+                                                        newPn: '',
+                                                        addingPn: false,
+                                                        availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
+                                                        selectedPns: @entangle('selectedPns'),
+                                                     }"
                                                      @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
                                                      class="flex flex-row w-full md:w-2/12 mb-2 md:mb-0 cursor-pointer relative"
                                                 >
 
                                                     <!-- PN -->
-                                                    <livewire:components.pn :part="$part"/>
+                                                    <livewire:components.pn :part="$part" :key="'pn-'.$part->id"/>
 
                                                     <span class="flex items-center md:hidden font-semibold">Name:</span>
 
@@ -416,7 +420,7 @@
                                                 </div>
 
                                                 <!-- Price -->
-                                                <livewire:components.price :part="$part"/>
+                                                <livewire:components.price :part="$part" :key="'price-'.$part->id"/>
 
                                                 <!-- Total -->
                                                 <div class="w-full md:w-1/12 mb-2 md:mb-0">
@@ -429,14 +433,14 @@
                                                     class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
                                                     <!-- Миниатюра -->
                                                     <span class="md:hidden font-semibold">Image:</span>
-                                                    <livewire:components.image :part="$part"/>
+                                                    <livewire:components.image :part="$part" :key="'image-'.$part->id"/>
                                                 </div>
 
                                                 <!-- URL -->
                                                 @php
                                                     $urlData = json_decode($part->url, true);
                                                 @endphp
-                                                <livewire:components.url :urlData="$urlData" :part="$part"/>
+                                                <livewire:components.url :urlData="$urlData" :part="$part" :key="'url-'.$part->id"/>
 
                                                 <!-- Actions -->
                                                 <div class="flex flex-col w-full md:w-2/12 flex">
@@ -476,9 +480,9 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        @endif
-                                    @endforeach
-                                </div>
+                                        @endforeach
+                                    </div>
+                                @endif
                             @endforeach
 
                             <div x-data="{ transferPartsModalOpen: false }"
@@ -617,12 +621,12 @@
                                      class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
                                      style="display: none;">
                                     <div
-                                        class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
+                                        class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6" @click.away="deletePartsModalOpen = false">
                                         <!-- Заголовок модального окна -->
                                         <div class="flex items-center justify-between mb-4">
                                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                                                Запчасти для
-                                                удаления</h3>
+                                                Запчасти для удаления
+                                            </h3>
                                             <button @click="closeDeleteModal"
                                                     class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
                                                     aria-label="Close">
@@ -637,7 +641,7 @@
                                         </div>
 
                                         <!-- Содержимое модального окна -->
-                                        <form wire:submit.prevent="deleteParts">
+                                        <form wire:submit.prevent="deleteParts()">
                                             <div class="space-y-4">
                                                 <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
                                                     <template x-for="name in selectedPartNames" :key="name">
@@ -665,7 +669,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -840,7 +843,7 @@
 
             <!-- Пагинация (если потребуется) -->
             <div class="mt-4">
-                {{ $parts->links() }}
+                {{ $paginatedParts->links() }}
             </div>
         </div>
     </div>

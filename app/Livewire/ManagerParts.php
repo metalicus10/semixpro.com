@@ -60,6 +60,7 @@ class ManagerParts extends Component
     public $selectedPartNames = [];
     public $selectedParts = [];
 
+    public $parts;
     public $partId;
     public $newImage;
     public $showImageModal = false;
@@ -86,6 +87,7 @@ class ManagerParts extends Component
 
     public function mount()
     {
+        //$this->parts = Part::with('nomenclature', 'warehouse')->get();
         $this->loadSuppliers();
     }
 
@@ -184,6 +186,7 @@ class ManagerParts extends Component
             'number' => $this->newPn,
             'part_id' => $partId,
             'manager_id' => auth()->id(),
+            'nomenclature_id ' => json_encode([$part->nomenclature_id]),
         ]);
         $this->updatePartPnsJson($part);
 
@@ -249,7 +252,7 @@ class ManagerParts extends Component
         }
 
         // Возвращаем пагинированный результат
-        return $partsQuery->paginate(30);
+        return $partsQuery->get();
     }
 
     public function updatedTransferQuantities($value, $partId)
@@ -358,6 +361,7 @@ class ManagerParts extends Component
     public function updatedSelectedParts()
     {
         $this->selectedPartNames = Part::whereIn('id', $this->selectedParts)->pluck('name')->toArray();
+        dd($this->selectedPartNames);
     }
 
     public function deleteParts()
@@ -366,8 +370,8 @@ class ManagerParts extends Component
             $parts = Part::whereIn('id', $this->selectedParts)->get();
 
             foreach($parts as $part){
-                if ($part->image && Storage::disk('s3')->exists($part->image)) {
-                    Storage::disk('s3')->delete($part->image);
+                if ($part->image && Storage::disk('public')->exists($part->image)) {
+                    Storage::disk('public')->delete($part->image);
                 }
 
                 // Обновляем запись в базе данных
@@ -478,6 +482,8 @@ class ManagerParts extends Component
                 Pn::create([
                     'number' => $pn,
                     'part_id' => $part->id,
+                    'manager_id' => auth()->id(),
+                    'nomenclature_id ' => json_encode([$part->nomenclature_id]),
                 ]);
             }
         }
@@ -573,7 +579,7 @@ class ManagerParts extends Component
     {
         $userId = Auth::id();
         $this->technicians = Technician::where('manager_id', $userId)->where('is_active', true)->get();
-        $parts = $this->getFilteredParts();
+        $this->parts = $this->getFilteredParts();
         $managerData = User::with([
             'categories',
             'brands',
@@ -586,9 +592,9 @@ class ManagerParts extends Component
         $this->warehouses = $managerData->warehouses;
 
         return view('livewire.manager.manager-parts', [
-            'parts' => $parts, 'categories' => $this->categories, 'technicians' => $this->technicians,
+            'parts' => $this->parts, 'categories' => $this->categories, 'technicians' => $this->technicians,
             'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen,
-            'selectedPartId' => $this->selectedPartId, 'warehouses' => $this->warehouses,
+            'selectedPartId' => $this->selectedPartId, 'warehouses' => $this->warehouses, 'paginatedParts' => Part::paginate(30),
         ])
             ->layout('layouts.app');
     }

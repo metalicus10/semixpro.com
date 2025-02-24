@@ -17,6 +17,11 @@ class Image extends Component
     public $part, $partId, $imgUrl, $newImage, $selectedPartId, $fullImage;
     public $showImageModal = false;
 
+    public function mount(Part $part)
+    {
+        $this->part = $part;
+    }
+
     public function openImageModal($partId)
     {
         $this->partId = $partId;

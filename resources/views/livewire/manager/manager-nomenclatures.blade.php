@@ -38,7 +38,7 @@
             this.selectedImage = null;
         },
         toggleCheckAll(event) {
-            this.selectedNomenclatures = event.target.checked ? this.nomenclatures.map(n => n.id) : [];
+            this.selectedNomenclatures = event.target.checked ? Object.values(this.nomenclatures).map(n => n.id) : [];
         },
         toggleNomenclatureSelection(id) {
             if (this.selectedNomenclatures.includes(id)) {
@@ -99,32 +99,32 @@
                 <div class="flex columns-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1">
                     <!-- Checkbox -->
                     <div class="w-1/12 block sm:hidden absolute top-5 right-5 mb-2">
-                        <input type="checkbox" :value="{{$nomenclature->id}}"
-                               @click="toggleNomenclatureSelection({{$nomenclature->id}})"
-                               :checked="selectedNomenclatures.includes({{$nomenclature->id}})"
+                        <input type="checkbox" :value="{{$nomenclature['id']}}"
+                               @click="toggleNomenclatureSelection({{$nomenclature['id']}})"
+                               :checked="selectedNomenclatures.includes({{$nomenclature['id']}})"
                                class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="checkbox-table-search-{{$nomenclature->id}}"
+                        <label for="checkbox-table-search-{{$nomenclature['id']}}"
                                class="sr-only">checkbox</label>
                     </div>
                     <div class="hidden w-1/12 flex items-center justify-center sm:flex p-2">
-                        <input type="checkbox" :value="{{$nomenclature->id}}"
-                               @click="toggleNomenclatureSelection({{$nomenclature->id}})"
-                               :checked="selectedNomenclatures.includes({{$nomenclature->id}})"
+                        <input type="checkbox" :value="{{$nomenclature['id']}}"
+                               @click="toggleNomenclatureSelection({{$nomenclature['id']}})"
+                               :checked="selectedNomenclatures.includes({{$nomenclature['id']}})"
                                class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="checkbox-table-search-{{$nomenclature->id}}"
+                        <label for="checkbox-table-search-{{$nomenclature['id']}}"
                                class="sr-only">checkbox</label>
                     </div>
                     <!-- NN -->
                     <div class="w-1/12 text-center flex items-center p-2">
                         <span class="md:hidden font-semibold">NN: </span>
-                        <span x-text="{{$nomenclature->nn}}"></span>
+                        <span x-text="{{$nomenclature['nn']}}"></span>
                     </div>
                     <!-- Name -->
                     <div x-data="{
                         showEditMenu: false,
                         editingName: false,
-                        newName: '{{$nomenclature->name}}',
-                        originalName: '{{$nomenclature->name}}',
+                        newName: '{{$nomenclature['name']}}',
+                        originalName: '{{$nomenclature['name']}}',
                         errorMessage: '',
                     }"
                         class="flex flex-col w-2/12 justify-center items-start"
@@ -142,17 +142,17 @@
                                 <!-- Отображение названия -->
                                 <div x-show="!editingName" @click="editingName = true"
                                     class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                    {{$nomenclature->name}}
+                                    {{$nomenclature['name']}}
                                 </div>
 
                                 <!-- Редактирование названия -->
                                 <div x-show="editingName" class="flex items-center gap-2 z-40" x-cloak>
                                     <input type="text" x-model="newName"
                                         class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
-                                           @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature({{$nomenclature->id}}, newName); originalName = newName; } editingName = false;"
+                                           @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature({{$nomenclature['id']}}, newName); originalName = newName; } editingName = false;"
                                            @keydown.escape="editingName = false; newName = originalName;"
                                     />
-                                    <button @click="if (newName !== originalName) { $wire.updateNomenclature({{$nomenclature->id}}, newName); originalName = newName; } editingName = false;"
+                                    <button @click="if (newName !== originalName) { $wire.updateNomenclature({{$nomenclature['id']}}, newName); originalName = newName; } editingName = false;"
                                             class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
                                         ✓
                                     </button>
@@ -163,70 +163,55 @@
                     <!-- Category -->
                     <div class="flex w-1/12 items-center px-2">
                         <span class="md:hidden font-semibold">Категория: </span>
-                        {{$nomenclature->category->name}}
+                        {{$nomenclature['category']['name']}}
                     </div>
                     <!-- Supplier -->
                     <div class="flex w-2/12 items-center px-2">
                         <span class="md:hidden font-semibold">Поставщик: </span>
-                        {{$nomenclature->suppliers->name}}
+                        {{$nomenclature['suppliers']['name']}}
                     </div>
                     <!-- Brand -->
                     <div class="flex w-1/12 items-center px-2">
                         <span class="md:hidden font-semibold">Брэнд: </span>
-                        <div id="brand-component-{{ $nomenclature->id }}">
-                            <livewire:components.brand :brands="$brands" :nomenclature="$nomenclature" />
+                        <div id="brand-component-{{ $nomenclature['id'] }}">
+                            <livewire:components.brand :nomenclature="$nomenclature" />
                         </div>
                     </div>
                     <!-- Image -->
                     <div class="flex w-2/12 items-center px-2">
                         <span class="md:hidden font-semibold">Изображение: </span>
-                        <template x-if="{{$nomenclature->image}} !== null">
-                            <img :src="'{{ asset('storage') }}' + {{$nomenclature->image}}" alt="{{$nomenclature->name}}" class="w-16 h-16 object-cover rounded">
-                        </template>
-                        <template x-if="{{$nomenclature->image}} === null">
+                        @if($nomenclature['image'])
+                            <img src="{{ asset('storage') }}{{$nomenclature['image']}}" alt="{{$nomenclature['name']}}" class="w-16 h-16 object-cover rounded">
+                        @else
                             <span class="text-gray-500">Нет изображения</span>
-                        </template>
+                        @endif
                     </div>
                     <!-- Actions -->
                     <div class="flex w-2/12 items-center px-2 gap-2">
-                        <button @click="openNomenclatureModal('edit', {{$nomenclature}})"
+                        <button @click="openNomenclatureModal('edit', {{$nomenclature['id']}})"
                                 class="cursor-pointer px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
                             Ред.
                         </button>
-                        <template x-if="{{$nomenclature->is_archived}} === 0">
-                            <button @click="archiveNomenclature({{$nomenclature->id}})"
+                        <template x-if="{{$nomenclature['is_archived']}} === 0">
+                            <button @click="archiveNomenclature({{$nomenclature['id']}})"
                                     class="cursor-pointer px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
                                 Archive
                             </button>
                         </template>
-                        <template x-if="{{$nomenclature->is_archived}} !== 0">
-                            <button @click="restoreNomenclature({{$nomenclature->id}})"
+                        <template x-if="{{$nomenclature['is_archived']}} !== 0">
+                            <button @click="restoreNomenclature({{$nomenclature['id']}})"
                                     class="cursor-pointer px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
                                 Restore
                             </button>
                         </template>
                         @if(Auth::user()->inRole('admin'))
-                        <button @click="openNomenclatureDelModal({{$nomenclature->id}})"
+                        <button @click="openNomenclatureDelModal({{$nomenclature['id']}})"
                                 class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600">
                             Удалить
                         </button>
                         @endif
                     </div>
                 </div>
-                <script>
-                    document.addEventListener("DOMContentLoaded", function () {
-                        document.querySelectorAll("[id^='brand-component-']").forEach((el) => {
-                            let partId = el.id.replace("brand-component-", "");
-                            let brandsData = JSON.parse(el.getAttribute("data-brands") || '[]');
-
-                            Livewire.dispatch("loadBrandComponent", { partId, brandsData, elementId: el.id });
-                        });
-                    });
-
-                    Livewire.on("loadBrandComponent", ({ partId, brandsData, elementId }) => {
-                        Livewire.dispatch("renderBrandComponent", { partId, brandsData, elementId });
-                    });
-                </script>
             @endforeach
             <template x-if="nomenclatures.length === 0">
             <div
