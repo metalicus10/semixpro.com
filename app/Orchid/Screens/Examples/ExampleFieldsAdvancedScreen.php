@@ -283,7 +283,7 @@ class ExampleFieldsAdvancedScreen extends Screen
                     ->horizontal(),
 
                 Attach::make('image')
-                    ->title('Upload Image')
+                    ->title('Upload PartImage')
                     ->accept('image/*')
                     ->help('Select an image file. You can upload files in any image format, such as JPG, PNG, or GIF.')
                     ->horizontal(),

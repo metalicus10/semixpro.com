@@ -1,29 +1,21 @@
 <div x-data="{
-        partName: '',
-        partImage: '{{ $part->image }}',
-        nomenclatureImage:'{{ $part->nomenclatures->image }}',
+        nomenclatureName: '{{ $nomenclature['name'] }}',
+        nomenclatureImage:'{{ $nomenclature['image'] }}',
         showTooltip: false,
         isUploading: false,
         uploadProgress: 0
-    }" class="flex gallery w-14 relative">
-    <div class="flex flex-row">
-        <template x-if="nomenclatureImage && !partImage">
-            <img :src="'{{ asset('storage') }}' + nomenclatureImage" alt="$part.name"
-                 @click="$dispatch('lightbox', '{{ asset('storage') }}' + nomenclatureImage)"
+    }" class="flex gallery relative">
+    <div class="flex flex-row h-[80px]">
+        @if ($nomenclature['image'])
+            <img src="{{ asset('storage') . '/' . $nomenclature['image'] }}"
+                 alt="{{ $nomenclature['name'] }}"
+                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $nomenclature['image'] }}')"
                  class="object-cover rounded cursor-zoom-in">
-        </template>
-
-        <template x-if="!partImage && !nomenclatureImage">
+        @else
             <span class="w-[56px] h-[56px]">
                 <livewire:components.empty-image/>
             </span>
-        </template>
-
-        <template x-if="partImage && nomenclatureImage">
-            <img :src="partImage" :alt="$part.name"
-                 @click="$dispatch('lightbox', '{{ asset('storage') }}' + partImage)"
-                 class="object-cover rounded cursor-zoom-in">
-        </template>
+        @endif
     </div>
     <!-- Tooltip и кнопка загрузки -->
     <div x-data="{ showTooltip: false }" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
@@ -31,7 +23,8 @@
              class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
             Change Image
         </div>
-        <button @click="$wire.openImageModal({{ $part->id }})" class="text-white rounded-full p-1 cursor-pointer h-[20px]">
+        <button @click="$wire.openImageModal({{ $nomenclature['id'] }})"
+                class="text-white rounded-full p-1 cursor-pointer h-[20px]">
             <livewire:components.upload-green-arrow/>
         </button>
     </div>
@@ -43,8 +36,7 @@
     <div x-data="{ showImageModal: @entangle('showImageModal') }">
         <!-- Modal Backdrop -->
         <div x-show="showImageModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
-             x-transition.opacity
-             x-cloak></div>
+             x-transition.opacity x-cloak></div>
 
         <!-- Modal Content -->
         <div x-show="showImageModal"

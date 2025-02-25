@@ -117,7 +117,7 @@
                         <span class="ms-3">Dashboard</span>
                     </a>
                 </li>-->
-                @if(Auth::user()->inRole('manager'))
+                @if(auth()->user()->hasAccess('manage_nomenclature'))
                     <li>
                         <a x-on:click="currentTab = 'nomenclatures', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
@@ -132,7 +132,7 @@
                         </a>
                     </li>
                 @endif
-                @if(Auth::user()->inRole('manager'))
+                @if(auth()->user()->hasAccess('manage_warehouses'))
                     <li>
                         <a x-on:click="currentTab = 'warehouses', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
@@ -247,6 +247,9 @@
         </div>
     </div>
 </div>
+
+<!-- Общий Lightbox для всех изображений -->
+<livewire:components.lightbox />
 
 @livewireScripts
 </body>

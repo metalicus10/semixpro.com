@@ -21,9 +21,15 @@ class PermissionServiceProvider extends ServiceProvider
      */
     public function boot(Dashboard $dashboard): void
     {
-        $permissions = ItemPermission::group('Main')
-            ->addPermission('manager', 'Access to manager features')
-            ->addPermission('technician', 'Access to technician features');
+        $permissions = ItemPermission::group(__('Main'))
+            ->addPermission('manager', __('Access to manager features'))
+            ->addPermission('technician', __('Access to technician features'))
+            ->addPermission('view_warehouses', __('View Warehouses'))
+            ->addPermission('manage_warehouses', __('Manage Warehouses'))
+            ->addPermission('view_parts', __('View Parts'))
+            ->addPermission('manage_parts', __('Manage Parts'))
+            ->addPermission('view_nomenclature', __('View Nomenclature'))
+            ->addPermission('manage_nomenclature', __('Manage Nomenclature'));;
 
         $dashboard->registerPermissions($permissions);
     }

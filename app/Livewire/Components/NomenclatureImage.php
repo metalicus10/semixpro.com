@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Components;
 
-use App\Models\Part;
+use App\Models\Nomenclature;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Imagick\Driver;
@@ -10,27 +10,22 @@ use Intervention\Image\ImageManager;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-class Image extends Component
+class NomenclatureImage extends Component
 {
     use WithFileUploads;
 
-    public $part, $partId, $imgUrl, $newImage, $selectedPartId, $fullImage;
+    public $nomenclature, $nomenclatureId, $imgUrl, $newImage, $fullImage;
     public $showImageModal = false;
 
-    public function mount(Part $part)
+    public function openImageModal($nomenclatureId)
     {
-        $this->part = $part;
-    }
-
-    public function openImageModal($partId)
-    {
-        $this->partId = $partId;
+        $this->nomenclatureId = $nomenclatureId;
         $this->showImageModal = true;
     }
 
     public function closeImageModal()
     {
-        $this->reset(['showImageModal', 'selectedPartId', 'newImage']);
+        $this->reset(['showImageModal', 'newImage']);
     }
 
     public function uploadImage()
@@ -39,17 +34,17 @@ class Image extends Component
             'newImage' => 'required|image|max:5200',
         ]);
 
-        // Получаем запчасть
-        $part = Part::find($this->partId);
+        // Получаем номенклатуру
+        $nomenclature = Nomenclature::find($this->nomenclatureId);
 
-        if (!$part) {
-            $this->dispatch('showNotification', 'error', 'Part not found');
+        if (!$nomenclature) {
+            $this->dispatch('showNotification', 'error', 'Nomenclature not found');
             return;
         }
 
         // Удаляем старое изображение, если оно есть
-        if ($part->image) {
-            Storage::disk('public')->delete($part->image);
+        if ($nomenclature->image) {
+            Storage::disk('public')->delete($nomenclature->image);
         }
 
         if ($this->newImage)
@@ -60,7 +55,7 @@ class Image extends Component
                 ->resize(null, null)
                 ->toWebp(quality: 60);
 
-            $imagePath = '/images/parts/' . Auth::id();
+            $imagePath = '/images/nomenclatures/' . Auth::id();
             // Генерируем уникальное имя для файла
             $fileName = $imagePath. '/' . uniqid() . '.webp';
 
@@ -69,11 +64,11 @@ class Image extends Component
         }
 
         // Обновляем модель
-        $part->update(['image' => $this->imgUrl]);
+        $nomenclature->update(['image' => $this->imgUrl]);
         $this->closeImageModal();
 
-        $this->dispatch('showNotification', 'success', 'Image updated successfully!');
-        $this->dispatch('imageUpdated', ['partId' => $this->partId]);
+        $this->dispatch('showNotification', 'success', 'Nomenclature Image updated successfully!');
+        $this->dispatch('imageUpdated', ['nomenclatureId' => $this->nomenclatureId]);
 
         // Сбрасываем состояние
         $this->reset('newImage');
@@ -88,9 +83,8 @@ class Image extends Component
     {
         $this->fullImage = null;
     }
-
     public function render()
     {
-        return view('livewire.manager.components.image');
+        return view('livewire.manager.components.nomenclature-image');
     }
 }

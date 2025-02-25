@@ -361,7 +361,6 @@ class ManagerParts extends Component
     public function updatedSelectedParts()
     {
         $this->selectedPartNames = Part::whereIn('id', $this->selectedParts)->pluck('name')->toArray();
-        dd($this->selectedPartNames);
     }
 
     public function deleteParts()

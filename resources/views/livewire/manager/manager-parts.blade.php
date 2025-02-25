@@ -183,7 +183,6 @@
                     </template>
                 </ul>
 
-
                 <!-- Кнопка для прокрутки вправо -->
                 <button @click="scrollBy(100)" @dblclick="scrollToEnd()"
                         class="absolute right-0 top-1/2 transform -translate-y-1/2 bg-gray-100 dark:bg-gray-700 p-2 rounded-full shadow z-10"
@@ -198,9 +197,27 @@
             <hr class="h-px mt-0 mb-3 bg-gray-200 border-0 dark:bg-gray-800">
 
             <!-- Таблица с запчастями -->
-            <div class="bg-white dark:bg-gray-800 shadow-md rounded-md">
+            <div class="bg-white dark:bg-gray-800 shadow-md rounded-md"
+                x-data="{
+                    selectedParts: @entangle('selectedParts'),
+                }"
+            >
                 <!-- Поле поиска -->
-                <div class="pb-4 bg-white dark:bg-gray-900">
+                <div class="flex pb-4 bg-white dark:bg-gray-900 gap-2"
+                     x-data="{
+                        transferPartsModalOpen: false,
+                        deletePartsModalOpen: false,
+                        openDeleteModal() {
+                        if (this.selectedParts.length > 0) {
+                            this.fetchSelectedNames();
+                                this.deletePartsModalOpen = true;
+                            }
+                        },
+                        closeDeleteModal() {
+                            this.deletePartsModalOpen = false;
+                        },
+                     }"
+                >
                     <label for="table-search" class="sr-only">Поиск</label>
                     <div class="relative">
                         <div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
@@ -212,15 +229,28 @@
                             </svg>
                         </div>
                         <input type="text" id="table-search" wire:model.live="search"
-                               class="block pt-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-md w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                               class="block py-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-md w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                placeholder="Поиск по запчастям...">
+                    </div>
+                    <div class="flex flex-row justify-around gap-2">
+                        <button
+                            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
+                            @click="openModal" x-show="selectedParts.length > 0"
+                        >
+                            Send parts
+                        </button>
+                        <button
+                            class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                            @click="openDeleteModal" x-show="selectedParts.length > 0"
+                        >
+                            Delete parts
+                        </button>
                     </div>
                 </div>
 
                 <!-- Таблица -->
                 <div x-data="{
-                      selectedParts: @entangle('selectedParts'),
-                      selectedPartNames: [],
+                    selectedPartNames: [],
                             async fetchSelectedNames() {
                                 if (this.selectedParts.length) {
                                     this.selectedPartNames = await $wire.call('getSelectedPartNames');
@@ -230,8 +260,6 @@
                             },
                             partQuantities: {},
                             partStock: @js($parts->pluck('quantity', 'id')),
-                            transferPartsModalOpen: false,
-                            deletePartsModalOpen: false,
                             toggleCheckAll(event) {
                                 this.selectedParts = event.target.checked ? @json($parts->pluck('id')) : [];
                                 this.selectedParts.forEach(partId => {
@@ -261,15 +289,6 @@
                                     this.transferPartsModalOpen = true;
                                 }
                             },
-                            openDeleteModal() {
-                                if (this.selectedParts.length > 0) {
-                                    this.fetchSelectedNames();
-                                    this.deletePartsModalOpen = true;
-                                }
-                            },
-                            closeDeleteModal() {
-                                this.deletePartsModalOpen = false;
-                            },
                             closeModal() {
                                 this.transferPartsModalOpen = false;
                             },
@@ -287,21 +306,35 @@
                     <div id="parts-table"
                          class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                         <!-- Заголовок таблицы -->
-                        <div
-                            class="hidden md:flex text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
-                            <div class="px-4 py-2">
+                        <div class="hidden md:flex text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                            <!-- Чекбокс -->
+                            <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
                                        :checked="selectedParts.length === @json($parts->count())"
                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <label for="checkbox-all-search" class="sr-only">checkbox</label>
                             </div>
-                            <div class="px-4 py-2">SKU</div>
-                            <div class="flex-1 px-4 py-2">Наименование</div>
-                            <div class="px-4 py-2">Quantity</div>
-                            <div class="px-4 py-2">Price</div>
-                            <div class="flex-1 px-4 py-2">Total</div>
-                            <div class="flex-1 px-4 py-2">Изображение</div>
-                            <div class="flex-1 flex items-center">
+
+                            <!-- SKU -->
+                            <div class="w-[100px] px-4 py-2">SKU</div>
+
+                            <!-- Наименование (шире остальных) -->
+                            <div class="flex-[1] px-4 py-2">Наименование</div>
+
+                            <!-- Quantity -->
+                            <div class="w-[120px] px-4 py-2">Quantity</div>
+
+                            <!-- Price -->
+                            <div class="w-[120px] px-4 py-2">Price</div>
+
+                            <!-- Total -->
+                            <div class="w-[120px] px-4 py-2">Total</div>
+
+                            <!-- Изображение -->
+                            <div class="w-[120px] px-4 py-2">Изображение</div>
+
+                            <!-- URL (шире остальных) -->
+                            <div class="flex-[1] flex px-4 py-2 items-center">
                                 <span>URL</span>
                                 <div x-data="{ showTooltip: false }" @click="showTooltip = !showTooltip"
                                      @click.away="showTooltip = false"
@@ -314,7 +347,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="flex-1 px-4 py-2">Действия</div>
+
+                            <!-- Действия -->
+                            <div class="w-[200px] px-4 py-2">Действия</div>
                         </div>
 
                         <!-- Строки таблицы -->
@@ -325,9 +360,9 @@
                                 @endphp
 
                                 @if($filteredParts->isNotEmpty())
-                                    <div x-show="activeTab === {{$warehouse->id}}">
+                                    <div x-show="activeTab === Number({{$warehouse->id}})">
                                         @foreach ($filteredParts as $part)
-                                            <div class="flex flex-col md:flex-row items-start md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-2 pt-5 md:pt-2 relative">
+                                            <div class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
                                                 <!-- Checkbox -->
                                                 <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
                                                     <input type="checkbox" :value="{{ $part->id }}"
@@ -337,7 +372,7 @@
                                                     <label for="checkbox-table-search-{{ $part->id }}"
                                                            class="sr-only">checkbox</label>
                                                 </div>
-                                                <div class="hidden sm:block md:w-1/12 mb-0" wire:ignore>
+                                                <div class="w-[40px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2" wire:ignore>
                                                     <input type="checkbox" :value="{{ $part->id }}"
                                                            @click="togglePartSelection({{ $part->id }})"
                                                            :checked="selectedParts.includes({{ $part->id }})"
@@ -347,7 +382,7 @@
                                                 </div>
 
                                                 <!-- SKU -->
-                                                <div class="w-full md:w-1/12 mb-2 md:mb-0">
+                                                <div class="w-[100px] px-4 py-2 mb-2 md:mb-0">
                                                     <span class="md:hidden font-semibold">SKU:</span>
                                                     {{ $part->sku }}
                                                 </div>
@@ -369,7 +404,7 @@
                                                         selectedPns: @entangle('selectedPns'),
                                                      }"
                                                      @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
-                                                     class="flex flex-row w-full md:w-2/12 mb-2 md:mb-0 cursor-pointer relative"
+                                                     class="flex-[1] flex flex-row px-4 py-2 md:mb-0 cursor-pointer relative"
                                                 >
 
                                                     <!-- PN -->
@@ -378,23 +413,23 @@
                                                     <span class="flex items-center md:hidden font-semibold">Name:</span>
 
                                                     <!-- Название с подменю -->
-                                                    <div class="flex items-center w-full">
+                                                    <div class="flex items-center">
                                                         <!-- Оверлей -->
                                                         <div x-show="editingName || deletePn || addingPn"
-                                                             class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
+                                                             class="flex fixed inset-0 bg-black opacity-50 z-40"
                                                              @click="editingName = false, deletePn = false, addingPn = false;"
                                                              x-cloak>
                                                         </div>
 
                                                         <!-- Основное отображение -->
                                                         <span x-show="!editingName" @click="editingName = true"
-                                                              class="flex z-35 items-center cursor-pointer hover:underline min-h-[30px]">
-                                                                        {{ $part->name }}
-                                                                    </span>
+                                                              class="flex z-20 items-center cursor-pointer hover:underline min-h-[30px]">
+                                                            {{ $part->name }}
+                                                        </span>
                                                     </div>
                                                     <!-- Режим редактирования Name -->
                                                     <div x-show="editingName"
-                                                         class="flex justify-center items-center w-full relative z-40"
+                                                         class="flex justify-center items-center relative z-40"
                                                          x-cloak>
                                                         <input type="text" x-model="newName"
                                                                class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
@@ -409,7 +444,7 @@
                                                 </div>
 
                                                 <!-- Quantity -->
-                                                <div class="w-full md:w-1/12 mb-2 md:mb-0"
+                                                <div class="w-[120px] px-4 py-2 md:mb-0"
                                                      @part-updated="event => {
                                                          if (event.detail.partId === {{ $part->id }}) {
                                                             $el.textContent = event.detail.newQuantity;
@@ -423,17 +458,17 @@
                                                 <livewire:components.price :part="$part" :key="'price-'.$part->id"/>
 
                                                 <!-- Total -->
-                                                <div class="w-full md:w-1/12 mb-2 md:mb-0">
+                                                <div class="w-[120px] px-4 py-2 md:mb-0">
                                                     <span class="md:hidden font-semibold">Total:</span>
                                                     ${{ $part->total }}
                                                 </div>
 
-                                                <!-- Image -->
+                                                <!-- PartImage -->
                                                 <div
-                                                    class="flex flex-row justify-start space-x-3 w-full md:w-1/12 mb-2 md:mb-0">
+                                                    class="flex flex-row w-[120px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
                                                     <!-- Миниатюра -->
                                                     <span class="md:hidden font-semibold">Image:</span>
-                                                    <livewire:components.image :part="$part" :key="'image-'.$part->id"/>
+                                                    <livewire:components.part-image :part="$part" :key="'image-'.$part->id"/>
                                                 </div>
 
                                                 <!-- URL -->
@@ -443,7 +478,7 @@
                                                 <livewire:components.url :urlData="$urlData" :part="$part" :key="'url-'.$part->id"/>
 
                                                 <!-- Actions -->
-                                                <div class="flex flex-col w-full md:w-2/12 flex">
+                                                <div class="flex flex-col w-[200px]">
                                                     <!-- Кнопки действий -->
                                                     <div class="flex flex-row w-full"><span
                                                             class="md:hidden font-semibold">Actions:</span>
@@ -487,13 +522,6 @@
 
                             <div x-data="{ transferPartsModalOpen: false }"
                                  x-bind:class="{ 'overflow-hidden': transferPartsModalOpen }">
-
-                                <button
-                                    class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-                                    @click="openModal" x-show="selectedParts.length > 0"
-                                >
-                                    Send parts
-                                </button>
 
                                 <!-- Flowbite-стилизованное модальное окно -->
                                 <div x-show="transferPartsModalOpen"
@@ -608,13 +636,6 @@
                             </div>
                             <div x-data="{ deletePartsModalOpen: false }"
                                  x-bind:class="{ 'overflow-hidden': deletePartsModalOpen }">
-
-                                <button
-                                    class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
-                                    @click="openDeleteModal" x-show="selectedParts.length > 0"
-                                >
-                                    Delete parts
-                                </button>
 
                                 <!-- Flowbite-стилизованное модальное окно -->
                                 <div x-show="deletePartsModalOpen"
@@ -821,25 +842,6 @@
                     </div>
                 </div>
             @endif
-
-            <!-- Общий Lightbox для всех изображений -->
-
-            <div class="lightbox fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center"
-                 x-data="{ lightboxOpen: false, imgSrc: '' }"
-                 x-show="lightboxOpen"
-                 x-transition
-                 @lightbox.window="lightboxOpen = true; imgSrc = $event.detail;"
-                 style="display: none;">
-
-                <!-- Фон для закрытия -->
-                <div class="absolute inset-0 bg-black opacity-75" @click="lightboxOpen = false"></div>
-
-                <!-- Контейнер для изображения -->
-                <div class="lightbox-container relative z-10" @click.stop>
-                    <!-- Полное изображение -->
-                    <img :src="imgSrc" class="object-contain max-w-full max-h-full">
-                </div>
-            </div>
 
             <!-- Пагинация (если потребуется) -->
             <div class="mt-4">

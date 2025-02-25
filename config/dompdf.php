@@ -181,7 +181,7 @@ return [
         'default_font' => 'serif',
 
         /**
-         * Image DPI setting
+         * PartImage DPI setting
          *
          * This setting determines the default DPI setting for images and fonts.  The
          * DPI may be overridden for inline images by explictly setting the

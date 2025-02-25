@@ -1,5 +1,5 @@
 <div
-    class="flex flex-row w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer relative parent-container"
+    class="flex flex-row w-[120px] px-4 py-2 md:mb-0 cursor-pointer relative parent-container"
     x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
     <!-- Кликабельная ссылка с ценой запчасти -->

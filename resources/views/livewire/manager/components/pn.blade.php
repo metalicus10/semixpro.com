@@ -1,7 +1,7 @@
 <div class="flex relative">
 
     <!-- Список существующих PNs -->
-    <div class="flex z-30 items-center" x-cloak>
+    <div class="flex z-20 items-center" x-cloak>
         <!-- Кнопка для открытия поповера -->
         <div
             class="w-4 h-4 md:w-6 md:h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2 uppercase font-bold text-[8px] md:text-[10px]"

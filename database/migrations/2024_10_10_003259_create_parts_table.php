@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('sku')->unique();
             $table->string('name');
             $table->integer('quantity')->default(0);
+            $table->string('image')->nullable();
             $table->foreignId('nomenclature_id')->constrained('nomenclatures');
             $table->foreignId('manager_id')->constrained('users')->onDelete('cascade');
             $table->json('url')->nullable();

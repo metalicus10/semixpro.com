@@ -177,14 +177,10 @@
                             <livewire:components.brand :nomenclature="$nomenclature" />
                         </div>
                     </div>
-                    <!-- Image -->
+                    <!-- Nomenclature Image -->
                     <div class="flex w-2/12 items-center px-2">
-                        <span class="md:hidden font-semibold">Изображение: </span>
-                        @if($nomenclature['image'])
-                            <img src="{{ asset('storage') }}{{$nomenclature['image']}}" alt="{{$nomenclature['name']}}" class="w-16 h-16 object-cover rounded">
-                        @else
-                            <span class="text-gray-500">Нет изображения</span>
-                        @endif
+                        <span class="md:hidden font-semibold">Изображение:</span>
+                        <livewire:components.nomenclature-image :nomenclature="$nomenclature" :key="'image-'.$nomenclature['id']"/>
                     </div>
                     <!-- Actions -->
                     <div class="flex w-2/12 items-center px-2 gap-2">
@@ -250,7 +246,7 @@
                             <label for="nn" class="block text-sm font-medium">Номер номенклатуры <span class="relative top-0 text-red-600">*</span></label>
                             <input type="text" id="nn" x-model="newNomenclature.nn"
                                    placeholder="Введите номер" required=""
-                                   class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
+                                   class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
                             <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.nn" x-text="$wire.errors?.newNomenclature?.nn"></p>
                         </div>
 
@@ -259,7 +255,7 @@
                             <label for="name" class="block text-sm font-medium">Название <span class="relative top-0 text-red-600">*</span></label>
                             <input type="text" id="name" x-model="newNomenclature.name"
                                 placeholder="Введите название" required=""
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
+                                class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
                             <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.name" x-text="$wire.errors?.newNomenclature?.name"></p>
                         </div>
 
@@ -305,10 +301,10 @@
                             <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.brand" x-text="$wire.errors?.newNomenclature?.brand"></p>
                         </div>
 
-                        <!-- Image -->
+                        <!-- PartImage -->
                         <div>
                             <label for="image" class="block text-sm font-medium">Изображение</label>
-                            <input type="file" id="image" wire:model="image" @change="previewImage" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm" />
+                            <input type="file" id="image" wire:model="image" @change="previewImage" class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-sm" />
                             <!-- Превью изображения -->
 
                             <div class="mt-4">
