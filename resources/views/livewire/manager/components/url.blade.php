@@ -50,9 +50,9 @@
             x-data
             x-init="document.body.classList.add('overflow-hidden')"
             x-on:close-modal.window="document.body.classList.remove('overflow-hidden')"
-            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
             <div
-                class="bg-white p-6 rounded-t-lg shadow-md w-full max-w-md h-[60%] overflow-y-auto md:rounded-lg md:max-h-[80%]">
+                class="bg-white p-6 rounded-t-lg cursor-default shadow-md w-full max-w-2xl max-h-full overflow-y-auto md:rounded-lg md:max-h-auto">
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-semibold text-gray-900">Редактировать ссылку</h2>
                     <button wire:click="$set('managerUrlModalVisible', false)"
