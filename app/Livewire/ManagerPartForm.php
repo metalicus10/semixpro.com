@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Gd\Driver;
 use Livewire\Component;
 use App\Models\Category;
 use App\Models\Part;
@@ -41,7 +41,7 @@ class ManagerPartForm extends Component
     public $notificationMessage = '';
     public $notificationType = 'info';
     public $imgUrl = null;
-    public $url = null;
+    public $url, $text = null;
 
     protected $listeners = ['categoryUpdated' => 'refreshCategories', 'brandUpdated' => 'refreshBrands', 'defaultWarehouseUpdated' => 'refreshWarehouses'];
 
@@ -139,13 +139,8 @@ class ManagerPartForm extends Component
             return;
         }
 
-        // Получаем идентификатор текущего пользователя
-        $userId = auth()->id();
-
-        // Путь для сохранения изображений
-        $path = '/images/parts/' . $userId;
-
-        /*if ($this->image) {
+        $fileName = '';
+        if ($this->image) {
 
             $tempPath = $this->image->getRealPath();
             $tempImg = Storage::disk('public')->get($tempPath);
@@ -153,16 +148,17 @@ class ManagerPartForm extends Component
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($tempImg)
-            ->resize(1024, 1024)
+            ->resize(1024, 768)
             ->toWebp(quality: 60);
 
+            $imagePath = '/images/parts/' . Auth::id();
+
             // Генерируем уникальное имя для файла
-            $fileName = $path. '/' . uniqid() . '.webp';
+            $fileName = $imagePath. '/' . uniqid() . '.webp';
 
             // Сохраняем закодированное изображение в local
-            $result = Storage::disk('public')->put($fileName, $processedImage);
-            $this->imgUrl = Storage::disk('public')->url($fileName);
-        }*/
+            Storage::disk('public')->put($fileName, $processedImage);
+        }
 
         $part = Part::create([
             'name' => $this->partName,
@@ -170,11 +166,12 @@ class ManagerPartForm extends Component
             'nomenclature_id' => $this->selectedNomenclature,
             'warehouse_id' => $this->selectedWarehouse,
             'category_id' => $this->selectedCategory,
-            'manager_id' => $userId,
+            'manager_id' => Auth::id(),
             'quantity' => $this->quantity,
             'price' => $this->price,
             'url' => json_encode(['url' => $this->url, 'text' => $this->text ?? '']),
             'total' => $this->quantity * $this->price,
+            'image' => $fileName,
         ]);
 
         if($this->pn != null)

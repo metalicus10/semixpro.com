@@ -12,6 +12,7 @@ class Nomenclature extends Model
     protected $fillable = [
         'nn',
         'name',
+        'url',
         'category_id',
         'supplier_id',
         'manager_id',

@@ -163,12 +163,20 @@
                     <!-- Category -->
                     <div class="flex w-1/12 items-center px-2">
                         <span class="md:hidden font-semibold">Категория: </span>
-                        {{$nomenclature['category']['name']}}
+                        @if($nomenclature['category'])
+                            {{$nomenclature['category']['name']}}
+                        @else
+                            ---
+                        @endif
                     </div>
                     <!-- Supplier -->
                     <div class="flex w-2/12 items-center px-2">
                         <span class="md:hidden font-semibold">Поставщик: </span>
-                        {{$nomenclature['suppliers']['name']}}
+                        @if($nomenclature['suppliers'])
+                            {{$nomenclature['suppliers']['name']}}
+                        @else
+                            ---
+                        @endif
                     </div>
                     <!-- Brand -->
                     <div class="flex w-1/12 items-center px-2">
@@ -301,7 +309,7 @@
                             <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.brand" x-text="$wire.errors?.newNomenclature?.brand"></p>
                         </div>
 
-                        <!-- PartImage -->
+                        <!-- Nomenclature Image -->
                         <div>
                             <label for="image" class="block text-sm font-medium">Изображение</label>
                             <input type="file" id="image" wire:model="image" @change="previewImage" class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-sm" />

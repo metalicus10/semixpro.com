@@ -9,7 +9,7 @@
     <div class="absolute inset-0 bg-black opacity-75" @click="lightboxOpen = false"></div>
 
     <!-- Контейнер для изображения -->
-    <div class="lightbox-container relative z-10" @click.stop>
+    <div class="lightbox-container flex justify-center relative z-10 max-w-[60%] max-h-[60%]" @click.stop>
         <!-- Полное изображение -->
         <img :src="imgSrc" class="object-contain max-w-full max-h-full">
     </div>

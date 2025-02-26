@@ -22,7 +22,8 @@ class ManagerNomenclatures extends Component
     public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [];
     public $manager_id, $nn, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
     public $editingNomenclature = null, $idToDelete;
-    public bool $showArchived = false;
+    public bool $showArchived, $managerUrlModalVisible = false;
+    public $managerUrl, $selectedId, $managerSupplier;
 
     protected $listeners = ['update-categories' => 'updateCategories'];
 
@@ -30,6 +31,7 @@ class ManagerNomenclatures extends Component
     public $newNomenclature = [
         'nn' => '',
         'name' => '',
+        'url' => '',
         'category_id' => '',
         'supplier_id' => '',
         'brand_id' => '',
@@ -88,7 +90,7 @@ class ManagerNomenclatures extends Component
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($this->image)
-                ->resize(null, null)
+                ->resize(1024, 768)
                 ->toWebp(quality: 60);
 
             $imagePath = '/images/nomenclatures/' . Auth::id();
@@ -200,6 +202,31 @@ class ManagerNomenclatures extends Component
             $this->dispatch('nomenclatureUpdated');
             $this->WriteActionLog('delete', 'nomenclature', $nomenclature->id, $nomenclature->name);
         }
+    }
+
+    public function openManagerUrlModal($partId)
+    {
+        $this->selectedId = $partId;
+        $nomenclature = Nomenclature::find($partId);
+
+        $data = json_decode($nomenclature->url, true) ?? [];
+        $this->managerSupplier = $data['text'] ?? '';
+        $this->managerUrl = $data['url'] ?? '';
+        $this->managerUrlModalVisible = true;
+    }
+
+    public function saveManagerUrl()
+    {
+        $part = Nomenclature::find($this->selectedId);
+        //$part->url = json_encode(['text' => '', 'url' => $this->url]);
+        $part->url = json_encode([
+            'text' => $this->managerSupplier,
+            'url' => $this->managerUrl,
+        ]);
+        $part->save();
+
+        $this->managerUrlModalVisible = false;
+        $this->refreshComponent();
     }
 
     public function WriteActionLog($actionType, $target_type, $target_id, $name)

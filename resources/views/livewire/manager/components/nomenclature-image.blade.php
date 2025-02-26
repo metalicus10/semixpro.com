@@ -7,9 +7,9 @@
     }" class="flex gallery relative">
     <div class="flex flex-row h-[80px]">
         @if ($nomenclature['image'])
-            <img src="{{ asset('storage') . '/' . $nomenclature['image'] }}"
+            <img src="{{ asset('storage') . $nomenclature['image'] }}"
                  alt="{{ $nomenclature['name'] }}"
-                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $nomenclature['image'] }}')"
+                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . $nomenclature['image'] }}')"
                  class="object-cover rounded cursor-zoom-in">
         @else
             <span class="w-[56px] h-[56px]">

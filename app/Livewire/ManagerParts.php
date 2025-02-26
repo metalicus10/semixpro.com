@@ -51,9 +51,8 @@ class ManagerParts extends Component
     //public $fullImage;
     public $imgUrl;
     public $startDate, $endDate;
-    public $managerPartUrlModalVisible = false;
-    public $managerPartSupplier = '';
-    public $managerPartUrl = '';
+    public $managerUrlModalVisible = false;
+    public $managerSupplier, $managerUrl;
     public $loaded = false;
     public $selectedPns = [];
     public $availablePns = [];
@@ -523,31 +522,6 @@ class ManagerParts extends Component
     {
         $this->selectedPartId = $partId;
         $this->isPriceHistoryModalOpen = true;
-    }
-
-    public function openManagerPartUrlModal($partId)
-    {
-        $this->selectedPartId = $partId;
-        $part = Part::find($partId);
-
-        $data = json_decode($part->url, true) ?? [];
-        $this->managerPartSupplier = $data['text'] ?? '';
-        $this->managerPartUrl = $data['url'] ?? '';
-        $this->managerPartUrlModalVisible = true;
-    }
-
-    public function saveManagerPartUrl()
-    {
-        $part = Part::find($this->selectedPartId);
-        //$part->url = json_encode(['text' => '', 'url' => $this->url]);
-        $part->url = json_encode([
-            'text' => $this->managerPartSupplier,
-            'url' => $this->managerPartUrl,
-        ]);
-        $part->save();
-
-        $this->managerPartUrlModalVisible = false;
-        $this->refreshComponent();
     }
 
     public function renameWarehouse($warehouseId, $newName)
