@@ -7,14 +7,13 @@ use Livewire\Component;
 
 class Pn extends Component
 {
-    public $part, $newPn;
+    public $part = null, $newPn;
 
     public function getPartPns($partId)
     {
         // Получить все PN для запчасти с указанным ID
-        $pns = \App\Models\Pn::where('part_id', $partId)->get();
-
-        // Вернуть массив или использовать данные по необходимости
+        $pns = \App\Models\Pn::where('part_id', $partId)->firstOrFail();
+        dd($pns);
         return $pns;
     }
 

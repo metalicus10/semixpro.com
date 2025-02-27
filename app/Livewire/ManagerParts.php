@@ -58,6 +58,7 @@ class ManagerParts extends Component
     public $availablePns = [];
     public $selectedPartNames = [];
     public $selectedParts = [];
+    public $selectedPartPns = null;
 
     public $parts;
     public $partId;
@@ -82,6 +83,7 @@ class ManagerParts extends Component
         'pnsAdded' => 'handlePnsUpdated',
         'refreshParts' => '$refresh',
         'defaultWarehouseUpdated' => 'refreshComponent',
+        'setPart',
     ];
 
     public function mount()
@@ -251,7 +253,12 @@ class ManagerParts extends Component
         }
 
         // Возвращаем пагинированный результат
-        return $partsQuery->get()->toArray();
+        return $partsQuery->get();
+    }
+
+    public function setPart($part)
+    {
+        $this->selectedPartPns  = $part;
     }
 
     public function updatedTransferQuantities($value, $partId)

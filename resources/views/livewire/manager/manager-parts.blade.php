@@ -31,14 +31,13 @@
         </div>
     </div>
 
-    <livewire:manager-part-form />
+    <livewire:manager-part-form/>
 
     <div class="flex flex-row space-x-4">
         <div class="relative w-full"
              x-data="{
-                    tabs: window.tabs || [],
-                    parts: @js($parts),
                     warehouses: @js($warehouses->values()->toArray()),
+                    tabs: [],
                     activeTab: null,
                     init() {
                         const defaultTab = this.tabs.find(tab => tab.is_default === 1);
@@ -117,11 +116,10 @@
                         this.newTabName = '';
                     },
                 }"
-                 x-init="init(); checkScroll();"
-                 @resize.window="checkScroll"
-                 @tabs-updated.window="(event) => {
-                    updateTabs(event.detail.tabs);
-                }"
+             x-init="this.tabs = this.warehouses; init(); checkScroll(); console.log(this.activeTab);"
+             @resize.window="checkScroll"
+             @tabs-updated.window="(event) => { this.updateTabs(event.detail.tabs); }"
+
         >
 
             <div class="relative overflow-hidden">
@@ -196,8 +194,9 @@
 
             <!-- Таблица с запчастями -->
             <div class="bg-white dark:bg-gray-800 shadow-md rounded-md"
-                x-data="{
+                 x-data="{
                     selectedParts: @entangle('selectedParts'),
+                    search: '',
                 }"
             >
                 <!-- Поле поиска -->
@@ -214,7 +213,6 @@
                         closeDeleteModal() {
                             this.deletePartsModalOpen = false;
                         },
-                        search: '',
                      }"
                 >
                     <label for="table-search" class="sr-only">Поиск</label>
@@ -299,7 +297,8 @@
                                 }
                                 $dispatch('update-part-quantities', { quantities: this.partQuantities });
                             },
-                    filteredParts() {
+                    parts: @js($parts ?? []),
+                    get filteredParts() {
                             return this.parts.filter(part =>
                                 part.name.toLowerCase().includes(this.search.toLowerCase()) ||
                                 part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
@@ -307,7 +306,7 @@
                                 (part.category && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
                                 (part.brand && part.brand.name.toLowerCase().includes(this.search.toLowerCase()))
                             );
-                    }
+                    },
                 }"
                      x-init="$watch('selectedParts', () => fetchSelectedNames())"
                      @keydown.escape="closeModal"
@@ -316,7 +315,8 @@
                     <div id="parts-table"
                          class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                         <!-- Заголовок таблицы -->
-                        <div class="hidden md:flex text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                        <div
+                            class="hidden md:flex text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
                             <!-- Чекбокс -->
                             <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
@@ -364,47 +364,43 @@
 
                         <!-- Строки таблицы -->
                         <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
-                            @foreach($warehouses as $warehouse)
-                                @php
-                                    $filteredParts = collect($parts)->where('warehouse_id', $warehouse->id);
-                                @endphp
+                            <template x-for="part in filteredParts" :key="part.id">
+                                <div x-show="activeTab === part.nomenclature_id">
+                                    <template x-if="(part?.nomenclatures?.is_archived ?? 0) == 0" >
+                                        <div
+                                            class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
+                                            <!-- Checkbox -->
+                                            <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
+                                                <input type="checkbox" :value="part.id"
+                                                       @click="togglePartSelection(part.id)"
+                                                       :checked="selectedParts.includes(part.id)"
+                                                       class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                                <label for="checkbox-table-search-part.id"
+                                                       class="sr-only">checkbox</label>
+                                            </div>
+                                            <div
+                                                class="w-[40px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2"
+                                                wire:ignore>
+                                                <input type="checkbox" :value="part.id"
+                                                       @click="togglePartSelection(part.id)"
+                                                       :checked="selectedParts.includes(part.id)"
+                                                       class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                                <label for="checkbox-table-search-part.id"
+                                                       class="sr-only">checkbox</label>
+                                            </div>
 
-                                @if($filteredParts->isNotEmpty())
-                                    <div x-show="activeTab === Number({{$warehouse->id}})">
-                                        <template x-for="part in filteredParts" :key="part.id">
-                                        @foreach ($filteredParts as $part)
-                                            @if(!$part['nomenclatures']['is_archived'])
-                                            <div class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
-                                                <!-- Checkbox -->
-                                                <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
-                                                    <input type="checkbox" :value="{{ $part['id'] }}"
-                                                           @click="togglePartSelection({{ $part['id'] }})"
-                                                           :checked="selectedParts.includes({{ $part['id'] }})"
-                                                           class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                    <label for="checkbox-table-search-{{ $part['id'] }}"
-                                                           class="sr-only">checkbox</label>
-                                                </div>
-                                                <div class="w-[40px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2" wire:ignore>
-                                                    <input type="checkbox" :value="{{ $part['id'] }}"
-                                                           @click="togglePartSelection({{ $part['id'] }})"
-                                                           :checked="selectedParts.includes({{ $part['id'] }})"
-                                                           class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                    <label for="checkbox-table-search-{{ $part['id'] }}"
-                                                           class="sr-only">checkbox</label>
-                                                </div>
+                                            <!-- SKU -->
+                                            <div class="w-[100px] px-4 py-2 mb-2 md:mb-0">
+                                                <span class="md:hidden font-semibold">SKU:</span>
+                                                <span x-text="part.sku"></span>
+                                            </div>
 
-                                                <!-- SKU -->
-                                                <div class="w-[100px] px-4 py-2 mb-2 md:mb-0">
-                                                    <span class="md:hidden font-semibold">SKU:</span>
-                                                    {{ $part['sku'] }}
-                                                </div>
-
-                                                <!-- Name -->
-                                                <div x-data="{
+                                            <!-- Name -->
+                                            <div x-data="{
                                                         showEditMenu: false,
                                                         editingName: false,
-                                                        newName: '{{ $part['name'] }}',
-                                                        originalName: '{{ $part['name'] }}',
+                                                        newName: part.name,
+                                                        originalName: part.name,
                                                         errorMessage: '',
                                                         showPnPopover: false,
                                                         deletePn: false,
@@ -414,125 +410,462 @@
                                                         addingPn: false,
                                                         availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
                                                         selectedPns: @entangle('selectedPns'),
-                                                     }"
-                                                     @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
-                                                     class="flex-[1] flex flex-row px-4 py-2 md:mb-0 cursor-pointer relative"
-                                                >
+                                            }"
+                                            @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
+                                            class="flex-[1] flex flex-row px-4 py-2 md:mb-0 cursor-pointer relative"
+                                            >
 
-                                                    <!-- PN -->
-                                                    <livewire:components.pn :part="$part" :key="'pn-'.$part['id']"/>
-
-                                                    <span class="flex items-center md:hidden font-semibold">Name:</span>
-
-                                                    <!-- Название с подменю -->
-                                                    <div class="flex items-center">
-                                                        <!-- Оверлей -->
-                                                        <div x-show="editingName || deletePn || addingPn"
-                                                             class="flex fixed inset-0 bg-black opacity-50 z-40"
-                                                             @click="editingName = false, deletePn = false, addingPn = false;"
-                                                             x-cloak>
+                                                <!-- PN -->
+                                                <!--<div class="flex relative" x-data="selectedPartPns: null,">
+                                                    <-- Список существующих PNs ->
+                                                    <div class="flex z-20 items-center" x-cloak>
+                                                        <-- Кнопка для открытия поповера ->
+                                                        <div
+                                                            class="w-4 h-4 md:w-6 md:h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2 uppercase font-bold text-[8px] md:text-[10px]"
+                                                            @click="showPnPopover = !showPnPopover; selectedPartPns = part; $wire.setPart(part)">
+                                                            PN
                                                         </div>
+                                                        <div x-show="selectedPartPns">
 
-                                                        <!-- Основное отображение -->
-                                                        <span x-show="!editingName" @click="editingName = true"
-                                                              class="flex z-20 items-center cursor-pointer hover:underline min-h-[30px]">
-                                                            {{ $part['name'] }}
-                                                        </span>
+                                                        </div>
                                                     </div>
-                                                    <!-- Режим редактирования Name -->
-                                                    <div x-show="editingName"
-                                                         class="flex justify-center items-center relative z-40"
+                                                </div>-->
+
+                                                <span class="flex items-center md:hidden font-semibold">Name:</span>
+
+                                                <!-- Название с подменю -->
+                                                <div class="flex items-center">
+                                                    <!-- Оверлей -->
+                                                    <div x-show="editingName || deletePn || addingPn"
+                                                         class="flex fixed inset-0 bg-black opacity-50 z-40"
+                                                         @click="editingName = false, deletePn = false, addingPn = false;"
                                                          x-cloak>
-                                                        <input type="text" x-model="newName"
-                                                               class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
-                                                               @keydown.enter="if (newName !== originalName) { $wire.updateName({{ $part['id'] }}, newName); originalName = newName; } editingName = false;"
-                                                               @keydown.escape="editingName = false">
-                                                        <button
-                                                            @click="if (newName !== originalName) { $wire.updateName({{ $part['id'] }}, newName); originalName = newName; } editingName = false;"
-                                                            class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
-                                                            ✓
-                                                        </button>
                                                     </div>
-                                                </div>
 
-                                                <!-- Quantity -->
-                                                <div class="w-[120px] px-4 py-2 md:mb-0"
-                                                     @part-updated="event => {
-                                                         if (event.detail.partId === {{ $part['id'] }}) {
+                                                    <!-- Основное отображение -->
+                                                    <span x-show="!editingName" @click="editingName = true"
+                                                          class="flex z-20 items-center cursor-pointer hover:underline min-h-[30px]">
+                                                            <span x-text="part.name"></span>
+                                                        </span>
+                                                </div>
+                                                <!-- Режим редактирования Name -->
+                                                <div x-show="editingName"
+                                                     class="flex justify-center items-center relative z-40"
+                                                     x-cloak>
+                                                    <input type="text" x-model="newName"
+                                                           class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
+                                                           @keydown.enter="if (newName !== originalName) { $wire.updateName(part.id, newName); originalName = newName; } editingName = false;"
+                                                           @keydown.escape="editingName = false">
+                                                    <button
+                                                        @click="if (newName !== originalName) { $wire.updateName(part.id, newName); originalName = newName; } editingName = false;"
+                                                        class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                                                        ✓
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- Quantity -->
+                                            <div class="w-[120px] px-4 py-2 md:mb-0"
+                                                 @part-updated="event => {
+                                                         if (event.detail.partId === part.id) {
                                                             $el.textContent = event.detail.newQuantity;
                                                          }
                                                      }"
-                                                >
-                                                    <span class="md:hidden font-semibold">Quantity:</span> {{ $part['quantity'] }}
-                                                </div>
+                                            >
+                                                <span class="md:hidden font-semibold">Quantity:</span> <span
+                                                    x-text="part.name"></span>
+                                            </div>
 
-                                                <!-- Price -->
-                                                <livewire:components.price :part="$part" :key="'price-'.$part['id']"/>
+                                            <!-- Price -->
+                                            <div
+                                                class="flex flex-row w-[120px] px-4 py-2 md:mb-0 cursor-pointer relative parent-container"
+                                                x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
-                                                <!-- Total -->
-                                                <div class="w-[120px] px-4 py-2 md:mb-0">
-                                                    <span class="md:hidden font-semibold">Total:</span>
-                                                    ${{ $part['total'] }}
-                                                </div>
+                                                <!-- Кликабельная ссылка с ценой запчасти -->
+                                                <span class="md:hidden font-semibold">Price:</span>
+                                                <a id="price-item-part.id"
+                                                   @click="
+                                                            $nextTick(() => {
+                                                                editing = false; // Сбрасываем редактирование при открытии
+                                                                newPrice = part.price; // Устанавливаем текущее значение
+                                                                const parent = $el.closest('.parent-container');
+                                                                const elementOffsetLeft = $el.offsetLeft;
+                                                                const elementOffsetTop = $el.offsetTop;
 
-                                                <!-- PartImage -->
-                                                <div
-                                                    class="flex flex-row w-[120px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
-                                                    <!-- Миниатюра -->
-                                                    <span class="md:hidden font-semibold">Image:</span>
-                                                    <livewire:components.part-image :part="$part" :key="'image-'.$part['id']"/>
-                                                </div>
+                                                                popoverX = elementOffsetLeft / parent.offsetWidth;
+                                                                popoverY = elementOffsetTop / parent.offsetHeight;
 
-                                                <!-- URL -->
-                                                @php
-                                                    $urlData = json_decode($part['url'], true);
-                                                @endphp
-                                                <livewire:components.url :urlData="$urlData" :part="$part" :suppliers="$suppliers" :key="'url-'.$part['id']"/>
+                                                                showPopover = true;
+                                                            });
+                                                       "
+                                                   class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
+                                                    <span x-text="part.price">$</span>
+                                                </a>
 
-                                                <!-- Actions -->
-                                                <div class="flex flex-col w-[200px]">
-                                                    <!-- Кнопки действий -->
-                                                    <div class="flex flex-row w-full"><span
-                                                            class="md:hidden font-semibold">Actions:</span>
+                                                <!-- Поповер с динамическим позиционированием -->
+                                                <div x-show="showPopover" x-transition role="tooltip"
+                                                     class="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-56 p-1"
+                                                     :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                                     @click.away="showPopover = false">
+
+                                                    <!-- Оверлей -->
+                                                    <div x-show="editing"
+                                                         class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                                         @click="editing = false"
+                                                         x-cloak>
                                                     </div>
-                                                    <div class="flex flex-row w-full justify-evenly">
-                                                        <button wire:click="incrementPart({{ $part['id'] }})"
-                                                                @click.stop title="Add one"
-                                                                class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
-                                                            +
+
+                                                    <div class="flex flex-row w-full">
+                                                        <!-- Кнопка Edit -->
+                                                        <button x-show="!editing"
+                                                                @click.prevent="editing = true; $nextTick(() => { $refs.priceInput.focus() })"
+                                                                class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                            Edit
                                                         </button>
-                                                        <button
-                                                            wire:click="openQuantityModal({{ $part['id'] }}, 'add')"
-                                                            @click.stop
-                                                            title="Add some"
-                                                            class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
-                                                            ++
-                                                        </button>
-                                                    </div>
-                                                    <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
-                                                    <div class="flex flex-row w-full justify-evenly">
-                                                        <button wire:click="decrementPart({{ $part['id'] }})"
-                                                                @click.stop
-                                                                title="Remove one"
-                                                                class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
-                                                            -
-                                                        </button>
-                                                        <button
-                                                            wire:click="openQuantityModal({{ $part['id'] }}, 'subtract')"
-                                                            @click.stop
-                                                            title="Remove some"
-                                                            class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
-                                                            --
+
+                                                        <!-- Поле ввода новой цены и кнопка подтверждения -->
+                                                        <div x-show="editing"
+                                                             class="flex justify-center items-center z-40"
+                                                             x-transition>
+                                                            <input type="number" x-ref="priceInput"
+                                                                   x-model="newPrice"
+                                                                   class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2 focus:outline-none focus:outline-offset-[0px] focus:outline-violet-900"
+                                                                   placeholder="part.price">
+                                                            <button @click="
+                                                                        if (newPrice !== part.price) {
+                                                                            $wire.set('newPrice', newPrice)
+                                                                            .then(() => {
+                                                                                $wire.updatePartPrice(part.id, newPrice);
+                                                                            });
+                                                                        }
+                                                                        showPopover = false;
+                                                                        editing = false;
+                                                                    "
+                                                                    class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                                                                ✓
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- Кнопка для открытия истории цен -->
+                                                        <button x-show="!editing"
+                                                                @click="$dispatch('open-price-modal', { partId: part.id })"
+                                                                class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                            History
                                                         </button>
                                                     </div>
                                                 </div>
                                             </div>
-                                            @endif
-                                        @endforeach
-                                        </template>
-                                    </div>
-                                @endif
-                            @endforeach
+
+                                            <!-- Total -->
+                                            <div class="w-[120px] px-4 py-2 md:mb-0">
+                                                <span class="md:hidden font-semibold">Total:</span>
+                                                $<span x-text="part.total"></span>
+                                            </div>
+
+                                            <!-- PartImage -->
+                                            <div
+                                                class="flex flex-row w-[120px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
+                                                <!-- Миниатюра -->
+                                                <span class="md:hidden font-semibold">Image:</span>
+                                                <div x-data="{
+                                                        partName: '',
+                                                        partImage: part.image || {},
+                                                        nomenclatureImage: part.nomenclatures.image,
+                                                        showTooltip: false,
+                                                        isUploading: false,
+                                                        uploadProgress: 0,
+                                                        hasPartImage: false,
+                                                        hasNomenclatureImage: false,
+                                                    }"
+                                                     x-init="
+                                                        hasPartImage = partImage !== null;
+                                                        hasNomenclatureImage = nomenclatureImage !== null;
+                                                    "
+                                                     class="flex gallery relative">
+                                                    <div class="flex flex-row">
+                                                        <!-- Изображение от номенклатуры, если у запчасти нет изображения -->
+                                                        <template x-if="hasNomenclatureImage && !hasPartImage">
+                                                            <img :src="nomenclatureImage"
+                                                                 alt="part.name"
+                                                                 @click="Livewire.dispatch('lightbox', nomenclatureImage)"
+                                                                 class="object-cover rounded cursor-zoom-in">
+                                                        </template>
+
+                                                        <!-- Если нет изображений, показываем Livewire-компонент заглушки -->
+                                                        <template x-if="!hasPartImage && !hasNomenclatureImage">
+                                                                <span class="w-[56px] h-[56px]">
+                                                                    <livewire:components.empty-image/>
+                                                                </span>
+                                                        </template>
+
+                                                        <!-- Если у запчасти есть изображение, но нет у номенклатуры -->
+                                                        <template x-if="hasPartImage && !hasNomenclatureImage">
+                                                            <img :src="partImage"
+                                                                 alt="part.name"
+                                                                 @click="Livewire.dispatch('lightbox', partImage)"
+                                                                 class="object-cover rounded cursor-zoom-in">
+                                                        </template>
+                                                    </div>
+                                                    <!-- Tooltip и кнопка загрузки -->
+                                                    <div x-data="{ showTooltip: false }"
+                                                         @mouseenter="showTooltip = true"
+                                                         @mouseleave="showTooltip = false">
+                                                        <div x-show="showTooltip" x-transition
+                                                             class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
+                                                            Change Image
+                                                        </div>
+                                                        <button @click="$wire.openImageModal(part.id)"
+                                                                class="text-white rounded-full p-1 cursor-pointer h-[20px]">
+                                                            <livewire:components.upload-green-arrow/>
+                                                        </button>
+                                                    </div>
+                                                    <!-- Прогресс загрузки -->
+                                                    <div x-show="isUploading"
+                                                         class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+                                                        <div class="text-white text-lg">Uploading... (<span
+                                                                x-text="uploadProgress"></span>%)
+                                                        </div>
+                                                    </div>
+
+                                                    <div x-data="{ showImageModal: @entangle('showImageModal') }">
+                                                        <!-- Modal Backdrop -->
+                                                        <div x-show="showImageModal"
+                                                             class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
+                                                             x-transition.opacity x-cloak></div>
+
+                                                        <!-- Modal Content -->
+                                                        <div x-show="showImageModal"
+                                                             class="fixed inset-0 flex items-center justify-center z-50 p-4">
+                                                            <div
+                                                                class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
+                                                                <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+                                                                    Upload Image</h3>
+
+                                                                <!-- File Input -->
+                                                                <div class="mb-4">
+                                                                    <input type="file" wire:model="newImage"
+                                                                           class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                                                                    @error('newImage') <span
+                                                                        class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                                                                </div>
+
+                                                                <!-- Action Buttons -->
+                                                                <div class="flex justify-end space-x-4">
+                                                                    <button type="button"
+                                                                            @click="showImageModal = false; $wire.closeImageModal();"
+                                                                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
+                                                                        Cancel
+                                                                    </button>
+                                                                    <button type="button"
+                                                                            wire:click="uploadImage"
+                                                                            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                                                        Upload
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- URL -->
+                                            <div
+                                                class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold"
+                                                x-data="{
+                                                    urlData: part.url ? JSON.parse(part.url) : {},
+                                                    clickCount: 0, partId: part.id, modalOpen: false,
+                                                    clickCount: 0,
+                                                    handleClick() {
+                                                        if (this.modalOpen) return; // Если модальное уже открыто - не выполняем логику
+                                                        this.clickCount++;
+                                                        setTimeout(() => {
+                                                            if (this.clickCount === 1) {
+                                                                // Одиночный клик - проверка на наличие ссылки
+                                                                if (this.urlData.url && this.urlData.url !== '') {
+                                                                    window.open(this.urlData.url, '_blank');
+                                                                }
+                                                            } else if (this.clickCount === 2) {
+                                                                // Двойной клик - открытие модального окна для редактирования
+                                                                this.modalOpen = true;
+                                                                $wire.openManagerUrlModal(this.partId);
+                                                            }
+                                                            this.clickCount = 0; // Сброс счётчика кликов
+                                                        }, 300); // Таймаут для определения двойного клика
+                                                    }
+                                                }"
+                                                x-init="
+                                                    window.addEventListener('modal-close', () => {
+                                                        modalOpen = false;
+                                                    });
+                                                "
+                                                @click="handleClick()"
+                                                @modal-close.window="modalOpen = false"
+                                            >
+                                                <!-- Отображение текста, если он есть -->
+                                                <template x-if="urlData.text && urlData.text !== ''">
+                                                        <span>
+                                                            <span class="md:hidden font-semibold">URL:</span>
+                                                            <span x-text="urlData.text"></span>
+                                                        </span>
+                                                </template>
+
+                                                <!-- Отображение URL, если текст отсутствует, но есть URL -->
+                                                <template x-if="!urlData.text && urlData.url && urlData.url !== ''">
+                                                        <span>
+                                                            <span class="md:hidden font-semibold">URL:</span>
+                                                            <a :href="urlData.url" target="_blank"
+                                                               class="text-blue-500 underline" x-text="urlData.url"></a>
+                                                        </span>
+                                                </template>
+
+                                                <!-- Отображение иконки, если URL пуст -->
+                                                <template x-if="!urlData.text && !urlData.url">
+                                                        <span>
+                                                            <i class="fas fa-link text-gray-400"></i>
+                                                            <!-- Иконка ссылки -->
+                                                        </span>
+                                                </template>
+
+                                                <!-- Модальное окно для редактирования ссылки -->
+                                                <div x-data="{
+                                                        managerUrlModalVisible: false,
+                                                        managerSupplier: '',
+                                                        managerUrl: '',
+                                                        openModal() {
+                                                            this.managerUrlModalVisible = true;
+                                                            document.body.classList.add('overflow-hidden');
+                                                        },
+                                                        closeModal() {
+                                                            this.managerUrlModalVisible = false;
+                                                            document.body.classList.remove('overflow-hidden');
+                                                        },
+                                                        saveManagerUrl() {
+                                                            $wire.saveManagerUrl(this.managerSupplier, this.managerUrl);
+                                                            this.closeModal();
+                                                        }
+                                                    }"
+                                                     x-init="
+                                                        $watch('managerUrlModalVisible', value => {
+                                                            if (!value) document.body.classList.remove('overflow-hidden');
+                                                        });
+                                                    "
+                                                     x-on:keydown.escape.window="closeModal()"
+                                                >
+
+                                                    <!-- Кнопка открытия модального окна -->
+                                                    <button @click="openModal()"
+                                                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                                        Редактировать ссылку
+                                                    </button>
+
+                                                    <!-- Затемнение фона и модальное окно -->
+                                                    <template x-if="managerUrlModalVisible">
+                                                        <div
+                                                            class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+                                                            <div
+                                                                class="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl max-h-full overflow-y-auto">
+                                                                <div class="flex items-center justify-between mb-4">
+                                                                    <h2 class="text-lg font-semibold text-gray-900">
+                                                                        Редактировать ссылку</h2>
+                                                                    <button @click="closeModal()"
+                                                                            class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                                             class="h-6 w-6" fill="none"
+                                                                             viewBox="0 0 24 24"
+                                                                             stroke="currentColor" stroke-width="2">
+                                                                            <path stroke-linecap="round"
+                                                                                  stroke-linejoin="round"
+                                                                                  d="M6 18L18 6M6 6l12 12"/>
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+
+                                                                <!-- Выбор поставщика -->
+                                                                <div class="mb-4">
+                                                                    <label
+                                                                        class="block text-gray-700 text-sm font-bold mb-2"
+                                                                        for="selectedSupplier">Supplier:</label>
+                                                                    <select x-model="managerSupplier"
+                                                                            id="selectedSupplier"
+                                                                            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                                        <option value="">Select Supplier</option>
+                                                                        @foreach ($suppliers as $supplier)
+                                                                            <option
+                                                                                value="{{ $supplier->name }}">{{ $supplier->name }}</option>
+                                                                        @endforeach
+                                                                    </select>
+                                                                </div>
+
+                                                                <!-- Поле ввода URL -->
+                                                                <div class="mb-4">
+                                                                    <label
+                                                                        class="block text-gray-700 text-sm font-bold mb-2"
+                                                                        for="managerUrl">URL:</label>
+                                                                    <input x-model="managerUrl" type="text"
+                                                                           id="managerUrl"
+                                                                           class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                           placeholder="Enter URL">
+                                                                </div>
+
+                                                                <!-- Кнопки действий -->
+                                                                <div
+                                                                    class="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2">
+                                                                    <button @click="closeModal()"
+                                                                            class="w-full md:w-auto bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                                                        Отмена
+                                                                    </button>
+                                                                    <button @click="saveManagerUrl()"
+                                                                            class="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                                                        OK
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+
+                                            <!-- Actions -->
+                                            <div class="flex flex-col w-[200px]">
+                                                <!-- Кнопки действий -->
+                                                <div class="flex flex-row w-full"><span
+                                                        class="md:hidden font-semibold">Actions:</span>
+                                                </div>
+                                                <div class="flex flex-row w-full justify-evenly">
+                                                    <button wire:click="incrementPart(part.id)"
+                                                            @click.stop title="Add one"
+                                                            class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                        +
+                                                    </button>
+                                                    <button
+                                                        wire:click="openQuantityModal(part.id, 'add')"
+                                                        @click.stop
+                                                        title="Add some"
+                                                        class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                        ++
+                                                    </button>
+                                                </div>
+                                                <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
+                                                <div class="flex flex-row w-full justify-evenly">
+                                                    <button wire:click="decrementPart(part.id)"
+                                                            @click.stop
+                                                            title="Remove one"
+                                                            class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                        -
+                                                    </button>
+                                                    <button
+                                                        wire:click="openQuantityModal(part.id, 'subtract')"
+                                                        @click.stop
+                                                        title="Remove some"
+                                                        class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                        --
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
 
                             <div x-data="{ transferPartsModalOpen: false }"
                                  x-bind:class="{ 'overflow-hidden': transferPartsModalOpen }">
@@ -656,7 +989,8 @@
                                      class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
                                      style="display: none;">
                                     <div
-                                        class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6" @click.away="deletePartsModalOpen = false">
+                                        class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6"
+                                        @click.away="deletePartsModalOpen = false">
                                         <!-- Заголовок модального окна -->
                                         <div class="flex items-center justify-between mb-4">
                                             <h3 class="text-xl font-semibold text-gray-900 dark:text-white">

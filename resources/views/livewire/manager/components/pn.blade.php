@@ -1,48 +1,35 @@
-<div class="flex relative">
+<div>
+    <!-- Поповер для редактирования PNs -->
+    <div x-show="showPnPopover" x-transition
+         @click.away="showPnPopover = false"
+         class="flex absolute z-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1">
 
-    <!-- Список существующих PNs -->
-    <div class="flex z-20 items-center" x-cloak>
-        <!-- Кнопка для открытия поповера -->
+        <!-- Оверлей -->
         <div
-            class="w-4 h-4 md:w-6 md:h-6 flex items-center justify-center bg-blue-500 text-white rounded-full cursor-pointer mr-2 uppercase font-bold text-[8px] md:text-[10px]"
-            @click="showPnPopover = !showPnPopover">
-            PN
+            x-show="deletePn || addingPn || showPnPopover || showingPn"
+            class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
+            @click="deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
+            x-cloak>
         </div>
 
-        <!-- Поповер для редактирования PNs -->
-        <div x-show="showPnPopover" x-transition
-             @click.away="showPnPopover = false"
-             class="flex absolute z-40 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1">
-
-            <!-- Оверлей -->
+        <div
+            class="flex flex-row w-full cursor-pointer z-50"
+            x-cloak>
             <div
-                x-show="deletePn || addingPn || showPnPopover || showingPn"
-                class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
-                @click="deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
-                x-cloak>
+                @click="addingPn = true; deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; showPnPopover = false;"
+                class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                Add PN
             </div>
-
             <div
-                class="flex flex-row w-full cursor-pointer z-50"
-                x-cloak>
-                <div
-                    @click="addingPn = true; deletePn = false; showEditMenu = false; showingPn = false; showPnsList = false; showPnPopover = false;"
-                    class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                    Add PN
-                </div>
-                <div
-                    @click="deletePn = true; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
-                    class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                    Del PN
-                </div>
-                <div
-                    @click="showingPn = true; deletePn = false; showEditMenu = false; showPnsList = false; addingPn = false; showPnPopover = false;"
-                    class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
-                    Show PN
-                </div>
+                @click="deletePn = true; showEditMenu = false; showingPn = false; showPnsList = false; addingPn = false; showPnPopover = false;"
+                class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                Del PN
             </div>
-
-
+            <div
+                @click="showingPn = true; deletePn = false; showEditMenu = false; showPnsList = false; addingPn = false; showPnPopover = false;"
+                class="w-1/3 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                Show PN
+            </div>
         </div>
     </div>
 
@@ -59,7 +46,10 @@
                     x-ref="pnList"
 
                 >
-                    @php $pnsArray = is_string($part['pns']) ? json_decode($part['pns'], true) : $part['pns']; @endphp
+                    @php $pnsArray = (!empty($part) && isset($part['pns']) && is_string($part['pns']))
+                        ? json_decode($part['pns'], true)
+                        : ($part['pns'] ?? []);
+                    @endphp
                     @if (!empty($pnsArray))
                         @foreach ($pnsArray as $pn)
                             <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
@@ -116,7 +106,8 @@
             @click.stop>
             <!-- Список PN с мульти-выбором -->
             <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto">
-                @php $pns = $this->getPartPns($part['id']); @endphp
+                @php $pns = (!empty($part) && isset($part['id'])) ? $this->getPartPns($part['id']) : [];
+                @endphp
                 @if (!empty($pns))
                     @foreach ($pns as $pn)
                         <template
