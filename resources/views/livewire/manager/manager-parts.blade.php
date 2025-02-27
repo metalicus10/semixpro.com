@@ -37,7 +37,8 @@
         <div class="relative w-full"
              x-data="{
                     tabs: window.tabs || [],
-                    parts: @entangle('parts'),
+                    parts: @js($parts),
+                    warehouses: @js($warehouses->values()->toArray()),
                     activeTab: null,
                     init() {
                         const defaultTab = this.tabs.find(tab => tab.is_default === 1);
@@ -114,7 +115,7 @@
                     cancelEdit() {
                         this.editingTabId = null;
                         this.newTabName = '';
-                    }
+                    },
                 }"
                  x-init="init(); checkScroll();"
                  @resize.window="checkScroll"
@@ -122,10 +123,6 @@
                     updateTabs(event.detail.tabs);
                 }"
         >
-
-            <script>
-                window.tabs = @js($warehouses);
-            </script>
 
             <div class="relative overflow-hidden">
                 <!-- Кнопка для прокрутки влево -->
@@ -146,9 +143,10 @@
                 >
 
                     <!-- Таб # -->
-                    <template x-for="(tab, index) in tabs" :key="tab.id">
+                    <template x-for="warehouse in warehouses" :key="warehouse.id">
                         <li
-                            @click.prevent="activeTab = tab.id"
+                            @click="activeTab = warehouse.id"
+                            :class="{'bg-gray-600 text-white': activeTab === warehouse.id, 'bg-gray-900': activeTab !== warehouse.id}"
                             class="shrink-0"
                         ><!--draggable="true"
                                 @dragstart="startDrag(index)"
@@ -156,15 +154,15 @@
                                 @dragend="endDrag()"-->
 
                             <!-- Режим редактирования -->
-                            <div x-show="editingTabId === tab.id" class="relative">
+                            <div x-show="editingTabId === warehouse.id" class="relative">
                                 <input type="text"
                                        x-model="newTabName"
-                                       @keydown.enter.prevent="saveEdit(tab)"
+                                       @keydown.enter.prevent="saveEdit(warehouse)"
                                        @keydown.escape="cancelEdit"
                                        class="block w-full text-start p-2 border rounded text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring focus:ring-blue-500"
                                 />
                                 <div class="absolute top-2 right-2">
-                                    <button @click="saveEdit(tab)"
+                                    <button @click="saveEdit(warehouse)"
                                             class="bg-green-500 text-white p-1 rounded hover:bg-green-600">✓
                                     </button>
                                     <button @click="cancelEdit"
@@ -172,12 +170,12 @@
                                     </button>
                                 </div>
                             </div>
-                            <a href="#" x-text="tab.name"
-                               @click.prevent="activeTab = tab.id"
-                               x-show="editingTabId !== tab.id"
-                               @dblclick="startEdit(tab)"
-                               :class="activeTab === tab.id ? 'text-blue-600 bg-gray-100 dark:bg-gray-800 dark:text-blue-500' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
-                               class="inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
+                            <a href="#" x-text="warehouse.name"
+                               @click.prevent="activeTab = warehouse.id"
+                               x-show="editingTabId !== warehouse.id"
+                               @dblclick="startEdit(warehouse)"
+                               :class="activeTab === warehouse.id ? 'text-blue-600 bg-gray-100 dark:bg-gray-800 dark:text-[rgb(255, 194, 128)]' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                               class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
                             ></a>
                         </li>
                     </template>
@@ -216,6 +214,7 @@
                         closeDeleteModal() {
                             this.deletePartsModalOpen = false;
                         },
+                        search: '',
                      }"
                 >
                     <label for="table-search" class="sr-only">Поиск</label>
@@ -228,8 +227,10 @@
                                       d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                             </svg>
                         </div>
-                        <input type="text" id="table-search" wire:model.live="search"
-                               class="block py-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-md w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        <input type="text" id="table-search" x-model="search"
+                               class="block py-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-md w-80 bg-gray-50
+                                focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
+                                dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                placeholder="Поиск по запчастям...">
                     </div>
                     <div class="flex flex-row justify-around gap-2">
@@ -259,9 +260,9 @@
                                 }
                             },
                             partQuantities: {},
-                            partStock: @js($parts->pluck('quantity', 'id')),
+                            partStock: @js(collect($parts)->pluck('quantity', 'id')->toArray()),
                             toggleCheckAll(event) {
-                                this.selectedParts = event.target.checked ? @json($parts->pluck('id')) : [];
+                                this.selectedParts = event.target.checked ? @json(collect($parts)->pluck('id')) : [];
                                 this.selectedParts.forEach(partId => {
                                     if (!this.partQuantities[partId]) {
                                         this.partQuantities[partId] = 1;
@@ -297,7 +298,16 @@
                                     this.partQuantities[partId] = this.partStock[partId];
                                 }
                                 $dispatch('update-part-quantities', { quantities: this.partQuantities });
-                            }
+                            },
+                    filteredParts() {
+                            return this.parts.filter(part =>
+                                part.name.toLowerCase().includes(this.search.toLowerCase()) ||
+                                part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
+                                (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
+                                (part.category && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
+                                (part.brand && part.brand.name.toLowerCase().includes(this.search.toLowerCase()))
+                            );
+                    }
                 }"
                      x-init="$watch('selectedParts', () => fetchSelectedNames())"
                      @keydown.escape="closeModal"
@@ -310,7 +320,7 @@
                             <!-- Чекбокс -->
                             <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
-                                       :checked="selectedParts.length === @json($parts->count())"
+                                       :checked="selectedParts.length === @json(collect($parts)->count())"
                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <label for="checkbox-all-search" class="sr-only">checkbox</label>
                             </div>
@@ -356,43 +366,45 @@
                         <div class="space-y-2 md:space-y-0 dark:bg-gray-900">
                             @foreach($warehouses as $warehouse)
                                 @php
-                                    $filteredParts = $parts->where('warehouse_id', $warehouse->id);
+                                    $filteredParts = collect($parts)->where('warehouse_id', $warehouse->id);
                                 @endphp
 
                                 @if($filteredParts->isNotEmpty())
                                     <div x-show="activeTab === Number({{$warehouse->id}})">
+                                        <template x-for="part in filteredParts" :key="part.id">
                                         @foreach ($filteredParts as $part)
+                                            @if(!$part['nomenclatures']['is_archived'])
                                             <div class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
                                                 <!-- Checkbox -->
                                                 <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
-                                                    <input type="checkbox" :value="{{ $part->id }}"
-                                                           @click="togglePartSelection({{ $part->id }})"
-                                                           :checked="selectedParts.includes({{ $part->id }})"
+                                                    <input type="checkbox" :value="{{ $part['id'] }}"
+                                                           @click="togglePartSelection({{ $part['id'] }})"
+                                                           :checked="selectedParts.includes({{ $part['id'] }})"
                                                            class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                    <label for="checkbox-table-search-{{ $part->id }}"
+                                                    <label for="checkbox-table-search-{{ $part['id'] }}"
                                                            class="sr-only">checkbox</label>
                                                 </div>
                                                 <div class="w-[40px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2" wire:ignore>
-                                                    <input type="checkbox" :value="{{ $part->id }}"
-                                                           @click="togglePartSelection({{ $part->id }})"
-                                                           :checked="selectedParts.includes({{ $part->id }})"
+                                                    <input type="checkbox" :value="{{ $part['id'] }}"
+                                                           @click="togglePartSelection({{ $part['id'] }})"
+                                                           :checked="selectedParts.includes({{ $part['id'] }})"
                                                            class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                    <label for="checkbox-table-search-{{ $part->id }}"
+                                                    <label for="checkbox-table-search-{{ $part['id'] }}"
                                                            class="sr-only">checkbox</label>
                                                 </div>
 
                                                 <!-- SKU -->
                                                 <div class="w-[100px] px-4 py-2 mb-2 md:mb-0">
                                                     <span class="md:hidden font-semibold">SKU:</span>
-                                                    {{ $part->sku }}
+                                                    {{ $part['sku'] }}
                                                 </div>
 
                                                 <!-- Name -->
                                                 <div x-data="{
                                                         showEditMenu: false,
                                                         editingName: false,
-                                                        newName: '{{ $part->name }}',
-                                                        originalName: '{{ $part->name }}',
+                                                        newName: '{{ $part['name'] }}',
+                                                        originalName: '{{ $part['name'] }}',
                                                         errorMessage: '',
                                                         showPnPopover: false,
                                                         deletePn: false,
@@ -408,7 +420,7 @@
                                                 >
 
                                                     <!-- PN -->
-                                                    <livewire:components.pn :part="$part" :key="'pn-'.$part->id"/>
+                                                    <livewire:components.pn :part="$part" :key="'pn-'.$part['id']"/>
 
                                                     <span class="flex items-center md:hidden font-semibold">Name:</span>
 
@@ -424,7 +436,7 @@
                                                         <!-- Основное отображение -->
                                                         <span x-show="!editingName" @click="editingName = true"
                                                               class="flex z-20 items-center cursor-pointer hover:underline min-h-[30px]">
-                                                            {{ $part->name }}
+                                                            {{ $part['name'] }}
                                                         </span>
                                                     </div>
                                                     <!-- Режим редактирования Name -->
@@ -433,10 +445,10 @@
                                                          x-cloak>
                                                         <input type="text" x-model="newName"
                                                                class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
-                                                               @keydown.enter="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
+                                                               @keydown.enter="if (newName !== originalName) { $wire.updateName({{ $part['id'] }}, newName); originalName = newName; } editingName = false;"
                                                                @keydown.escape="editingName = false">
                                                         <button
-                                                            @click="if (newName !== originalName) { $wire.updateName({{ $part->id }}, newName); originalName = newName; } editingName = false;"
+                                                            @click="if (newName !== originalName) { $wire.updateName({{ $part['id'] }}, newName); originalName = newName; } editingName = false;"
                                                             class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
                                                             ✓
                                                         </button>
@@ -446,21 +458,21 @@
                                                 <!-- Quantity -->
                                                 <div class="w-[120px] px-4 py-2 md:mb-0"
                                                      @part-updated="event => {
-                                                         if (event.detail.partId === {{ $part->id }}) {
+                                                         if (event.detail.partId === {{ $part['id'] }}) {
                                                             $el.textContent = event.detail.newQuantity;
                                                          }
                                                      }"
                                                 >
-                                                    <span class="md:hidden font-semibold">Quantity:</span> {{ $part->quantity }}
+                                                    <span class="md:hidden font-semibold">Quantity:</span> {{ $part['quantity'] }}
                                                 </div>
 
                                                 <!-- Price -->
-                                                <livewire:components.price :part="$part" :key="'price-'.$part->id"/>
+                                                <livewire:components.price :part="$part" :key="'price-'.$part['id']"/>
 
                                                 <!-- Total -->
                                                 <div class="w-[120px] px-4 py-2 md:mb-0">
                                                     <span class="md:hidden font-semibold">Total:</span>
-                                                    ${{ $part->total }}
+                                                    ${{ $part['total'] }}
                                                 </div>
 
                                                 <!-- PartImage -->
@@ -468,14 +480,14 @@
                                                     class="flex flex-row w-[120px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
                                                     <!-- Миниатюра -->
                                                     <span class="md:hidden font-semibold">Image:</span>
-                                                    <livewire:components.part-image :part="$part" :key="'image-'.$part->id"/>
+                                                    <livewire:components.part-image :part="$part" :key="'image-'.$part['id']"/>
                                                 </div>
 
                                                 <!-- URL -->
                                                 @php
-                                                    $urlData = json_decode($part->url, true);
+                                                    $urlData = json_decode($part['url'], true);
                                                 @endphp
-                                                <livewire:components.url :urlData="$urlData" :part="$part" :suppliers="$suppliers" :key="'url-'.$part->id"/>
+                                                <livewire:components.url :urlData="$urlData" :part="$part" :suppliers="$suppliers" :key="'url-'.$part['id']"/>
 
                                                 <!-- Actions -->
                                                 <div class="flex flex-col w-[200px]">
@@ -484,13 +496,13 @@
                                                             class="md:hidden font-semibold">Actions:</span>
                                                     </div>
                                                     <div class="flex flex-row w-full justify-evenly">
-                                                        <button wire:click="incrementPart({{ $part->id }})"
+                                                        <button wire:click="incrementPart({{ $part['id'] }})"
                                                                 @click.stop title="Add one"
                                                                 class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
                                                             +
                                                         </button>
                                                         <button
-                                                            wire:click="openQuantityModal({{ $part->id }}, 'add')"
+                                                            wire:click="openQuantityModal({{ $part['id'] }}, 'add')"
                                                             @click.stop
                                                             title="Add some"
                                                             class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
@@ -499,14 +511,14 @@
                                                     </div>
                                                     <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
                                                     <div class="flex flex-row w-full justify-evenly">
-                                                        <button wire:click="decrementPart({{ $part->id }})"
+                                                        <button wire:click="decrementPart({{ $part['id'] }})"
                                                                 @click.stop
                                                                 title="Remove one"
                                                                 class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
                                                             -
                                                         </button>
                                                         <button
-                                                            wire:click="openQuantityModal({{ $part->id }}, 'subtract')"
+                                                            wire:click="openQuantityModal({{ $part['id'] }}, 'subtract')"
                                                             @click.stop
                                                             title="Remove some"
                                                             class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
@@ -515,7 +527,9 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            @endif
                                         @endforeach
+                                        </template>
                                     </div>
                                 @endif
                             @endforeach

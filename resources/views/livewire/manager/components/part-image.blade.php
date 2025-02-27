@@ -1,25 +1,25 @@
 <div x-data="{
         partName: '',
-        partImage: '{{ $part->image }}',
-        nomenclatureImage:'{{ $part->nomenclatures->image }}',
+        partImage: '{{ $part['image'] }}',
+        nomenclatureImage:'{{ $part['nomenclatures']['image'] }}',
         showTooltip: false,
         isUploading: false,
         uploadProgress: 0
     }" class="flex gallery relative">
     <div class="flex flex-row">
-        @if ($part->nomenclatures->image && !$part->image)
-            <img src="{{ asset('storage') . '/' . $part->nomenclatures->image }}"
-                 alt="{{ $part->name }}"
-                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $part->nomenclatures->image }}')"
+        @if ($part['nomenclatures']['image'] && !$part['image'])
+            <img src="{{ asset('storage') . '/' . $part['nomenclatures']['image'] }}"
+                 alt="{{ $part['name'] }}"
+                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $part['nomenclatures']['image'] }}')"
                  class="object-cover rounded cursor-zoom-in">
-        @elseif (!$part->image && !$part->nomenclatures->image)
+        @elseif (!$part['image'] && !$part['nomenclatures']['image'])
             <span class="w-[56px] h-[56px]">
                 <livewire:components.empty-image/>
             </span>
-        @elseif ($part->image && !$part->nomenclatures->image)
-            <img src="{{ asset('storage') . '/' . $part->image }}"
-                 alt="{{ $part->name }}"
-                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $part->image }}')"
+        @elseif ($part['image'] && !$part['nomenclatures']['image'])
+            <img src="{{ asset('storage') . '/' . $part['image'] }}"
+                 alt="{{ $part['name'] }}"
+                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $part['image'] }}')"
                  class="object-cover rounded cursor-zoom-in">
         @endif
     </div>
@@ -29,7 +29,7 @@
              class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
             Change Image
         </div>
-        <button @click="$wire.openImageModal({{ $part->id }})"
+        <button @click="$wire.openImageModal({{ $part['id'] }})"
                 class="text-white rounded-full p-1 cursor-pointer h-[20px]">
             <livewire:components.upload-green-arrow/>
         </button>

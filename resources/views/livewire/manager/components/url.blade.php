@@ -1,6 +1,6 @@
 <div
     class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold"
-    x-data="{ clickCount: 0, partId: {{ $part->id }}, modalOpen: false }"
+    x-data="{ clickCount: 0, partId: {{ $part['id'] }}, modalOpen: false }"
     x-init="
         window.addEventListener('modal-close', () => {
             modalOpen = false;

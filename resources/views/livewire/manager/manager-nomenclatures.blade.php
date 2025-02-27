@@ -192,10 +192,12 @@
                     </div>
                     <!-- Actions -->
                     <div class="flex w-2/12 items-center px-2 gap-2">
+                        @if(Auth::user()->inRole('admin'))
                         <button @click="openNomenclatureModal('edit', {{$nomenclature['id']}})"
                                 class="cursor-pointer px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
                             Ред.
                         </button>
+                        @endif
                         <template x-if="{{$nomenclature['is_archived']}} === 0">
                             <button @click="archiveNomenclature({{$nomenclature['id']}})"
                                     class="cursor-pointer px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">

@@ -59,7 +59,7 @@
                     x-ref="pnList"
 
                 >
-                    @php $pnsArray = json_decode($part->pns, true); @endphp
+                    @php $pnsArray = is_string($part['pns']) ? json_decode($part['pns'], true) : $part['pns']; @endphp
                     @if (!empty($pnsArray))
                         @foreach ($pnsArray as $pn)
                             <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
@@ -116,20 +116,20 @@
             @click.stop>
             <!-- Список PN с мульти-выбором -->
             <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-28 overflow-y-auto">
-                @php $pns = $this->getPartPns($part->id); @endphp
+                @php $pns = $this->getPartPns($part['id']); @endphp
                 @if (!empty($pns))
                     @foreach ($pns as $pn)
                         <template
-                            x-if="!searchPn || '{{ strtolower($pn->number) }}'.includes(searchPn.toLowerCase())">
+                            x-if="!searchPn || '{{ strtolower($pn['number']) }}'.includes(searchPn.toLowerCase())">
                             <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
                                 @click.stop>
                                 <input type="checkbox"
-                                       value="{{ $pn->id }}"
+                                       value="{{ $pn['id'] }}"
                                        x-model="selectedPns"
                                        class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                        @click.stop>
                                 <label
-                                    class="ml-2">{{ $pn->number }}</label>
+                                    class="ml-2">{{ $pn['number'] }}</label>
                             </li>
                         </template>
                     @endforeach
@@ -142,7 +142,7 @@
             <div
                 class="justify-self-center inline-flex self-center items-center">
                 <button @click="$wire.set('selectedPns', selectedPns).then(() => {
-                                                                                        $wire.deletePns({{ $part->id }}, selectedPns);
+                                                                                        $wire.deletePns({{ $part['id'] }}, selectedPns);
                                                                                         deletePn = false;
                                                                                     });"
                         class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">

@@ -251,7 +251,7 @@ class ManagerParts extends Component
         }
 
         // Возвращаем пагинированный результат
-        return $partsQuery->get();
+        return $partsQuery->get()->toArray();
     }
 
     public function updatedTransferQuantities($value, $partId)

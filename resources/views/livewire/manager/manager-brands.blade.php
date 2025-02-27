@@ -22,7 +22,7 @@
                         <tr>
                             <th scope="col"
                                 class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
-                                Brand Name
+                                Name
                             </th>
                             <th scope="col"
                                 class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">

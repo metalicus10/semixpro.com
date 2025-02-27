@@ -1,31 +1,6 @@
-<div x-data="{ showAddSupplierModal: false }" 
-    @supplier-added.window="showAddSupplierModal = false" 
-    class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg">
-    @if ($notificationMessage)
-        <div
-            class="flex justify-center left-1/3 text-white text-center p-4 rounded-lg mb-6 transition-opacity duration-1000 z-50 absolute top-[10%] w-1/2"
-            x-data="{ show: true }"
-            x-init="
-            setTimeout(() => show = false, 3500);
-            setTimeout(() => $wire.clearNotification(), 3500);
-        "
-            x-show="show"
-            x-transition:enter="opacity-0"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="opacity-100"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            :class="{
-            'bg-blue-700': '{{ $notificationType }}' === 'info',
-            'bg-green-500': '{{ $notificationType }}' === 'success',
-            'bg-yellow-500': '{{ $notificationType }}' === 'warning',
-            'bg-red-500': '{{ $notificationType }}' === 'error'
-        }"
-        >
-            {{ $notificationMessage }}
-        </div>
-    @endif
+<div x-data="{ showAddSupplierModal: false }"
+    @supplier-added.window="showAddSupplierModal = false"
+    class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
 
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Suppliers</h1>
@@ -33,37 +8,50 @@
 
     <!-- Кнопка для добавления поставщика -->
     <button @click="showAddSupplierModal = true"
-            class="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
         Add Supplier
     </button>
 
+    <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
+
     <!-- Таблица поставщиков -->
-    <div class="overflow-x-auto" 
-        x-data="{ showDeleteConfirmModal: false }" 
-        @confirm-delete.window="showDeleteConfirmModal = true" 
+    <div class="overflow-x-auto"
+        x-data="{ showDeleteConfirmModal: false }"
+        @confirm-delete.window="showDeleteConfirmModal = true"
         @supplier-deleted.window="showDeleteConfirmModal = false">
-        <table class="min-w-full bg-white">
-            <thead>
-                <tr class="text-left text-gray-500 bg-gray-50">
-                    <th class="py-2 px-4">Name</th>
-                    <th class="py-2 px-4">Actions</th>
-                </tr>
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
+                    Name
+                </th>
+                <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
+                    Actions
+                </th>
+            </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
                 @forelse($suppliers as $supplier)
-                    <tr class="border-b">
-                        <td class="py-2 px-4">{{ $supplier->name }}</td>
-                        <td class="py-2 px-4">
-                            <!-- Кнопка для дополнительных действий -->
-                            <button @click="$wire.confirmDelete({{ $supplier->id }})" 
-                                class="px-2 py-1 text-white bg-red-500 rounded hover:bg-red-600">
+                    <tr class="hover:bg-[#585c63] dark:hover:bg-[#162033]">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-400">{{ $supplier->name }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-400">
+                            <!-- Кнопки действий -->
+                            <button wire:click="editSupplier({{ $supplier->id }})"
+                                    class="bg-yellow-500 text-white px-2 py-1 rounded">
+                                Edit
+                            </button>
+                            <button wire:click="confirmDelete({{ $supplier->id }})"
+                                class="bg-red-500 text-white px-2 py-1 rounded">
                                 Delete
                             </button>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="2" class="py-2 px-4 text-center text-gray-500">No suppliers available.</td>
+                        <td colspan="4"
+                            class="px-5 py-5 text-sm text-center text-gray-400 bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                            No data
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
@@ -74,7 +62,7 @@
             <div class="bg-white p-6 rounded shadow-lg">
                 <h2 class="text-lg font-semibold mb-4">Confirm Delete</h2>
                 <p class="mb-4">Are you sure you want to delete this supplier?</p>
-                
+
                 <div class="flex justify-end space-x-2">
                     <button @click="showDeleteConfirmModal = false" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
                     <button wire:click="deleteSupplier" class="px-4 py-2 bg-red-500 text-white rounded">Delete</button>
@@ -85,7 +73,7 @@
 
     <!-- Модальное окно для добавления поставщика -->
     <div x-show="showAddSupplierModal" x-cloak
-         x-transition 
+         x-transition
          class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
         <div class="bg-white rounded-lg shadow-lg p-6 w-1/3">
             <h3 class="text-lg font-semibold mb-4">Add New Supplier</h3>
