@@ -49,7 +49,7 @@ class ManagerParts extends Component
     public $isPriceHistoryModalOpen = false;
     public $errorMessage = '';
     //public $fullImage;
-    public $imgUrl;
+    public $imgUrl, $fullImage;
     public $startDate, $endDate;
     public $managerUrlModalVisible = false;
     public $managerSupplier, $managerUrl;
@@ -529,6 +529,80 @@ class ManagerParts extends Component
     {
         $this->selectedPartId = $partId;
         $this->isPriceHistoryModalOpen = true;
+    }
+
+    public function uploadImage()
+    {
+        $this->validate([
+            'newImage' => 'required|image|max:5200',
+        ]);
+
+        // Получаем запчасть
+        $part = Part::find($this->partId);
+
+        if (!$part) {
+            $this->dispatch('showNotification', 'error', 'Part not found');
+            return;
+        }
+
+        // Удаляем старое изображение, если оно есть
+        if ($part->image) {
+            Storage::disk('public')->delete($part->image);
+        }
+
+        if ($this->newImage)
+        {
+            $manager = new ImageManager(Driver::class);
+
+            $processedImage = $manager->read($this->newImage)
+                ->resize(null, null)
+                ->toWebp(quality: 60);
+
+            $imagePath = '/images/parts/' . Auth::id();
+            // Генерируем уникальное имя для файла
+            $fileName = $imagePath. '/' . uniqid() . '.webp';
+
+            // Сохраняем закодированное изображение в local storage
+            Storage::disk('public')->put($fileName, $processedImage);
+        }
+
+        // Обновляем модель
+        $part->update(['image' => $this->imgUrl]);
+        $this->closeImageModal();
+
+        $this->dispatch('showNotification', 'success', 'PartImage updated successfully!');
+        $this->dispatch('imageUpdated', ['partId' => $this->partId]);
+
+        // Сбрасываем состояние
+        $this->reset('newImage');
+    }
+
+    public function showImage($imageUrl)
+    {
+        $this->fullImage = $imageUrl;
+    }
+
+    public function closeImage()
+    {
+        $this->fullImage = null;
+    }
+
+    public function openImageModal($partId)
+    {
+        $this->selectedPartId = $partId;
+        $this->showImageModal = true;
+    }
+
+    public function closeImageModal()
+    {
+        $this->reset(['showImageModal', 'selectedPartId', 'newImage']);
+    }
+
+    public function updatedNewImage()
+    {
+        if ($this->newImage) {
+            $this->showImageModal = true;
+        }
     }
 
     public function renameWarehouse($warehouseId, $newName)
