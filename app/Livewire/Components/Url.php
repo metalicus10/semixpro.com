@@ -12,6 +12,15 @@ class Url extends Component
     public $managerUrlModalVisible = false;
     public $managerUrl, $selectedId, $managerSupplier;
 
+    protected $listeners = [
+        'urlChanged' => '$refresh',
+    ];
+
+    public function refreshComponent()
+    {
+        $this->render();
+    }
+
     public function openManagerUrlModal($partId)
     {
         $this->selectedId = $partId;
@@ -29,7 +38,7 @@ class Url extends Component
         $this->dispatch('modal-close');
     }
 
-    public function saveManagerUrl()
+    public function updateUrl()
     {
         $part = Part::find($this->selectedId);
         //$part->url = json_encode(['text' => '', 'url' => $this->url]);
@@ -40,7 +49,7 @@ class Url extends Component
         $part->save();
 
         $this->managerUrlModalVisible = false;
-        $this->refreshComponent();
+        $this->dispatch('urlUpdated', updatedPartId: $this->selectedId);
     }
 
     public function render()

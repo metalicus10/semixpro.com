@@ -9,7 +9,7 @@
                 <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by
                     Cat:</label>
                 <select wire:model.live="selectedCategory" id="category"
-                        class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 text-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">All cats</option>
                     @foreach ($categories as $cat)
                         <option class="text-gray-400" value="{{ $cat->id }}">{{ $cat->name }}</option>
@@ -37,14 +37,17 @@
         <div class="relative w-full"
              x-data="{
                     warehouses: @js($warehouses->values()->toArray()),
+                    partStock: @js(collect($parts)->pluck('quantity', 'id')->toArray()),
+                    partQuantities: {},
+                    parts: [],
                     tabs: [],
                     activeTab: null,
                     init() {
-                        const defaultTab = this.tabs.find(tab => tab.is_default === 1);
-                        this.activeTab = defaultTab ? defaultTab.id : (this.tabs[0]?.id || null);
+                        const defaultTab = this.warehouses.find(tab => tab.is_default === 1);
+                        activeTab = defaultTab ? defaultTab.id : (this.warehouses[0]?.id || null);
 
                         // Инициализируем объект с запчастями
-                        this.parts = this.tabs.reduce((acc, tab) => {
+                        this.parts = this.warehouses.reduce((acc, tab) => {
                             acc[tab.id] = tab.parts || [];
                             return acc;
                         }, {});
@@ -115,8 +118,42 @@
                         this.editingTabId = null;
                         this.newTabName = '';
                     },
-                }"
-             x-init="this.tabs = this.warehouses; init(); checkScroll();"
+                    limitQuantity(partId) {
+                        if (this.partQuantities[partId] > this.partStock[partId]) {
+                            this.partQuantities[partId] = this.partStock[partId];
+                        }
+                        $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                    },
+                    transferPartsModalOpen: false,
+                        deletePartsModalOpen: false,
+                        selectedPartNames: @entangle('selectedPartNames'),
+                        async fetchSelectedNames() {
+                            if (this.selectedParts.length) {
+                                this.selectedPartNames = await $wire.call('getSelectedPartNames');
+                            } else {
+                                this.selectedPartNames = [];
+                            }
+                        },
+                        openSendModal() {
+                            if (this.selectedParts.length > 0) {
+                                this.transferPartsModalOpen = true;
+                                console.log(this.transferPartsModalOpen);
+                            }
+                        },
+                        closeModal() {
+                            this.transferPartsModalOpen = false;
+                        },
+                        openDeleteModal() {
+                            if (this.selectedParts.length > 0) {
+                                this.fetchSelectedNames();
+                                this.deletePartsModalOpen = true;
+                            }
+                        },
+                        closeDeleteModal() {
+                            this.deletePartsModalOpen = false;
+                        },
+             }"
+             x-init="init(); checkScroll(); tabs = warehouses;"
              @resize.window="checkScroll"
              @tabs-updated.window="(event) => { this.updateTabs(event.detail.tabs); }"
 
@@ -201,19 +238,7 @@
             >
                 <!-- Поле поиска -->
                 <div class="flex pb-4 bg-white dark:bg-gray-900 gap-2"
-                     x-data="{
-                        transferPartsModalOpen: false,
-                        deletePartsModalOpen: false,
-                        openDeleteModal() {
-                        if (this.selectedParts.length > 0) {
-                            this.fetchSelectedNames();
-                                this.deletePartsModalOpen = true;
-                            }
-                        },
-                        closeDeleteModal() {
-                            this.deletePartsModalOpen = false;
-                        },
-                     }"
+                     x-data
                 >
                     <label for="table-search" class="sr-only">Поиск</label>
                     <div class="relative">
@@ -232,12 +257,14 @@
                                placeholder="Поиск по запчастям...">
                     </div>
                     <div class="flex flex-row justify-around gap-2">
+                        <!-- Кнопка открытия модального окна для передачи запчастей -->
                         <button
                             class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-                            @click="openModal" x-show="selectedParts.length > 0"
+                            @click="openSendModal" x-show="selectedParts.length > 0"
                         >
                             Send parts
                         </button>
+                        <!-- Кнопка открытия модального окна для удаления запчастей -->
                         <button
                             class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
                             @click="openDeleteModal" x-show="selectedParts.length > 0"
@@ -245,20 +272,176 @@
                             Delete parts
                         </button>
                     </div>
+                    <!-- Модальное окно перемещения запчастей технику -->
+                    <div x-data>
+                        <div x-show="transferPartsModalOpen"
+                             x-data="{
+                                    open: false,
+                                    selectedTechnicians: @entangle('selectedTechnicians').defer || [],
+                                    isSendButtonEnabled() {
+                                        return this.selectedTechnicians &&
+                                            this.selectedParts.every(partId =>
+                                                this.partQuantities[partId] > 0 &&
+                                                this.partQuantities[partId] <= this.partStock[partId]
+                                            );
+                                    },
+                                }"
+                             x-init="$watch('selectedTechnicians', value => $wire.set('selectedTechnicians', value))"
+                             class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
+                             style="display: none;">
+                            <div
+                                class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
+                                <!-- Заголовок модального окна -->
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                        Выбранные запчасти
+                                    </h3>
+                                    <button @click="closeModal"
+                                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                                            aria-label="Close">
+                                        <svg aria-hidden="true" class="w-5 h-5" fill="currentColor"
+                                             viewBox="0 0 20 20"
+                                             xmlns="http://www.w3.org/2000/svg">
+                                            <path fill-rule="evenodd"
+                                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                                  clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <!-- Содержимое модального окна -->
+                                <form wire:submit.prevent="sendParts">
+                                    <div class="space-y-4">
+                                        <template x-for="partId in selectedParts" :key="partId">
+                                            <div class="mb-2 text-gray-900 dark:text-gray-400">
+                                                <label>Запчасть #<span x-text="partId"></span>
+                                                    (Доступно: <span
+                                                        x-text="partStock[partId]"></span>)</label>
+                                                <input id="quantity" type="number" min="1"
+                                                       :max="partStock[partId]"
+                                                       class="input mt-1 block w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                                       placeholder="Количество"
+                                                       x-model="partQuantities[partId]"
+                                                       @input="limitQuantity(partId)">
+                                            </div>
+                                        </template>
+
+                                        <div
+                                            class="relative w-full text-gray-500"
+                                        >
+                                            <label for="technician"
+                                                   class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
+
+                                            <!-- Поле выбора техников для передачи запчастей -->
+                                            <div @click="open = !open"
+                                                 class="w-full cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center text-gray-500">
+                                                    <span
+                                                        x-text="selectedTechnicians.length > 0 ? selectedTechnicians.length + ' selected' : 'Select Technicians'"></span>
+                                                <svg
+                                                    class="h-5 w-5 text-gray-400 transform transition-transform"
+                                                    :class="{'rotate-180': open}"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 20 20"
+                                                    fill="currentColor">
+                                                    <path fill-rule="evenodd"
+                                                          d="M5.23 7.21a.75.75 0 011.06-.02L10 10.879l3.72-3.67a.75.75 0 111.04 1.08l-4.25 4.2a.75.75 0 01-1.06 0l-4.25-4.2a.75.75 0 01-.02-1.06z"
+                                                          clip-rule="evenodd"/>
+                                                </svg>
+                                            </div>
+
+                                            <!-- Выпадающий список с мульти-выбором техников -->
+                                            <div x-show="open" @click.away="open = false" x-transition
+                                                 class="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                                                <ul id="technician" class="py-1 text-sm text-gray-700">
+                                                    @foreach ($technicians as $technician)
+                                                        <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">
+                                                            <input type="checkbox"
+                                                                   value="{{ $technician->id }}"
+                                                                   x-model="selectedTechnicians"
+                                                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                                            <label
+                                                                class="ml-2 text-gray-700">{{ $technician->name }}</label>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Кнопки действия -->
+                                    <div class="flex items-center justify-end mt-6 space-x-4">
+                                        <button type="button"
+                                                @click="closeModal, transferPartsModalOpen = false; document.body.classList.remove('overflow-hidden')"
+                                                class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                            Отменить
+                                        </button>
+                                        <button type="submit"
+                                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
+                                                :disabled="!isSendButtonEnabled()">Подтвердить
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Модальное окно удаления запчастей -->
+                    <div x-show="deletePartsModalOpen"
+                         class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
+                         style="display: none;">
+                        <div
+                            class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6"
+                            @click.away="deletePartsModalOpen = false">
+                            <!-- Заголовок модального окна -->
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
+                                    Запчасти для удаления
+                                </h3>
+                                <button @click="closeDeleteModal"
+                                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                                        aria-label="Close">
+                                    <svg aria-hidden="true" class="w-5 h-5" fill="currentColor"
+                                         viewBox="0 0 20 20"
+                                         xmlns="http://www.w3.org/2000/svg">
+                                        <path fill-rule="evenodd"
+                                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                              clip-rule="evenodd"></path>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Содержимое модального окна -->
+                            <form wire:submit.prevent="deleteParts()">
+                                <div class="space-y-4">
+                                    <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
+                                        <template x-for="name in selectedPartNames" :key="name">
+                                            <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
+                                                <span x-text="name"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
+
+                                <!-- Кнопки действия -->
+                                <div class="flex items-center justify-end mt-6 space-x-4">
+                                    <button type="button"
+                                            @click="closeDeleteModal, deletePartsModalOpen = false; document.body.classList.remove('overflow-hidden')"
+                                            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                                        Отменить
+                                    </button>
+                                    <button type="button"
+                                            @click="$wire.deleteParts().then(() => closeDeleteModal())"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800">
+                                        Подтвердить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Таблица -->
                 <div x-data="{
-                    selectedPartNames: [],
-                            async fetchSelectedNames() {
-                                if (this.selectedParts.length) {
-                                    this.selectedPartNames = await $wire.call('getSelectedPartNames');
-                                } else {
-                                    this.selectedPartNames = [];
-                                }
-                            },
-                            partQuantities: {},
-                            partStock: @js(collect($parts)->pluck('quantity', 'id')->toArray()),
+                            <!-- Метод выбора всех запчастей -->
                             toggleCheckAll(event) {
                                 this.selectedParts = event.target.checked ? @json(collect($parts)->pluck('id')) : [];
                                 this.selectedParts.forEach(partId => {
@@ -269,7 +452,7 @@
 
                                 $dispatch('update-part-quantities', { quantities: this.partQuantities });
                             },
-
+                            <!-- Метод выбора через чекбоксы запчастей и обновление данных -->
                             togglePartSelection(partId) {
                                 if (this.selectedParts.includes(partId)) {
                                     this.selectedParts = this.selectedParts.filter(id => id !== partId);
@@ -281,20 +464,6 @@
                                     }
                                 }
 
-                                $dispatch('update-part-quantities', { quantities: this.partQuantities });
-                            },
-                            openModal() {
-                                if (this.selectedParts.length > 0) {
-                                    this.transferPartsModalOpen = true;
-                                }
-                            },
-                            closeModal() {
-                                this.transferPartsModalOpen = false;
-                            },
-                            limitQuantity(partId) {
-                                if (this.partQuantities[partId] > this.partStock[partId]) {
-                                    this.partQuantities[partId] = this.partStock[partId];
-                                }
                                 $dispatch('update-part-quantities', { quantities: this.partQuantities });
                             },
                     parts: @js($parts ?? []),
@@ -356,9 +525,9 @@
 
                         <!-- Строки таблицы -->
                         <div class="space-y-2 md:space-y-0 dark:bg-gray-900"
-                            x-data="{
+                             x-data="{
                                 filteredParts() {
-                                    return parts.filter(part =>
+                                    return {{$parts}}.filter(part =>
                                         part.name.toLowerCase().includes(this.search.toLowerCase()) ||
                                         part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
                                         (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
@@ -368,208 +537,188 @@
                                 }
                             }"
                         >
-                            <template x-for="part in filteredParts()" :key="part.id">
-                                <template x-if="activeTab == part.nomenclature_id">
-
+                            @foreach($parts as $part)
+                                @if($activeTab === $part->warehouse_id)
+                                    @if($part->nomenclatures->is_archived === 0)
                                         <div
                                             class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
                                             <!-- Checkbox -->
                                             <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
-                                                <input type="checkbox" :value="part.id"
-                                                       @click="togglePartSelection(part.id)"
-                                                       :checked="selectedParts.includes(part.id)"
+                                                <input type="checkbox" value="{{ $part->id }}"
+                                                       @click="togglePartSelection({{ $part->id }})"
+                                                       :checked="selectedParts.includes({{ $part->id }})"
                                                        class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                <label for="checkbox-table-search-part.id"
+                                                <label for="checkbox-table-search-{{ $part->id }}"
                                                        class="sr-only">checkbox</label>
                                             </div>
                                             <div
-                                                class="w-[40px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2"
+                                                class="w-[48px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2"
                                                 wire:ignore>
-                                                <input type="checkbox" :value="part.id"
-                                                       @click="togglePartSelection(part.id)"
-                                                       :checked="selectedParts.includes(part.id)"
+                                                <input type="checkbox" value="{{ $part->id }}"
+                                                       @click="togglePartSelection({{ $part->id }})"
+                                                       :checked="selectedParts.includes({{ $part->id }})"
                                                        class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                <label for="checkbox-table-search-part.id"
+                                                <label for="checkbox-table-search-{{ $part->id }}"
                                                        class="sr-only">checkbox</label>
                                             </div>
+                                            <!-- SKU -->
+                                            <div class="w-[100px] px-4 py-2 mb-2 md:mb-0">
+                                                <span class="md:hidden font-semibold">SKU:</span>
+                                                {{ $part->sku }}
+                                            </div>
 
+                                            <!-- Name -->
+                                            <livewire:components.part-name :part="$part"/>
 
-                                        </div>
+                                            <!-- Quantity -->
+                                            <div class="w-[120px] px-4 py-2 md:mb-0"
+                                                 @part-updated="event => {
+                                                         if (event.detail.partId === {{ $part->id }}) {
+                                                            $el.textContent = event.detail.newQuantity;
+                                                         }
+                                                     }"
+                                            >
+                                                <span class="md:hidden font-semibold">Quantity:</span>
+                                                {{ $part->quantity }}
+                                            </div>
 
-                                </template>
-                            </template>
+                                            <!-- Price -->
+                                            <livewire:components.price :part="$part"/>
 
-                            <div x-data="{ transferPartsModalOpen: false }"
-                                 x-bind:class="{ 'overflow-hidden': transferPartsModalOpen }">
+                                            <!-- Total -->
+                                            <div class="w-[120px] px-4 py-2 md:mb-0">
+                                                <span class="md:hidden font-semibold">Total:</span>
+                                                <span>${{ $part->total }}</span>
+                                            </div>
 
-                                <!-- Flowbite-стилизованное модальное окно -->
-                                <div x-show="transferPartsModalOpen"
-                                     x-data="{
-                                    open: false,
-                                    selectedTechnicians: @entangle('selectedTechnicians').defer || [],
-                                    isSendButtonEnabled() {
-                                        return this.selectedTechnicians &&
-                                            this.selectedParts.every(partId =>
-                                                this.partQuantities[partId] > 0 &&
-                                                this.partQuantities[partId] <= this.partStock[partId]
-                                            );
-                                    },
-                                }"
-                                     x-init="$watch('selectedTechnicians', value => $wire.set('selectedTechnicians', value))"
-                                     class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
-                                     style="display: none;">
-                                    <div
-                                        class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6">
-                                        <!-- Заголовок модального окна -->
-                                        <div class="flex items-center justify-between mb-4">
-                                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                                                Выбранные
-                                                запчасти</h3>
-                                            <button @click="closeModal"
-                                                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                                                    aria-label="Close">
-                                                <svg aria-hidden="true" class="w-5 h-5" fill="currentColor"
-                                                     viewBox="0 0 20 20"
-                                                     xmlns="http://www.w3.org/2000/svg">
-                                                    <path fill-rule="evenodd"
-                                                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                                          clip-rule="evenodd"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
+                                            <!-- PartImage -->
+                                            <div
+                                                class="flex flex-row w-[120px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
+                                                <!-- Миниатюра -->
+                                                <span class="md:hidden font-semibold">Image:</span>
+                                                <livewire:components.part-image :part="$part"/>
+                                            </div>
 
-                                        <!-- Содержимое модального окна -->
-                                        <form wire:submit.prevent="sendParts">
-                                            <div class="space-y-4">
-                                                <template x-for="partId in selectedParts" :key="partId">
-                                                    <div class="mb-2 text-gray-900 dark:text-gray-400">
-                                                        <label>Запчасть #<span x-text="partId"></span>
-                                                            (Доступно: <span
-                                                                x-text="partStock[partId]"></span>)</label>
-                                                        <input id="quantity" type="number" min="1"
-                                                               :max="partStock[partId]"
-                                                               class="input mt-1 block w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                                                               placeholder="Количество"
-                                                               x-model="partQuantities[partId]"
-                                                               @input="limitQuantity(partId)">
-                                                    </div>
-                                                </template>
+                                            <!-- Колонка URL -->
+                                            <div class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold truncate"
+                                                 wire:click="handleClick({{ $part->id }})"
+                                                 wire:keydown.enter="handleDoubleClick({{ $part->id }})"
+                                                 id="clickable-{{ $part->id }}">
 
-                                                <div
-                                                    class="relative w-full text-gray-500"
-                                                >
-                                                    <label for="technician"
-                                                           class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
-
-                                                    <!-- Поле выбора техников для передачи запчастей -->
-                                                    <div @click="open = !open"
-                                                         class="w-full cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center text-gray-500">
-                                                    <span
-                                                        x-text="selectedTechnicians.length > 0 ? selectedTechnicians.length + ' selected' : 'Select Technicians'"></span>
-                                                        <svg
-                                                            class="h-5 w-5 text-gray-400 transform transition-transform"
-                                                            :class="{'rotate-180': open}"
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            viewBox="0 0 20 20"
-                                                            fill="currentColor">
-                                                            <path fill-rule="evenodd"
-                                                                  d="M5.23 7.21a.75.75 0 011.06-.02L10 10.879l3.72-3.67a.75.75 0 111.04 1.08l-4.25 4.2a.75.75 0 01-1.06 0l-4.25-4.2a.75.75 0 01-.02-1.06z"
-                                                                  clip-rule="evenodd"/>
+                                                <!-- Выводим поставщика, если указан -->
+                                                @if(isset($part->url['text']) && $part->url['text'] !== '')
+                                                    {{ $part->url['text'] }}
+                                                @elseif(isset($part->url['url']) && $part->url['url'] !== '')
+                                                    <a href="{{ $part->url['url'] }}" target="_blank">{{ $part->url['url'] }}</a>
+                                                @else
+                                                    <span class="text-gray-500">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none"
+                                                             viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                                  d="M15.232 5.232l3.536 3.536M9 13h.01M6 9l5 5-3 3h6l-1.293-1.293a1 1 0 010-1.414l7.42-7.42a2.828 2.828 0 10-4-4l-7.42 7.42a1 1 0 01-1.414 0L6 9z" />
                                                         </svg>
-                                                    </div>
+                                                    </span>
+                                                @endif
 
-                                                    <!-- Выпадающий список с мульти-выбором техников -->
-                                                    <div x-show="open" @click.away="open = false" x-transition
-                                                         class="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                                                        <ul id="technician" class="py-1 text-sm text-gray-700">
-                                                            @foreach ($technicians as $technician)
-                                                                <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">
-                                                                    <input type="checkbox"
-                                                                           value="{{ $technician->id }}"
-                                                                           x-model="selectedTechnicians"
-                                                                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                                                    <label
-                                                                        class="ml-2 text-gray-700">{{ $technician->name }}</label>
-                                                                </li>
-                                                            @endforeach
-                                                        </ul>
+                                                <!-- Модальное окно редактирования URL -->
+                                                @if($managerUrlModalVisible)
+                                                    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 w-full h-full">
+                                                        <div class="bg-white p-6 rounded-lg shadow-md w-full max-w-2xl max-h-full overflow-y-auto">
+                                                            <div class="flex items-center justify-between mb-4">
+                                                                <h2 class="text-lg font-semibold text-gray-900">Редактировать ссылку</h2>
+                                                                <button wire:click="$set('managerUrlModalVisible', false)" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+
+                                                            <div class="mb-4">
+                                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="selectedSupplier">Supplier:</label>
+                                                                <select wire:model="managerSupplier" id="selectedSupplier" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                                    <option value="">Select Supplier</option>
+                                                                    @foreach ($suppliers as $supplier)
+                                                                        <option value="{{ $supplier->name }}">{{ $supplier->name }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+
+                                                            <div class="mb-4">
+                                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrl">URL:</label>
+                                                                <input wire:model="managerUrl" type="text" id="managerUrl" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter URL">
+                                                            </div>
+
+                                                            <div class="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2">
+                                                                <button wire:click="$set('managerUrlModalVisible', false)" class="w-full md:w-auto bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                                                    Отмена
+                                                                </button>
+                                                                <button wire:click="updatePartURL({{ $part->id }})" class="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                                                    OK
+                                                                </button>
+                                                            </div>
+                                                        </div>
                                                     </div>
+                                                @endif
+                                                <script>
+                                                    document.addEventListener('delayed-click', event => {
+                                                        let partId = event.detail.partId;
+                                                        let clickable = document.getElementById('clickable-' + partId);
+
+                                                        setTimeout(() => {
+                                                            if (window.Livewire.components.getComponentsByName('manager-parts')[0].scopedListeners.hasOwnProperty('handleClick')) {
+                                                                window.Livewire.dispatch('handleClick', partId);
+                                                            }
+                                                        }, 300);
+                                                    });
+
+                                                    document.addEventListener('open-modal', () => {
+                                                        // Здесь можно добавить открытие модального окна, если требуется
+                                                    });
+                                                </script>
+                                            </div>
+
+                                            <!-- Actions -->
+                                            <div class="flex flex-col w-[200px]">
+                                                <!-- Кнопки действий -->
+                                                <div class="flex flex-row w-full"><span
+                                                        class="md:hidden font-semibold">Actions:</span>
+                                                </div>
+                                                <div class="flex flex-row w-full justify-evenly">
+                                                    <button wire:click="incrementPart('{{ $part->id }}')"
+                                                            @click.stop title="Add one"
+                                                            class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                        +
+                                                    </button>
+                                                    <button
+                                                        wire:click="openQuantityModal('{{ $part->id }}', 'add')"
+                                                        @click.stop
+                                                        title="Add some"
+                                                        class="w-10 h-10 md:w-8 md:h-8 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-2 rounded-md hover:bg-green-800">
+                                                        ++
+                                                    </button>
+                                                </div>
+                                                <hr class="w-full h-px mx-auto my-2 bg-gray-100 border-0 rounded md:my-2 dark:bg-gray-700">
+                                                <div class="flex flex-row w-full justify-evenly">
+                                                    <button wire:click="decrementPart('{{ $part->id }}')"
+                                                            @click.stop
+                                                            title="Remove one"
+                                                            class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                        -
+                                                    </button>
+                                                    <button
+                                                        wire:click="openQuantityModal('{{ $part->id }}', 'subtract')"
+                                                        @click.stop
+                                                        title="Remove some"
+                                                        class="w-10 h-10 md:w-8 md:h-8 bg-red-500 hover:bg-red-600 text-white font-bold py-1 px-2 rounded-md bg-red-800">
+                                                        --
+                                                    </button>
                                                 </div>
                                             </div>
 
-                                            <!-- Кнопки действия -->
-                                            <div class="flex items-center justify-end mt-6 space-x-4">
-                                                <button type="button"
-                                                        @click="closeModal, transferPartsModalOpen = false; document.body.classList.remove('overflow-hidden')"
-                                                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                                    Отменить
-                                                </button>
-                                                <button type="submit"
-                                                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
-                                                        :disabled="!isSendButtonEnabled()">Подтвердить
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <div x-data="{ deletePartsModalOpen: false }"
-                                 x-bind:class="{ 'overflow-hidden': deletePartsModalOpen }">
-
-                                <!-- Flowbite-стилизованное модальное окно -->
-                                <div x-show="deletePartsModalOpen"
-                                     class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50"
-                                     style="display: none;">
-                                    <div
-                                        class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 max-w-md w-full p-6"
-                                        @click.away="deletePartsModalOpen = false">
-                                        <!-- Заголовок модального окна -->
-                                        <div class="flex items-center justify-between mb-4">
-                                            <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                                                Запчасти для удаления
-                                            </h3>
-                                            <button @click="closeDeleteModal"
-                                                    class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                                                    aria-label="Close">
-                                                <svg aria-hidden="true" class="w-5 h-5" fill="currentColor"
-                                                     viewBox="0 0 20 20"
-                                                     xmlns="http://www.w3.org/2000/svg">
-                                                    <path fill-rule="evenodd"
-                                                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                                          clip-rule="evenodd"></path>
-                                                </svg>
-                                            </button>
                                         </div>
-
-                                        <!-- Содержимое модального окна -->
-                                        <form wire:submit.prevent="deleteParts()">
-                                            <div class="space-y-4">
-                                                <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
-                                                    <template x-for="name in selectedPartNames" :key="name">
-                                                        <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
-                                                            <span x-text="name"></span>
-                                                        </li>
-                                                    </template>
-                                                </ul>
-                                            </div>
-
-                                            <!-- Кнопки действия -->
-                                            <div class="flex items-center justify-end mt-6 space-x-4">
-                                                <button type="button"
-                                                        @click="closeDeleteModal, deletePartsModalOpen = false; document.body.classList.remove('overflow-hidden')"
-                                                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                                    Отменить
-                                                </button>
-                                                <button type="button"
-                                                        @click="$wire.deleteParts().then(() => closeDeleteModal())"
-                                                        class="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800">
-                                                    Подтвердить
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
+                                    @endif
+                                @endif
+                            @endforeach
                         </div>
                     </div>
                 </div>

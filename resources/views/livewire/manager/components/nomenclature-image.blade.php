@@ -25,7 +25,7 @@
         </div>
         <button @click="$wire.openImageModal({{ $nomenclature['id'] }})"
                 class="text-white rounded-full p-1 cursor-pointer h-[20px]">
-            <livewire:components.upload-green-arrow/>
+            <livewire:components.upload-green-arrow :key="'upload-green-arrow-nomenclatures'.auth()->id()" />
         </button>
     </div>
     <!-- Прогресс загрузки -->

@@ -7,7 +7,7 @@
         height="256"
         viewBox="0 0 256 256"
         xml:space="preserve">
-                <defs></defs>
+        <defs></defs>
         <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
            transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
             <circle cx="45" cy="45"

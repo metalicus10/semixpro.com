@@ -16,7 +16,23 @@
     @livewireStyles
 </head>
 <body class="dark font-sans antialiased bg-gray-800">
-<div x-data="{ currentTab: 'nomenclatures', showSidebar: false }">
+<div x-data="{
+        currentTab: localStorage.getItem('activeTab') || 'nomenclatures',
+        role: 'manager',
+        showSidebar: false,
+        setTab(tabName) {
+            this.currentTab = tabName;
+            localStorage.setItem('activeTab', tabName);
+        },
+        setDefaultTabForRole() {
+            if (!localStorage.getItem('activeTab')) {
+                this.currentTab = this.role === 'manager' ? 'nomenclatures' :
+                                  this.role === 'technician' ? 'parts' :
+                                  this.role === 'admin' ? 'dashboard' : 'nomenclatures';
+                localStorage.setItem('activeTab', this.currentTab);
+            }
+        }
+    }" x-init="setDefaultTabForRole()">
 
     <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
         <div class="px-3 py-3 lg:px-5 lg:pl-3">
@@ -119,7 +135,7 @@
                 </li>-->
                 @if(auth()->user()->hasAccess('manage_nomenclature'))
                     <li>
-                        <a x-on:click="currentTab = 'nomenclatures', showSidebar = false"
+                        <a x-on:click="setTab('nomenclatures'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -134,7 +150,7 @@
                 @endif
                 @if(auth()->user()->hasAccess('manage_warehouses'))
                     <li>
-                        <a x-on:click="currentTab = 'warehouses', showSidebar = false"
+                        <a x-on:click="setTab('warehouses'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -149,7 +165,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'categories', showSidebar = false"
+                        <a x-on:click="setTab('categories'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -163,7 +179,7 @@
                     </li>
                 @endif
                 <li>
-                    <a x-on:click="currentTab = 'parts', showSidebar = false"
+                    <a x-on:click="setTab('parts'), showSidebar = false"
                        class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                         <svg
                             class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -177,7 +193,7 @@
                 </li>
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'brands', showSidebar = false"
+                        <a x-on:click="setTab('brands'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -192,7 +208,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'suppliers', showSidebar = false"
+                        <a x-on:click="setTab('suppliers'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -207,7 +223,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'statistics', showSidebar = false"
+                        <a x-on:click="setTab('statistics'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -222,7 +238,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="currentTab = 'technicians', showSidebar = false"
+                        <a x-on:click="setTab('technicians'), showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"

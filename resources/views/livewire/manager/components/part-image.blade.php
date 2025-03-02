@@ -8,18 +8,18 @@
     }" class="flex gallery relative">
     <div class="flex flex-row">
         @if ($part['nomenclatures']['image'] && !$part['image'])
-            <img src="{{ asset('storage') . '/' . $part['nomenclatures']['image'] }}"
+            <img src="{{ asset('storage') . $part['nomenclatures']['image'] }}"
                  alt="{{ $part['name'] }}"
-                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $part['nomenclatures']['image'] }}')"
+                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . $part['nomenclatures']['image'] }}')"
                  class="object-cover rounded cursor-zoom-in">
         @elseif (!$part['image'] && !$part['nomenclatures']['image'])
             <span class="w-[56px] h-[56px]">
                 <livewire:components.empty-image/>
             </span>
         @elseif ($part['image'] && !$part['nomenclatures']['image'])
-            <img src="{{ asset('storage') . '/' . $part['image'] }}"
+            <img src="{{ asset('storage') . $part['image'] }}"
                  alt="{{ $part['name'] }}"
-                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . '/' . $part['image'] }}')"
+                 onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . $part['image'] }}')"
                  class="object-cover rounded cursor-zoom-in">
         @endif
     </div>

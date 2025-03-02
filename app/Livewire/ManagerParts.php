@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Intervention\Image\Drivers\Imagick\Driver;
 use Intervention\Image\ImageManager;
 use Livewire\Component;
@@ -31,7 +32,7 @@ class ManagerParts extends Component
     public $technicians;
     public $selectedTechnicians;
     public $categories;
-    public $suppliers;
+    public $suppliers, $selectedId;
     public $partQuantities = [];
     public $selectedTechnician = null;
     public $selectedPartId = null;
@@ -59,6 +60,7 @@ class ManagerParts extends Component
     public $selectedPartNames = [];
     public $selectedParts = [];
     public $selectedPartPns = null;
+    public $urlData = null;
 
     public $parts;
     public $partId;
@@ -67,6 +69,7 @@ class ManagerParts extends Component
     public $newPn;
     public $searchPn = '';
     public $partPns;
+    public $clickTimers = [];
 
     public $warehousesWithParts;
 
@@ -80,17 +83,28 @@ class ManagerParts extends Component
         'brandUpdated' => 'refreshComponent',
         'update-part-quantities' => 'updatePartQuantities',
         'open-price-modal' => 'openPriceModal',
+        'open-image-modal' => 'openImageModal',
         'pnsAdded' => 'handlePnsUpdated',
         'refreshParts' => '$refresh',
         'defaultWarehouseUpdated' => 'refreshComponent',
         'setPart',
+        'urlChanged' => '$refresh',
     ];
 
     public function mount()
     {
         //$this->parts = Part::with('nomenclature', 'warehouse')->get();
         $this->loadSuppliers();
+        //$this->loadUrlData();
     }
+
+    /*public function loadUrlData()
+    {
+        $parts = Part::where('manager_id', Auth::id())->get();
+        foreach ($parts as $part) {
+            $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
+        }
+    }*/
 
     public function loadComponent()
     {
@@ -396,6 +410,67 @@ class ManagerParts extends Component
         }
     }
 
+    public function handleClick($partId)
+    {
+        if (isset($this->clickTimers[$partId])) {
+            $this->handleDoubleClick($partId);
+            unset($this->clickTimers[$partId]);
+        } else {
+            $this->clickTimers[$partId] = now()->addMilliseconds(300);
+
+            // Запуск отложенного действия (если не будет второго клика)
+            $this->dispatch('delayed-click', ['partId' => $partId]);
+        }
+    }
+
+    public function handleDoubleClick($partId)
+    {
+        unset($this->clickTimers[$partId]);
+        $this->openManagerUrlModal($partId);
+    }
+
+    public function openManagerUrlModal($partId)
+    {
+        $this->selectedId = $partId;
+        $part = Part::find($partId);
+        $data = json_decode($part->url, true) ?? ['text' => '', 'url' => ''];
+
+        $this->managerSupplier = $data['text'] ?? '';
+        $this->managerUrl = $data['url'] ?? '';
+        $this->dispatch('open-modal');
+    }
+
+    public function closeUrlModal()
+    {
+        $this->managerUrlModalVisible = false;
+        $this->dispatch('modal-close');
+    }
+
+    public function updatePartURL($partId, $supplier, $url)
+    {
+        $part = Part::find($partId);
+
+        if ($part) {
+            $part->url = json_encode([
+                'text' => $supplier,
+                'url'  => $url
+            ]);
+            $part->save();
+        }
+
+        // Отправляем обновленные данные обратно в AlpineJS
+        $this->dispatch('urlUpdated', [
+            'partId' => $partId,
+            'data'   => json_decode($part->url, true),
+        ]);
+    }
+
+    public function getUrlData($partId)
+    {
+        $part = Part::find($partId);
+        return json_decode($part->url, true);
+    }
+
     // Метод для увеличения на единицу
     public function incrementPart($partId)
     {
@@ -446,22 +521,6 @@ class ManagerParts extends Component
         //$this->dispatch('partUpdated');
         $this->dispatch('part-updated', ['partId' => $part->id, 'newQuantity' => $part->quantity]);
 
-    }
-
-    public function updateName($partId, $newName)
-    {
-        $part = Part::find($partId);
-
-        if (!$part) {
-            $this->dispatch('showNotification', 'error', 'Part not found');
-            return;
-        }
-
-        // Обновляем название
-        $part->name = $newName;
-        $part->save();
-
-        $this->dispatch('showNotification', 'success', 'Part name updated successfully');
     }
 
     public function savePns($partId, $selectedPns)
@@ -644,10 +703,17 @@ class ManagerParts extends Component
         $this->categories = $managerData->categories;
         $this->brands = $managerData->brands;
         $this->warehouses = $managerData->warehouses;
+        $activeTab = null;
+        foreach ($this->warehouses as $warehouse) {
+            if($warehouse->is_default == 1){$activeTab = $warehouse->id;}
+        }
+        foreach ($this->parts as $part) {
+            $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
+        }
 
         return view('livewire.manager.manager-parts', [
-            'parts' => $this->parts, 'categories' => $this->categories, 'technicians' => $this->technicians,
-            'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen,
+            'parts' => $this->parts, 'categories' => $this->categories, 'technicians' => $this->technicians, 'activeTab' => $activeTab,
+            'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen, 'urlData' => $this->urlData,
             'selectedPartId' => $this->selectedPartId, 'warehouses' => $this->warehouses, 'paginatedParts' => Part::paginate(30),
         ])
             ->layout('layouts.app');

@@ -27,7 +27,7 @@ class TechnicianParts extends Component
 
     public function loadParts()
     {
-        $this->parts = TechnicianPart::with('part.category', 'part.brands')
+        $this->parts = TechnicianPart::with('part.category', 'part.brands', 'part.nomenclatures')
             ->where('technician_id', Auth::id())
             ->where('quantity', '>', 0)
             ->get();
@@ -73,6 +73,7 @@ class TechnicianParts extends Component
 
             // Отправляем событие менеджеру
             $this->dispatch('partUsedByTechnician', $partTransfer->part_id);
+            $this->dispatch('showNotification', 'success', 'Запчасть успешно списана');
 
             // Обновляем список запчастей
             $this->loadParts();
