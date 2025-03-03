@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignId('technician_id')->constrained('users')->onDelete('cascade'); // Кому назначили
             $table->foreignId('warehouse_id')->constrained('warehouses')->onDelete('cascade'); // Какой склад
             $table->timestamp('assigned_at')->default(now()); // Время назначения
+            $table->timestamps();
         });
     }
 

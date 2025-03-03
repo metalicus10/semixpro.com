@@ -19,4 +19,9 @@ class Warehouse extends Model
     {
         return $this->hasMany(Part::class);
     }
+
+    public function technicians()
+    {
+        return $this->belongsToMany(User::class, 'technician_warehouse');
+    }
 }

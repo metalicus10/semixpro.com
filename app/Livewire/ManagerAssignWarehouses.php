@@ -6,14 +6,21 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseAssignmentLog;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 
 class ManagerAssignWarehouses extends Component
 {
     public $technicians;
     public $warehouses;
-    public $selectedTechnician;
+    public $selectedTechnician = null;
     public $selectedWarehouses = [];
+
+    protected $rules = [
+        'selectedWarehouses' => 'array',
+        'selectedWarehouses.*' => 'integer'
+    ];
 
     public function mount()
     {
@@ -25,12 +32,15 @@ class ManagerAssignWarehouses extends Component
         $this->warehouses = Warehouse::where('manager_id', $userId)->get();
     }
 
-    public function updatedSelectedTechnician()
+    public function updatedSelectedTechnician($value)
     {
-        if ($this->selectedTechnician) {
-            $technician = User::find($this->selectedTechnician);
-            $this->selectedWarehouses = $technician->warehouses->pluck('id')->toArray();
-            //$this->warehouses = Warehouse::where('manager_id', Auth::id())->get();
+        $this->selectedWarehouses = [];
+        if ($value) {
+            //$this->warehouses = Warehouse::all();
+            $technician = User::find($value);
+            if ($technician) {
+                $this->selectedWarehouses = $technician->warehouses->pluck('id')->toArray();
+            }
         }
     }
 
@@ -40,7 +50,18 @@ class ManagerAssignWarehouses extends Component
 
         if ($technician) {
             $oldWarehouses = $technician->warehouses()->pluck('id')->toArray();
-            $technician->warehouses()->sync($this->selectedWarehouses);
+
+            //dd($this->selectedWarehouses);
+            foreach ($this->selectedWarehouses as $warehouseId) {
+
+                    DB::table('technician_warehouse')->insert([
+                        'technician_id' => $technician->id,
+                        'warehouse_id' => $warehouseId,
+                    ]);
+
+            }
+
+            //$technician->warehouses()->sync($this->selectedWarehouses);
 
             // Логируем новые назначения
             foreach ($this->selectedWarehouses as $warehouseId) {

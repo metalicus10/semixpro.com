@@ -98,7 +98,8 @@ class User extends Authenticatable
     public function assignedWarehouses()
     {
         return $this->belongsToMany(Warehouse::class, 'technician_warehouse', 'technician_id', 'warehouse_id')
-            ->select('warehouses.*');
+            ->withPivot('technician_id', 'warehouse_id')
+            ->select('warehouses.id', 'warehouses.name');
     }
 
     // Универсальный метод для получения складов в зависимости от роли
