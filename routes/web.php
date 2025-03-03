@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\ManagerProfile;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Manager;
 use App\Livewire\ManagerDashboard;
@@ -10,6 +11,7 @@ use App\Livewire\Technician;
 use App\Livewire\TechnicianDashboard;
 use App\Livewire\TechnicianParts;
 use App\Livewire\TransferPartForm;
+use App\Models\User;
 
 Route::view('/', 'welcome');
 

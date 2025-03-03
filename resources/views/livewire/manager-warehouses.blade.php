@@ -8,7 +8,7 @@
             <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow">
                 <h3 class="font-semibold text-lg text-gray-600 dark:text-gray-300 mb-4">Create Warehouse</h3>
                 <input type="text" wire:model="newWarehouseName" placeholder="Warehouse Name"
-                       class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mb-4">
+                       class="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 mb-4 text-gray-600 dark:text-gray-300">
                 @if ($errorMessage)
                     <div class="text-red-500 text-sm mb-2">{{ $errorMessage }}</div>
                 @endif
@@ -62,6 +62,8 @@
                     </div>
                 </div>
             </div>
+
+            <livewire:manager-assign-warehouses />
 
         </div>
 

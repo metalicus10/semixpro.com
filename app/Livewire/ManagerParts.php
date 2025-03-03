@@ -93,9 +93,7 @@ class ManagerParts extends Component
 
     public function mount()
     {
-        //$this->parts = Part::with('nomenclature', 'warehouse')->get();
         $this->loadSuppliers();
-        //$this->loadUrlData();
     }
 
     /*public function loadUrlData()
@@ -691,12 +689,20 @@ class ManagerParts extends Component
     public function render()
     {
         $userId = Auth::id();
+        $user = Auth::user();
         $this->technicians = Technician::where('manager_id', $userId)->where('is_active', true)->get();
         $this->parts = $this->getFilteredParts();
+
+        if ($user->inRole('technician')) {
+            // Показываем только запчасти, связанные со складами техника
+            $this->parts = Part::whereIn('warehouse_id', $user->warehouses()->pluck('id'))
+                ->get();
+        }
+
         $managerData = User::with([
             'categories',
             'brands',
-            'warehouses' => function ($query) {
+            'managedWarehouses' => function ($query) {
                 $query->with('parts')->orderBy('position');
             }
         ])->find($userId);

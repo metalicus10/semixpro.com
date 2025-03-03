@@ -27,13 +27,21 @@ class ManagerWarehouses extends Component
     public function mount()
     {
         $userId = Auth::id();
+        $user = Auth::user();
 
         // Фильтрация запчастей, принадлежащих текущему менеджеру
         $this->parts = Part::whereHas('category', function ($query) use ($userId) {
             $query->where('manager_id', $userId);
         })->get();
 
-        $this->warehouses = Warehouse::where('manager_id', $userId)->orderBy('position')->get();
+        //$this->warehouses = Warehouse::where('manager_id', $userId)->orderBy('position')->get();
+        if ($user->inRole('technician')) {
+            // Если техник, показываем только склады, назначенные ему
+            $this->warehouses = $user->warehouses()->with('parts')->get();
+        } else {
+            // Если менеджер, показываем все склады
+            $this->warehouses = Warehouse::where('manager_id', $userId)->orderBy('position')->get();
+        }
     }
 
     public function createWarehouse()

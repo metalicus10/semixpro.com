@@ -90,9 +90,21 @@ class User extends Authenticatable
         return $this->hasMany(Brand::class, 'manager_id', 'id');
     }
 
-    public function warehouses()
+    public function managedWarehouses()
     {
         return $this->hasMany(Warehouse::class, 'manager_id', 'id');
+    }
+
+    public function assignedWarehouses()
+    {
+        return $this->belongsToMany(Warehouse::class, 'technician_warehouse', 'technician_id', 'warehouse_id')
+            ->select('warehouses.*');
+    }
+
+    // Универсальный метод для получения складов в зависимости от роли
+    public function warehouses()
+    {
+        return $this->inRole('manager') ? $this->managedWarehouses() : $this->assignedWarehouses();
     }
 
     public function pns()
