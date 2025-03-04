@@ -112,4 +112,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pn::class, 'manager_id', 'id');
     }
+
+    public function assignedParts()
+    {
+        return Part::whereIn('warehouse_id', function ($query) {
+            $query->select('warehouse_id')
+                ->from('technician_warehouse')
+                ->where('technician_id', auth()->id());
+        })->get();
+    }
+
 }

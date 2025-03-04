@@ -41,7 +41,7 @@
                     partQuantities: {},
                     parts: [],
                     tabs: [],
-                    activeTab: null,
+                    activeTab: @entangle('activeTab'),
                     init() {
                         const defaultTab = this.warehouses.find(tab => tab.is_default === 1);
                         activeTab = defaultTab ? defaultTab.id : (this.warehouses[0]?.id || null);
@@ -171,7 +171,7 @@
 
                 <!-- Таб заголовки -->
                 <ul id="draggable-tabs"
-                    class="flex flex-nowrap no-scrollbar text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:border-gray-700 dark:text-gray-400"
+                    class="flex flex-nowrap gap-1 no-scrollbar text-sm font-medium text-center text-gray-500 border-b border-gray-200 dark:border-gray-700 dark:text-gray-400"
                     x-ref="tabContainer"
                     @scroll="checkScroll"
                     style="scroll-behavior: smooth; overflow-x: hidden;"
@@ -181,7 +181,7 @@
                     <template x-for="warehouse in warehouses" :key="warehouse.id">
                         <li
                             @click="activeTab = warehouse.id"
-                            :class="{'bg-gray-600 text-white': activeTab === warehouse.id, 'bg-gray-900': activeTab !== warehouse.id}"
+                            :class="{'bg-gray-900 text-white': activeTab === warehouse.id, 'bg-gray-900': activeTab !== warehouse.id}"
                             class="shrink-0"
                         ><!--draggable="true"
                                 @dragstart="startDrag(index)"
@@ -206,10 +206,10 @@
                                 </div>
                             </div>
                             <a href="#" x-text="warehouse.name"
-                               @click.prevent="activeTab = warehouse.id"
+                               @click.prevent="activeTab = warehouse.id" wire:click="activeTab = 'warehouse.id'"
                                x-show="editingTabId !== warehouse.id"
                                @dblclick="startEdit(warehouse)"
-                               :class="activeTab === warehouse.id ? 'text-blue-600 bg-gray-100 dark:bg-gray-800 dark:text-[rgb(255, 194, 128)]' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                               :class="activeTab === warehouse.id ? 'text-gray-300 bg-[#b13a00] dark:bg-[#ff8144] dark:text-gray-800' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
                                class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
                             ></a>
                         </li>

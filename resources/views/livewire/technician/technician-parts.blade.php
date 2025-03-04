@@ -32,7 +32,7 @@
 
     <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
 
-    <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+    <tr class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
         <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
             <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
             <tr>
@@ -46,6 +46,55 @@
             </tr>
             </thead>
             <tbody>
+            @if(count($assignedParts))
+                @foreach($assignedParts as $part)
+                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
+                        <td class="px-5 py-5">{{ $part->sku }}</td>
+                        <td class="px-5 py-5">{{ $part->name }}</td>
+                        <td class="px-5 py-5">{{ $part->quantity }}</td>
+                        @if(!empty($part->brands))
+                            <td class="px-5 py-5 truncate whitespace-nowrap overflow-hidden">
+                                @foreach($part->brands as $brand)
+                                    <span>{{ $brand->name }}</span>
+                                @endforeach
+                            </td>
+                        @else
+                            <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden"></td>
+                        @endif
+                        @if(!empty($part->category))
+                            <td class="px-5 py-5">{{ $part->category->name }}</td>
+                        @else
+                            <td class="px-5 py-5"></td>
+                        @endif
+                        <td class="px-5 py-5">
+                            <div x-data class="gallery h-12 w-12">
+                                @if($part->image && $part->nomenclatures->image || $part->image && $part->nomenclatures->image===null)
+                                    <img src="{{ asset('storage') . $part->image }}" alt="{{ $part->name }}"
+                                         @click="$dispatch('lightbox', '{{ asset('storage') . $part->image }}')"
+                                         @click.stop
+                                         class="object-cover rounded cursor-zoom-in">
+                                @elseif($part->nomenclatures->image && $part->image===null)
+                                    <img src="{{ asset('storage') . $part->nomenclatures->image }}" alt="{{ $part->name }}"
+                                         @click="$dispatch('lightbox', '{{ asset('storage') . $part->nomenclatures->image }}')"
+                                         @click.stop
+                                         class="object-cover rounded cursor-zoom-in">
+                                @else
+                                    <livewire:components.empty-image/>
+                                @endif
+                            </div>
+                        </td>
+                        <td class="px-5 py-5">
+                            <button
+                                wire:click="usePart({{ $part->id }})"
+                                class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                @if($part->quantity == 0) disabled @endif
+                            >
+                                Use
+                            </button>
+                        </td>
+                    </tr>
+                @endforeach
+            @endif
             @forelse ($parts as $transfer)
                 @if($transfer->quantity > 0)
                 <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">

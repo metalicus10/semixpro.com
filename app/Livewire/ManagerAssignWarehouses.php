@@ -76,6 +76,7 @@ class ManagerAssignWarehouses extends Component
             }
 
             $this->dispatch('showNotification', 'success', 'Склады успешно назначены технику');
+            $this->dispatch('updateAssignedParts');
         }
     }
 

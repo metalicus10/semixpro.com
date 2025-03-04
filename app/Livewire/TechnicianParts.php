@@ -16,12 +16,14 @@ class TechnicianParts extends Component
     public $brands;
     public $selectedCategory = null;
     public $selectedBrand = null;
+    public $assignedParts = [];
 
-    protected $listeners = ['partUsed' => 'refreshParts'];
+    protected $listeners = ['partUsed' => 'refreshParts', 'updateAssignedParts' => 'loadAssignedParts'];
 
     public function mount()
     {
         $this->loadParts();
+        $this->loadAssignedParts();
         $this->loadCategoriesAndBrands();
     }
 
@@ -31,6 +33,11 @@ class TechnicianParts extends Component
             ->where('technician_id', Auth::id())
             ->where('quantity', '>', 0)
             ->get();
+    }
+
+    public function loadAssignedParts()
+    {
+        $this->assignedParts = auth()->user()->assignedParts();
     }
 
     public function loadCategoriesAndBrands()

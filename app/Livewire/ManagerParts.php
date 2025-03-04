@@ -60,7 +60,7 @@ class ManagerParts extends Component
     public $selectedPartNames = [];
     public $selectedParts = [];
     public $selectedPartPns = null;
-    public $urlData = null;
+    public $urlData, $activeTab = null;
 
     public $parts;
     public $partId;
@@ -709,16 +709,15 @@ class ManagerParts extends Component
         $this->categories = $managerData->categories;
         $this->brands = $managerData->brands;
         $this->warehouses = $managerData->warehouses;
-        $activeTab = null;
         foreach ($this->warehouses as $warehouse) {
-            if($warehouse->is_default == 1){$activeTab = $warehouse->id;}
+            if($warehouse->is_default === 1){$this->activeTab = $warehouse->id;}
         }
         foreach ($this->parts as $part) {
             $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
         }
 
         return view('livewire.manager.manager-parts', [
-            'parts' => $this->parts, 'categories' => $this->categories, 'technicians' => $this->technicians, 'activeTab' => $activeTab,
+            'parts' => $this->parts, 'categories' => $this->categories, 'technicians' => $this->technicians, 'activeTab' => $this->activeTab,
             'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen, 'urlData' => $this->urlData,
             'selectedPartId' => $this->selectedPartId, 'warehouses' => $this->warehouses, 'paginatedParts' => Part::paginate(30),
         ])
