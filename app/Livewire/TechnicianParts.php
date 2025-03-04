@@ -11,33 +11,40 @@ use Livewire\Component;
 
 class TechnicianParts extends Component
 {
-    public $parts;
-    public $categories;
-    public $brands;
+    public $parts = [];
+    public $categories = [];
+    public $brands = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
     public $assignedParts = [];
+    public $selectedWarehouse = null;
+    public $groupedParts = null;
 
     protected $listeners = ['partUsed' => 'refreshParts', 'updateAssignedParts' => 'loadAssignedParts'];
 
     public function mount()
     {
-        $this->loadParts();
         $this->loadAssignedParts();
+        $this->selectedWarehouse = $this->groupedParts->keys()->first();
         $this->loadCategoriesAndBrands();
-    }
-
-    public function loadParts()
-    {
-        $this->parts = TechnicianPart::with('part.category', 'part.brands', 'part.nomenclatures')
-            ->where('technician_id', Auth::id())
-            ->where('quantity', '>', 0)
-            ->get();
     }
 
     public function loadAssignedParts()
     {
-        $this->assignedParts = auth()->user()->assignedParts();
+        $manualParts = TechnicianPart::with('part.category', 'part.brands', 'part.nomenclatures')
+            ->where('technician_id', auth()->id())
+            ->where('quantity', '>', 0)
+            ->get();
+
+        $warehouseParts = auth()->user()->assignedParts();
+
+        // Объединяем две коллекции
+        $allParts = $manualParts->merge($warehouseParts);
+
+        // Группируем запчасти по складу (null => 'Без склада')
+        $this->groupedParts = $allParts->groupBy(function ($part) {
+            return $part->warehouse_id ?? 'Без склада';
+        });
     }
 
     public function loadCategoriesAndBrands()
@@ -55,6 +62,11 @@ class TechnicianParts extends Component
         $partIds = TechnicianPart::where('technician_id', $technicianId)
             ->pluck('part_id')
             ->toArray();
+
+        if (empty($partIds)) {
+            $this->brands = collect(); // Если нет данных, присваиваем пустую коллекцию
+            return;
+        }
 
         // Загрузка брендов, связанных с переданными запчастями
         $this->brands = Brand::whereHas('parts', function($query) use ($partIds) {
