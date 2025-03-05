@@ -16,16 +16,16 @@ class TechnicianParts extends Component
     public $brands = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
-    public $assignedParts = [];
-    public $selectedWarehouse = null;
-    public $groupedParts = null;
+    public $partsWithWarehouse, $partsWithoutWarehouse;
+    public $selectedWarehouse = [];
+    public $groupedParts;
 
     protected $listeners = ['partUsed' => 'refreshParts', 'updateAssignedParts' => 'loadAssignedParts'];
 
     public function mount()
     {
         $this->loadAssignedParts();
-        $this->selectedWarehouse = $this->groupedParts->keys()->first();
+        //$this->selectedWarehouse = $this->groupedParts->keys()->first();
         $this->loadCategoriesAndBrands();
     }
 
@@ -41,10 +41,21 @@ class TechnicianParts extends Component
         // Объединяем две коллекции
         $allParts = $manualParts->merge($warehouseParts);
 
-        // Группируем запчасти по складу (null => 'Без склада')
-        $this->groupedParts = $allParts->groupBy(function ($part) {
-            return $part->warehouse_id ?? 'Без склада';
-        });
+        // Разделяем на две коллекции
+        $this->partsWithWarehouse = $allParts->filter(fn($part) => isset($part->warehouse_id));
+        $this->partsWithoutWarehouse = $allParts->filter(fn($part) => !isset($part->warehouse_id));
+    }
+
+    public function warehouseParts()
+    {
+        // Ваш код для получения запчастей со складов
+        return $this->partsWithWarehouse; // Или другая переменная, содержащая запчасти
+    }
+
+    public function unassignedParts()
+    {
+        // Ваш код для получения запчастей со складов
+        return $this->partsWithoutWarehouse; // Или другая переменная, содержащая запчасти
     }
 
     public function loadCategoriesAndBrands()
@@ -117,7 +128,7 @@ class TechnicianParts extends Component
     public function render()
     {
         return view('livewire.technician.technician-parts', [
-            'parts' => $this->parts,
+
             'categories' => $this->categories,
             'brands' => $this->brands,
         ])->layout('layouts.app');
