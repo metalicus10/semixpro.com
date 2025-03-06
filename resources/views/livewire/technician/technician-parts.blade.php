@@ -1,4 +1,5 @@
 <div x-data="{
+
         warehouses: @entangle('warehouses'),
         warehouseParts: @entangle('warehouseParts'),
         unassignedParts: @entangle('unassignedParts'),
@@ -71,19 +72,22 @@
                     </thead>
                     <tbody>
                     <template x-for="part in warehouseParts" :key="part.id" >
-                        <template x-if="part.warehouse_id == warehouse.id" :key="part.id" x-init="console.log(part);">
+                        <template x-if="part.warehouse_id == warehouse.id" :key="part.id" x-init="console.log(part.nomenclatures);">
                         <tr>
                             <td class="border border-gray-300 px-4 py-2" x-text="part.sku"></td>
                             <td class="border border-gray-300 px-4 py-2" x-text="part.name"></td>
                             <td class="border border-gray-300 px-4 py-2" x-text="part.quantity"></td>
                             <td class="border border-gray-300 px-4 py-2" x-text="part.category ? part.category.name : ''"></td>
                             <td class="border border-gray-300 px-4 py-2">
-                                <template x-for="brand in part.brands" :key="brand.id">
+                                <template x-for="brand in part.nomenclatures.brands" :key="brand.id">
                                     <span x-text="brand.name"></span>
                                 </template>
                             </td>
                             <td class="border border-gray-300 px-4 py-2">
-                                <img :src="part.image ? '/storage/' + part.image : '/default-image.jpg'" class="h-12 w-12 rounded">
+                                <img :src="part.image ? '/storage/' + part.image
+                                     : (part.nomenclatures && part.nomenclatures.image ? '/storage/' + part.nomenclatures.image
+                                     : '/default-image.jpg')"
+                                     class="h-12 w-12 rounded">
                             </td>
                             <td class="border border-gray-300 px-4 py-2">
                                 <button @click="$wire.usePart(part.id)" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"

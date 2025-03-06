@@ -13,7 +13,7 @@ use Livewire\Component;
 
 class TechnicianParts extends Component
 {
-    public $parts = [];
+    public $parts, $nomenclatures = [];
     public $categories = [];
     public $brands = [];
     public $selectedCategory = null;
@@ -44,12 +44,16 @@ class TechnicianParts extends Component
 
     public function loadAssignedParts()
     {
-        $manualParts = TechnicianPart::with('part.category', 'part.brands', 'part.nomenclatures')
+        $manualParts = TechnicianPart::with([
+                'part.nomenclatures' => function ($query) {
+                    $query->with('brands', 'category');
+                },
+            ])
             ->where('technician_id', auth()->id())
             ->where('quantity', '>', 0)
             ->get();
 
-        $warehouseParts = auth()->user()->assignedParts();
+        $warehouseParts = auth()->user()->assignedParts()->load('nomenclatures');
 
         // Объединяем две коллекции
         $allParts = $manualParts->merge($warehouseParts);
