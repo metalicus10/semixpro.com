@@ -1,11 +1,16 @@
-<div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div x-data="{
+        warehouses: @entangle('warehouses'),
+        warehouseParts: @entangle('warehouseParts'),
+        unassignedParts: @entangle('unassignedParts'),
+        active: 'warehouse',
+    }"
+    class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
 
     <!-- Заголовок страницы -->
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
 
         <!-- Фильтр по категориям -->
-        @dd($categories)
         <div>
             <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by Cat:</label>
             <select wire:model.live="selectedCategory" id="category"
@@ -32,10 +37,11 @@
     </div>
 
     <ul class="flex border-b">
-        <li class="mr-1" x-data="{ active: 'warehouse' }">
-            <template x-for="(warehouse, index) in $wire.warehouseParts" :key="index">
-                <button @click="active = 'warehouse-' + index"
-                        :class="{'border-blue-500 text-blue-500': active === 'warehouse-' + index, 'border-transparent text-gray-500': active !== 'warehouse-' + index}"
+        <li class="mr-1">
+            <template x-for="warehouse in warehouses" :key="warehouse.id">
+                <button @click="active = 'warehouse-' + warehouse.id"
+                        :class="{'border-blue-500 text-blue-500': active === 'warehouse-' + warehouse.id,
+                        'border-transparent text-gray-500': active !== 'warehouse-' + warehouse.id}"
                         class="inline-block py-2 px-4 font-semibold border-b-2">
                     <span x-text="warehouse.name"></span>
                 </button>
@@ -49,8 +55,8 @@
     </ul>
 
     <div>
-        <template x-for="(warehouse, index) in $wire.warehouseParts" :key="index">
-            <div x-show="active === 'warehouse-' + index">
+        <template x-for="(warehouse, index) in warehouses" :key="warehouse.id">
+            <div x-show="active === 'warehouse-' + warehouse.id">
                 <table class="w-full border-collapse border border-gray-300">
                     <thead>
                     <tr>
@@ -64,7 +70,8 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <template x-for="part in warehouse.parts" :key="part.id">
+                    <template x-for="part in warehouseParts" :key="part.id" >
+                        <template x-if="part.warehouse_id == warehouse.id" :key="part.id" x-init="console.log(part);">
                         <tr>
                             <td class="border border-gray-300 px-4 py-2" x-text="part.sku"></td>
                             <td class="border border-gray-300 px-4 py-2" x-text="part.name"></td>
@@ -79,11 +86,13 @@
                                 <img :src="part.image ? '/storage/' + part.image : '/default-image.jpg'" class="h-12 w-12 rounded">
                             </td>
                             <td class="border border-gray-300 px-4 py-2">
-                                <button @click="$wire.usePart(part.id)" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600" :disabled="part.quantity == 0">
+                                <button @click="$wire.usePart(part.id)" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                                        :disabled="part.quantity == 0">
                                     Использовать
                                 </button>
                             </td>
                         </tr>
+                        </template>
                     </template>
                     </tbody>
                 </table>
@@ -104,7 +113,7 @@
                 </tr>
                 </thead>
                 <tbody>
-                <template x-for="part in $wire.unassignedParts" :key="part.id">
+                <template x-for="part in this.unassignedParts" :key="part.id">
                     <tr>
                         <td class="border border-gray-300 px-4 py-2" x-text="part.sku"></td>
                         <td class="border border-gray-300 px-4 py-2" x-text="part.name"></td>
