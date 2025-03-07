@@ -16,7 +16,7 @@ class TechnicianParts extends Component
     public $brands = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
-    public $assignedParts = [];
+    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts;
     public $selectedWarehouse = null;
     public $groupedParts = null;
 
@@ -25,7 +25,7 @@ class TechnicianParts extends Component
     public function mount()
     {
         $this->loadAssignedParts();
-        $this->selectedWarehouse = $this->groupedParts->keys()->first();
+        //$this->selectedWarehouse = $this->groupedParts->keys()->first();
         $this->loadCategoriesAndBrands();
     }
 
@@ -39,12 +39,11 @@ class TechnicianParts extends Component
         $warehouseParts = auth()->user()->assignedParts();
 
         // Объединяем две коллекции
-        $allParts = $manualParts->merge($warehouseParts);
+        $this->allParts = $manualParts->merge($warehouseParts);
 
         // Группируем запчасти по складу (null => 'Без склада')
-        $this->groupedParts = $allParts->groupBy(function ($part) {
-            return $part->warehouse_id ?? 'Без склада';
-        });
+        $this->partsWithWarehouse = $this->allParts->filter(fn($part) => isset($part->warehouse_id));
+        $this->partsWithoutWarehouse = $this->allParts->filter(fn($part) => !isset($part->warehouse_id));
     }
 
     public function loadCategoriesAndBrands()
@@ -106,12 +105,12 @@ class TechnicianParts extends Component
 
     public function updatedSelectedCategory()
     {
-        $this->loadParts();
+        $this->loadAssignedParts();
     }
 
     public function updatedSelectedBrand()
     {
-        $this->loadParts();
+        $this->loadAssignedParts();
     }
 
     public function render()

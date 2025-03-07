@@ -1,5 +1,5 @@
 <div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
-
+@dd($partsWithWarehouse)
     <!-- Заголовок страницы -->
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
@@ -32,7 +32,7 @@
 
     <!-- Вкладки -->
     <div class="flex space-x-4 border-b pb-2">
-        @foreach($groupedParts as $warehouseId => $parts)
+        @foreach($partsWithWarehouse as $warehouseId => $parts)
             <button
                 class="px-4 py-2 border rounded-md"
                 wire:click="$set('selectedWarehouse', '{{ $warehouseId }}')"
@@ -58,8 +58,8 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($groupedParts as $warehouseId => $parts)
-                    <template x-if="selectedWarehouse == '{{ $warehouseId }}'">
+                @foreach($partsWithWarehouse as $warehouseId => $parts)
+
                         @forelse($parts as $part)
                         <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
                             <td class="px-5 py-5">{{ $part->sku }}</td>
@@ -114,7 +114,7 @@
                                 </td>
                             </tr>
                         @endforelse
-                    </template>
+
                 @endforeach
             </tbody>
         </table>
