@@ -4,8 +4,10 @@ namespace App\Livewire;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Part;
 use App\Models\TechnicianPart;
 use App\Models\TechnicianPartUsage;
+use App\Models\TechnicianWarehouse;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -31,17 +33,37 @@ class TechnicianParts extends Component
 
     public function loadAssignedParts()
     {
-        $manualParts = TechnicianPart::with('part.category', 'part.brands', 'part.nomenclatures')
-            ->where('technician_id', auth()->id())
+        $technicianId = auth()->id();
+
+        // Получаем запчасти, назначенные напрямую технику
+        $manualParts = TechnicianPart::with([
+            'part.category',
+            'part.brands',
+            'part.nomenclatures',
+            'part.warehouse' // Добавляем связь с складами
+        ])
+            ->where('technician_id', $technicianId)
             ->where('quantity', '>', 0)
             ->get();
 
-        $warehouseParts = auth()->user()->assignedParts();
+        // Получаем ID складов, доступных технику
+        $warehouseIds = TechnicianWarehouse::where('technician_id', $technicianId)
+            ->pluck('warehouse_id');
 
-        // Объединяем две коллекции
-        $this->allParts = $manualParts->merge($warehouseParts);
+        // Получаем запчасти со складов, к которым у техника есть доступ
+        $warehouseParts = Part::with([
+            'category',
+            'brands',
+            'nomenclatures',
+            'warehouse' // Подтягиваем информацию о складе
+        ])
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->get();
 
-        // Группируем запчасти по складу (null => 'Без склада')
+        // Объединяем обе коллекции и убираем дубликаты по id запчасти
+        $this->allParts = $manualParts->merge($warehouseParts)->unique('id');
+
+        // Разделяем запчасти на складские и без склада
         $this->partsWithWarehouse = $this->allParts->filter(fn($part) => isset($part->warehouse_id));
         $this->partsWithoutWarehouse = $this->allParts->filter(fn($part) => !isset($part->warehouse_id));
     }
