@@ -9,6 +9,8 @@ class Nomenclature extends Model
 {
     use HasFactory;
 
+    protected $with = ['brands'];
+
     protected $fillable = [
         'nn',
         'name',
@@ -42,7 +44,7 @@ class Nomenclature extends Model
 
     public function brands()
     {
-        return $this->belongsToMany(Brand::class, 'brand_nomenclature');
+        return $this->belongsToMany(Brand::class, 'brand_nomenclature', 'nomenclature_id', 'brand_id');
     }
 
     public function parts()
