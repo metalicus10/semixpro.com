@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Nomenclature;
 use Livewire\Component;
 use App\Models\Warehouse;
 use App\Models\Part;
@@ -30,9 +31,13 @@ class ManagerWarehouses extends Component
         $user = Auth::user();
 
         // Фильтрация запчастей, принадлежащих текущему менеджеру
-        $this->parts = Part::whereHas('category', function ($query) use ($userId) {
+        $this->parts = Nomenclature::whereHas('category', function ($query) use ($userId) {
             $query->where('manager_id', $userId);
-        })->get();
+        })
+            ->with('parts') // Загружаем связанные запчасти
+            ->get()
+            ->pluck('parts') // Получаем только запчасти
+            ->flatten(); // Разворачиваем в один массив
 
         //$this->warehouses = Warehouse::where('manager_id', $userId)->orderBy('position')->get();
         if ($user->inRole('technician')) {

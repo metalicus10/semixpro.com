@@ -4,8 +4,10 @@ namespace App\Livewire;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Part;
 use App\Models\TechnicianPart;
 use App\Models\TechnicianPartUsage;
+use App\Models\TechnicianWarehouse;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -16,35 +18,53 @@ class TechnicianParts extends Component
     public $brands = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
-    public $assignedParts = [];
+    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts;
     public $selectedWarehouse = null;
     public $groupedParts = null;
 
-    protected $listeners = ['partUsed' => 'refreshParts', 'updateAssignedParts' => 'loadAssignedParts'];
+    protected $listeners = ['partUsed' => 'loadAssignedParts', 'updateAssignedParts' => 'loadAssignedParts'];
 
     public function mount()
     {
         $this->loadAssignedParts();
-        $this->selectedWarehouse = $this->groupedParts->keys()->first();
         $this->loadCategoriesAndBrands();
     }
 
     public function loadAssignedParts()
     {
-        $manualParts = TechnicianPart::with('part.category', 'part.brands', 'part.nomenclatures')
-            ->where('technician_id', auth()->id())
+        $technicianId = auth()->id();
+
+        // Получаем запчасти, назначенные напрямую технику
+        $manualParts = TechnicianPart::with([
+            'part.category',
+            'part.brands',
+            'part.nomenclatures',
+            'part.warehouse'
+        ])
+            ->where('technician_id', $technicianId)
             ->where('quantity', '>', 0)
             ->get();
 
-        $warehouseParts = auth()->user()->assignedParts();
+        // Получаем ID складов, доступных технику
+        $warehouseIds = TechnicianWarehouse::where('technician_id', $technicianId)
+            ->pluck('warehouse_id');
 
-        // Объединяем две коллекции
-        $allParts = $manualParts->merge($warehouseParts);
+        // Получаем запчасти со складов, к которым у техника есть доступ
+        $warehouseParts = Part::with([
+            'category',
+            'brands',
+            'nomenclatures',
+            'warehouse'
+        ])
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->get();
 
-        // Группируем запчасти по складу (null => 'Без склада')
-        $this->groupedParts = $allParts->groupBy(function ($part) {
-            return $part->warehouse_id ?? 'Без склада';
-        });
+        // Объединяем обе коллекции и убираем дубликаты по id запчасти
+        $this->allParts = $manualParts->merge($warehouseParts)->unique('id');
+
+        // Разделяем запчасти на складские и без склада
+        $this->partsWithWarehouse = $this->allParts->filter(fn($part) => isset($part->warehouse_id));
+        $this->partsWithoutWarehouse = $this->allParts->filter(fn($part) => !isset($part->warehouse_id));
     }
 
     public function loadCategoriesAndBrands()
@@ -74,9 +94,9 @@ class TechnicianParts extends Component
         })->get();
     }
 
-    public function usePart($transferId)
+    public function usePart($partId)
     {
-        $partTransfer = TechnicianPart::find($transferId);
+        $partTransfer = TechnicianPart::find($partId);
 
         if ($partTransfer && $partTransfer->quantity > 0) {
             // Уменьшаем количество на 1
@@ -95,7 +115,7 @@ class TechnicianParts extends Component
             $this->dispatch('showNotification', 'success', 'Запчасть успешно списана');
 
             // Обновляем список запчастей
-            $this->loadParts();
+            $this->loadAssignedParts();
         }
     }
 
@@ -106,18 +126,17 @@ class TechnicianParts extends Component
 
     public function updatedSelectedCategory()
     {
-        $this->loadParts();
+        $this->loadAssignedParts();
     }
 
     public function updatedSelectedBrand()
     {
-        $this->loadParts();
+        $this->loadAssignedParts();
     }
 
     public function render()
     {
         return view('livewire.technician.technician-parts', [
-            'parts' => $this->parts,
             'categories' => $this->categories,
             'brands' => $this->brands,
         ])->layout('layouts.app');

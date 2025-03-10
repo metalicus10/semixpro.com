@@ -37,7 +37,7 @@
         <div class="relative w-full"
              x-data="{
                     warehouses: @js($warehouses->values()->toArray()),
-                    partStock: @js(collect($parts)->pluck('quantity', 'id')->toArray()),
+                    partStock: @js(collect($nomenclatures)->pluck('quantity', 'id')->toArray()),
                     partQuantities: {},
                     parts: [],
                     tabs: [],
@@ -443,7 +443,7 @@
                 <div x-data="{
                             <!-- Метод выбора всех запчастей -->
                             toggleCheckAll(event) {
-                                this.selectedParts = event.target.checked ? @json(collect($parts)->pluck('id')) : [];
+                                this.selectedParts = event.target.checked ? @json(collect($nomenclatures)->pluck('id')) : [];
                                 this.selectedParts.forEach(partId => {
                                     if (!this.partQuantities[partId]) {
                                         this.partQuantities[partId] = 1;
@@ -466,7 +466,7 @@
 
                                 $dispatch('update-part-quantities', { quantities: this.partQuantities });
                             },
-                    parts: @js($parts ?? []),
+                    parts: @js($nomenclatures ?? []),
 
                 }"
                      x-init="$watch('selectedParts', () => fetchSelectedNames())"
@@ -481,7 +481,7 @@
                             <!-- Чекбокс -->
                             <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
-                                       :checked="selectedParts.length === @json(collect($parts)->count())"
+                                       :checked="selectedParts.length === @json(collect($nomenclatures)->count())"
                                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <label for="checkbox-all-search" class="sr-only">checkbox</label>
                             </div>
@@ -527,7 +527,7 @@
                         <div class="space-y-2 md:space-y-0 dark:bg-gray-900"
                              x-data="{
                                 filteredParts() {
-                                    return {{$parts}}.filter(part =>
+                                    return {{$nomenclatures}}.filter(part =>
                                         part.name.toLowerCase().includes(this.search.toLowerCase()) ||
                                         part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
                                         (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
@@ -537,18 +537,19 @@
                                 }
                             }"
                         >
-                            @foreach($parts as $part)
-                                @if($activeTab === $part->warehouse_id)
-                                    @if($part->nomenclatures->is_archived === 0)
+                            @foreach($nomenclatures as $nomenclature)
+                                @if($activeTab === $nomenclature->warehouse_id)
+                                    @dd($nomenclature)
+                                    @if(!empty($nomenclature->nomenclatures) && $nomenclature->nomenclatures->is_archived === 0)
                                         <div
                                             class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
                                             <!-- Checkbox -->
                                             <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
-                                                <input type="checkbox" value="{{ $part->id }}"
-                                                       @click="togglePartSelection({{ $part->id }})"
-                                                       :checked="selectedParts.includes({{ $part->id }})"
+                                                <input type="checkbox" value="{{ $nomenclature->id }}"
+                                                       @click="togglePartSelection({{ $nomenclature->id }})"
+                                                       :checked="selectedParts.includes({{ $nomenclature->id }})"
                                                        class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                <label for="checkbox-table-search-{{ $part->id }}"
+                                                <label for="checkbox-table-search-{{ $nomenclature->id }}"
                                                        class="sr-only">checkbox</label>
                                             </div>
                                             <div

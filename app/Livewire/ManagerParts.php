@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Category;
+use App\Models\Nomenclature;
 use App\Models\Part;
 use App\Models\Pn;
 use App\Models\Supplier;
@@ -62,7 +63,7 @@ class ManagerParts extends Component
     public $selectedPartPns = null;
     public $urlData, $activeTab = null;
 
-    public $parts;
+    public $parts, $nomenclatures;
     public $partId;
     public $newImage;
     public $showImageModal = false;
@@ -147,8 +148,8 @@ class ManagerParts extends Component
     {
         $managerId = auth()->id();
         return Warehouse::where('manager_id', $managerId)
-        ->with('parts') // Загружаем связанные запчасти
-        ->get();
+            ->with('parts') // Загружаем связанные запчасти
+            ->get();
     }
 
     public function getPartPns($partId)
@@ -193,6 +194,7 @@ class ManagerParts extends Component
         }
 
         $part = Part::find($partId);
+        dd($part);
 
         // Добавляем новый PN
         Pn::create([
@@ -218,24 +220,24 @@ class ManagerParts extends Component
         ]);
     }
 
-    public function getFilteredParts()
+    public function getFilteredNomenclatures()
     {
         // Начальный запрос для выборки запчастей, связанный с пользователем
         $userId = auth()->user()->id;
-        $partsQuery = Part::where(function ($query) use ($userId) {
+        $partsQuery = Nomenclature::where(function ($query) use ($userId) {
             // Учитываем запчасти, которые связаны с категорией текущего менеджера
             $query->whereHas('category', function ($query) use ($userId) {
                 $query->where('manager_id', $userId);
             });
         })
-        ->where(function ($query) use ($userId) {
-            // Учитываем запчасти без склада или запчасти, привязанные к складам текущего менеджера
-            $query->whereNull('warehouse_id')
-                  ->orWhereHas('warehouse', function ($query) use ($userId) {
-                      $query->where('manager_id', $userId);
-                  });
-        })
-        ->with('nomenclatures', 'category', 'brands', 'pns', 'warehouse');
+            /*->where(function ($query) use ($userId) {
+                // Учитываем запчасти без склада или запчасти, привязанные к складам текущего менеджера
+                $query->whereNull('warehouse_id')
+                    ->orWhereHas('warehouse', function ($query) use ($userId) {
+                        $query->where('manager_id', $userId);
+                    });
+            })*/
+            ->with('parts', 'category', 'brands', 'pns', 'warehouse');
 
         // Фильтр по категории
         if ($this->selectedCategory) {
@@ -270,7 +272,7 @@ class ManagerParts extends Component
 
     public function setPart($part)
     {
-        $this->selectedPartPns  = $part;
+        $this->selectedPartPns = $part;
     }
 
     public function updatedTransferQuantities($value, $partId)
@@ -316,7 +318,7 @@ class ManagerParts extends Component
             $technician = Technician::find($technicianId);
 
             if (!$technician) {
-                $this->dispatch('showNotification', 'error', 'Техник с ID'.$technicianId.' не найден');
+                $this->dispatch('showNotification', 'error', 'Техник с ID' . $technicianId . ' не найден');
                 continue; // Переходим к следующему технику
             }
 
@@ -325,7 +327,7 @@ class ManagerParts extends Component
                 $part = Part::find($partId);
 
                 if (!$part) {
-                    $this->dispatch('showNotification', 'error', 'Запчасть с ID'.$partId.' не найдена');
+                    $this->dispatch('showNotification', 'error', 'Запчасть с ID' . $partId . ' не найдена');
                     continue; // Переходим к следующей запчасти
                 }
 
@@ -386,7 +388,7 @@ class ManagerParts extends Component
         if (!empty($this->selectedParts)) {
             $parts = Part::whereIn('id', $this->selectedParts)->get();
 
-            foreach($parts as $part){
+            foreach ($parts as $part) {
                 if ($part->image && Storage::disk('public')->exists($part->image)) {
                     Storage::disk('public')->delete($part->image);
                 }
@@ -451,7 +453,7 @@ class ManagerParts extends Component
         if ($part) {
             $part->url = json_encode([
                 'text' => $supplier,
-                'url'  => $url
+                'url' => $url
             ]);
             $part->save();
         }
@@ -459,7 +461,7 @@ class ManagerParts extends Component
         // Отправляем обновленные данные обратно в AlpineJS
         $this->dispatch('urlUpdated', [
             'partId' => $partId,
-            'data'   => json_decode($part->url, true),
+            'data' => json_decode($part->url, true),
         ]);
     }
 
@@ -607,8 +609,7 @@ class ManagerParts extends Component
             Storage::disk('public')->delete($part->image);
         }
 
-        if ($this->newImage)
-        {
+        if ($this->newImage) {
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($this->newImage)
@@ -617,7 +618,7 @@ class ManagerParts extends Component
 
             $imagePath = '/images/parts/' . Auth::id();
             // Генерируем уникальное имя для файла
-            $fileName = $imagePath. '/' . uniqid() . '.webp';
+            $fileName = $imagePath . '/' . uniqid() . '.webp';
 
             // Сохраняем закодированное изображение в local storage
             Storage::disk('public')->put($fileName, $processedImage);
@@ -691,7 +692,7 @@ class ManagerParts extends Component
         $userId = Auth::id();
         $user = Auth::user();
         $this->technicians = Technician::where('manager_id', $userId)->where('is_active', true)->get();
-        $this->parts = $this->getFilteredParts();
+        $this->nomenclatures = $this->getFilteredNomenclatures();
 
         if ($user->inRole('technician')) {
             // Показываем только запчасти, связанные со складами техника
@@ -709,11 +710,18 @@ class ManagerParts extends Component
         $this->categories = $managerData->categories;
         $this->brands = $managerData->brands;
         $this->warehouses = $managerData->warehouses;
-        foreach ($this->warehouses as $warehouse) {
-            if($warehouse->is_default === 1){$this->activeTab = $warehouse->id;}
+
+        if (!empty($this->nomenclatures->warehouse)) {
+            foreach ($this->nomenclatures->warehouse as $warehouse) {
+                if ($warehouse->is_default === 1) {
+                    $this->activeTab = $warehouse->id;
+                }
+            }
         }
-        foreach ($this->parts as $part) {
-            $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
+        if (!empty($this->nomenclatures->parts)) {
+            foreach ($this->nomenclatures->parts as $part) {
+                $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
+            }
         }
 
         return view('livewire.manager.manager-parts', [

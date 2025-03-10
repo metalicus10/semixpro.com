@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->string('nn')->unique();
             $table->string('name');
-            $table->foreignId('category_id')->constrained()->onDelete('restrict');
-            $table->foreignId('brand_id')->nullable()->constrained()->onDelete('restrict');
-            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('restrict');
+            $table->foreignId('category_id')->constrained('categories')->onDelete('restrict');
+            $table->foreignId('brand_id')->nullable()->constrained('brands')->onDelete('restrict');
+            $table->foreignId('supplier_id')->nullable()->constrained('suppliers')->onDelete('restrict');
             $table->foreignId('manager_id')->constrained('users')->onDelete('restrict');
             $table->string('image')->nullable();
             $table->integer('version')->default(1);

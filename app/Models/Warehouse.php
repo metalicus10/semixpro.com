@@ -24,4 +24,9 @@ class Warehouse extends Model
     {
         return $this->belongsToMany(User::class, 'technician_warehouse');
     }
+
+    public function nomenclatures()
+    {
+        return $this->hasMany(Nomenclature::class, 'warehouse_id');
+    }
 }

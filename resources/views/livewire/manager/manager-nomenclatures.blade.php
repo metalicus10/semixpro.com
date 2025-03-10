@@ -163,7 +163,7 @@
                     <!-- Category -->
                     <div class="flex w-1/12 items-center px-2">
                         <span class="md:hidden font-semibold">Категория: </span>
-                        @if($nomenclature['category'])
+                        @if(!empty($nomenclature['category']))
                             {{$nomenclature['category']['name']}}
                         @else
                             ---
@@ -172,7 +172,7 @@
                     <!-- Supplier -->
                     <div class="flex w-2/12 items-center px-2">
                         <span class="md:hidden font-semibold">Поставщик: </span>
-                        @if($nomenclature['suppliers'])
+                        @if(!empty($nomenclature['suppliers']))
                             {{$nomenclature['suppliers']['name']}}
                         @else
                             ---
