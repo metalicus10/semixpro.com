@@ -52,6 +52,16 @@ class Nomenclature extends Model
         return $this->hasMany(Part::class);
     }
 
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function pns()
+    {
+        return $this->hasMany(Pn::class, 'part_id', 'id');
+    }
+
     public function archive()
     {
         $this->is_archived = true;

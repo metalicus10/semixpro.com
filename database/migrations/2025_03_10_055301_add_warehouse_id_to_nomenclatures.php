@@ -11,8 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('parts', function (Blueprint $table) {
-            $table->unsignedBigInteger('nomenclature_id')->nullable()->after('id')->references('id')->on('nomenclatures')->onDelete('cascade');
+        Schema::table('nomenclatures', function (Blueprint $table) {
+            $table->unsignedBigInteger('warehouse_id')->nullable()->after('category_id');
+            $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('set null');
         });
     }
 
@@ -21,9 +22,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('parts', function (Blueprint $table) {
-            //$table->dropForeign(['nomenclature_id']);
-            $table->dropColumn('nomenclature_id');
+        Schema::table('nomenclatures', function (Blueprint $table) {
+            //
         });
     }
 };

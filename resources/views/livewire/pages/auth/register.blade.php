@@ -53,7 +53,7 @@ new #[Layout('layouts.guest')] class extends Component {
         Warehouse::create([
             'manager_id' => $user->id,
             'name' => 'Main',
-            'is_default' => 1,
+            'is_default' => true,
         ]);
 
         Category::create([
