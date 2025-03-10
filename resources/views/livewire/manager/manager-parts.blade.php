@@ -37,7 +37,7 @@
         <div class="relative w-full"
              x-data="{
                     warehouses: @js($warehouses->values()->toArray()),
-                    partStock: @js(collect($nomenclatures)->pluck('quantity', 'id')->toArray()),
+                    partStock: @js(collect($parts)->pluck('quantity', 'id')->toArray()),
                     partQuantities: {},
                     parts: [],
                     tabs: [],
@@ -133,25 +133,25 @@
                             } else {
                                 this.selectedPartNames = [];
                             }
-                        },
-                        openSendModal() {
+                    },
+                    openSendModal() {
                             if (this.selectedParts.length > 0) {
                                 this.transferPartsModalOpen = true;
                                 console.log(this.transferPartsModalOpen);
                             }
-                        },
-                        closeModal() {
+                    },
+                    closeModal() {
                             this.transferPartsModalOpen = false;
-                        },
-                        openDeleteModal() {
+                    },
+                    openDeleteModal() {
                             if (this.selectedParts.length > 0) {
                                 this.fetchSelectedNames();
                                 this.deletePartsModalOpen = true;
                             }
-                        },
-                        closeDeleteModal() {
+                    },
+                    closeDeleteModal() {
                             this.deletePartsModalOpen = false;
-                        },
+                    },
              }"
              x-init="init(); checkScroll(); tabs = warehouses;"
              @resize.window="checkScroll"
@@ -539,17 +539,17 @@
                         >
                             @foreach($nomenclatures as $nomenclature)
                                 @if($activeTab === $nomenclature->warehouse_id)
-                                    @dd($nomenclature)
-                                    @if(!empty($nomenclature->nomenclatures) && $nomenclature->nomenclatures->is_archived === 0)
+                                    @foreach($nomenclature->parts as $part)
+                                    @if($nomenclature->is_archived === 0)
                                         <div
                                             class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
                                             <!-- Checkbox -->
                                             <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
-                                                <input type="checkbox" value="{{ $nomenclature->id }}"
-                                                       @click="togglePartSelection({{ $nomenclature->id }})"
-                                                       :checked="selectedParts.includes({{ $nomenclature->id }})"
+                                                <input type="checkbox" value="{{ $part->id }}"
+                                                       @click="togglePartSelection({{ $part->id }})"
+                                                       :checked="selectedParts.includes({{ $part->id }})"
                                                        class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                                                <label for="checkbox-table-search-{{ $nomenclature->id }}"
+                                                <label for="checkbox-table-search-{{ $part->id }}"
                                                        class="sr-only">checkbox</label>
                                             </div>
                                             <div
@@ -643,6 +643,7 @@
 
                                         </div>
                                     @endif
+                                    @endforeach
                                 @endif
                             @endforeach
                         </div>

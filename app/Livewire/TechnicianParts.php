@@ -34,7 +34,7 @@ class TechnicianParts extends Component
     {
         $technicianId = auth()->id();
 
-        // Получаем запчасти, назначенные напрямую технику
+        // Получаем запчасти, назначенные технику, и приводим к модели Part
         $manualParts = TechnicianPart::with([
             'part.category',
             'part.brands',
@@ -43,7 +43,13 @@ class TechnicianParts extends Component
         ])
             ->where('technician_id', $technicianId)
             ->where('quantity', '>', 0)
-            ->get();
+            ->get()
+            ->map(function ($tp) {
+                // Клонируем модель Part, чтобы не менять оригинальные данные
+                $part = clone $tp->part;
+                $part->quantity = $tp->quantity; // Подменяем quantity из TechnicianPart
+                return $part;
+            });
 
         // Получаем ID складов, доступных технику
         $warehouseIds = TechnicianWarehouse::where('technician_id', $technicianId)
@@ -58,9 +64,11 @@ class TechnicianParts extends Component
         ])
             ->whereIn('warehouse_id', $warehouseIds)
             ->get();
-
-        // Объединяем обе коллекции и убираем дубликаты по id запчасти
-        $this->allParts = $manualParts->merge($warehouseParts)->unique('id');
+        dd($warehouseParts );
+        // Объединяем обе коллекции, убираем дубликаты по id, приоритет - `manualParts`
+        $this->allParts = $manualParts->merge($warehouseParts)
+            ->unique('id') // Убираем дубликаты по id
+            ->values(); // Сбрасываем ключи
 
         // Разделяем запчасти на складские и без склада
         $this->partsWithWarehouse = $this->allParts->filter(fn($part) => isset($part->warehouse_id));

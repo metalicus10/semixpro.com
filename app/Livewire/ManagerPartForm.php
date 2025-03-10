@@ -180,7 +180,7 @@ class ManagerPartForm extends Component
                 'number' => $this->pn,
                 'part_id' => $part->id,
                 'manager_id' => auth()->id(),
-                'nomenclature_id ' => json_encode([$part->nomenclature_id]),
+                'nomenclature_id ' => $part->nomenclature_id,
             ]);
         }
 
