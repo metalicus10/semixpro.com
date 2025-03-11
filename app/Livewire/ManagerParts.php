@@ -308,7 +308,9 @@ class ManagerParts extends Component
 
     public function sendParts()
     {
-        if (empty($this->selectedTechnicians)) {
+        $technicianId = $this->selectedTechnician;
+
+        if (!$technicianId) {
             $this->dispatch('showNotification', 'error', 'Не выбраны техники для передачи запчастей');
             return;
         }

@@ -39,6 +39,7 @@
                     warehouses: @js($warehouses->values()->toArray()),
                     partStock: @js(collect($parts)->pluck('quantity', 'id')->toArray()),
                     partQuantities: {},
+                    transferAll: false,
                     parts: [],
                     tabs: [],
                     activeTab: @entangle('activeTab'),
@@ -117,6 +118,13 @@
                     cancelEdit() {
                         this.editingTabId = null;
                         this.newTabName = '';
+                    },
+                    setMaxQuantities() {
+                        if (this.transferAll) {
+                            this.selectedParts.forEach(partId => {
+                                this.partQuantities[partId] = this.partStock[partId] || 0;
+                            });
+                        }
                     },
                     limitQuantity(partId) {
                         if (this.partQuantities[partId] > this.partStock[partId]) {
@@ -312,8 +320,13 @@
                                 <!-- Содержимое модального окна -->
                                 <form wire:submit.prevent="sendParts">
                                     <div class="space-y-4">
+                                        <!-- Галочка "Передать все" -->
+                                        <label class="flex items-center mb-4">
+                                            <input type="checkbox" x-model="transferAll" @change="setMaxQuantities()" class="mr-2">
+                                            Передать все доступные запчасти
+                                        </label>
                                         <template x-for="partId in selectedParts" :key="partId">
-                                            <div class="mb-2 text-gray-900 dark:text-gray-400">
+                                            <div class="mb-2 text-gray-900 dark:text-gray-400" x-init="console.log(partStock);">
                                                 <label>Запчасть #<span x-text="partId"></span>
                                                     (Доступно: <span
                                                         x-text="partStock[partId]"></span>)</label>
@@ -332,39 +345,15 @@
                                             <label for="technician"
                                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
 
-                                            <!-- Поле выбора техников для передачи запчастей -->
-                                            <div @click="open = !open"
-                                                 class="w-full cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center text-gray-500">
-                                                    <span
-                                                        x-text="selectedTechnicians.length > 0 ? selectedTechnicians.length + ' selected' : 'Select Technicians'"></span>
-                                                <svg
-                                                    class="h-5 w-5 text-gray-400 transform transition-transform"
-                                                    :class="{'rotate-180': open}"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor">
-                                                    <path fill-rule="evenodd"
-                                                          d="M5.23 7.21a.75.75 0 011.06-.02L10 10.879l3.72-3.67a.75.75 0 111.04 1.08l-4.25 4.2a.75.75 0 01-1.06 0l-4.25-4.2a.75.75 0 01-.02-1.06z"
-                                                          clip-rule="evenodd"/>
-                                                </svg>
-                                            </div>
-
-                                            <!-- Выпадающий список с мульти-выбором техников -->
-                                            <div x-show="open" @click.away="open = false" x-transition
-                                                 class="absolute z-10 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
-                                                <ul id="technician" class="py-1 text-sm text-gray-700">
-                                                    @foreach ($technicians as $technician)
-                                                        <li class="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100">
-                                                            <input type="checkbox"
-                                                                   value="{{ $technician->id }}"
-                                                                   x-model="selectedTechnicians"
-                                                                   class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-                                                            <label
-                                                                class="ml-2 text-gray-700">{{ $technician->name }}</label>
-                                                        </li>
-                                                    @endforeach
-                                                </ul>
-                                            </div>
+                                            <select x-model="selectedTechnicians" @change="open = false"
+                                                class="w-full py-2 px-4 text-sm text-gray-700 bg-white border-none focus:outline-none">
+                                                <option value="" selected>Выберите техника</option>
+                                                @foreach ($technicians as $technician)
+                                                    <option value="{{ $technician->id }}" class="px-4 py-2 cursor-pointer hover:bg-gray-100">
+                                                            {{ $technician->name }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     </div>
 

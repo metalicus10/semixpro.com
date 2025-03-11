@@ -2,6 +2,8 @@
 
 namespace App\Livewire;
 
+use App\Models\Part;
+use App\Models\TechnicianPart;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseAssignmentLog;
@@ -16,6 +18,8 @@ class ManagerAssignWarehouses extends Component
     public $warehouses;
     public $selectedTechnician = null;
     public $selectedWarehouses = [];
+    public $partQuantities = [];
+    public $assignAll = false;
 
     protected $rules = [
         'selectedWarehouses' => 'array',
@@ -46,38 +50,85 @@ class ManagerAssignWarehouses extends Component
 
     public function assignWarehouses()
     {
-        $technician = User::find($this->selectedTechnician);
+        $technicianId = $this->selectedTechnician;
+        $technician = User::find($technicianId);
 
-        if ($technician) {
-            $oldWarehouses = $technician->warehouses()->pluck('id')->toArray();
+        if (!$technicianId) {
+            $this->dispatch('showNotification', 'error', 'Выберите техника перед назначением складов');
+            return;
+        }
 
-            //dd($this->selectedWarehouses);
-            foreach ($this->selectedWarehouses as $warehouseId) {
+        $oldWarehouses = $technician->warehouses()->pluck('id')->toArray();
 
-                    DB::table('technician_warehouse')->insert([
-                        'technician_id' => $technician->id,
-                        'warehouse_id' => $warehouseId,
-                    ]);
+        /*foreach ($this->selectedWarehouses as $warehouseId) {
 
-            }
+            DB::table('technician_warehouse')->insert([
+                'technician_id' => $technicianId->id,
+                'warehouse_id' => $warehouseId,
+            ]);
 
-            //$technician->warehouses()->sync($this->selectedWarehouses);
+        }*/
 
-            // Логируем новые назначения
-            foreach ($this->selectedWarehouses as $warehouseId) {
-                if (!in_array($warehouseId, $oldWarehouses)) {
-                    WarehouseAssignmentLog::create([
-                        'manager_id'   => auth()->id(),
-                        'technician_id' => $technician->id,
-                        'warehouse_id' => $warehouseId,
-                        'assigned_at'  => now(),
+        foreach ($this->selectedWarehouses as $warehouseId) {
+            $warehouseParts = Part::where('warehouse_id', $warehouseId)->get();
+
+            foreach ($warehouseParts as $part) {
+                $quantityToTransfer = $this->assignAll ? $part->quantity : ($this->partQuantities[$part->id] ?? 0);
+
+                if ($quantityToTransfer <= 0) continue;
+
+                // Проверяем, есть ли уже такая запчасть у техника
+                $technicianPart = TechnicianPart::where('technician_id', $technicianId)
+                    ->where('part_id', $part->id)
+                    ->first();
+
+                if ($technicianPart) {
+                    $technicianPart->increment('quantity', $quantityToTransfer);
+                } else {
+                    TechnicianPart::create([
+                        'technician_id' => $technicianId,
+                        'part_id' => $part->id,
+                        'quantity' => $quantityToTransfer,
+                        'manager_id' => auth()->id(),
                     ]);
                 }
-            }
 
-            $this->dispatch('showNotification', 'success', 'Склады успешно назначены технику');
-            $this->dispatch('updateAssignedParts');
+                $part->decrement('quantity', $quantityToTransfer);
+            }
         }
+
+        // Логируем новые назначения
+        foreach ($this->selectedWarehouses as $warehouseId) {
+            if (!in_array($warehouseId, $oldWarehouses)) {
+                WarehouseAssignmentLog::create([
+                    'manager_id' => auth()->id(),
+                    'technician_id' => $technicianId->id,
+                    'warehouse_id' => $warehouseId,
+                    'assigned_at' => now(),
+                ]);
+            }
+        }
+
+        $this->dispatch('showNotification', 'success', 'Склады успешно назначены технику');
+        $this->dispatch('updateAssignedParts');
+        $this->reset('selectedWarehouses', 'partQuantities', 'assignAll');
+    }
+
+    public function loadWarehouseParts($warehouseId)
+    {
+        $parts = Part::where('warehouse_id', $warehouseId)
+            ->select('id', 'name', 'quantity')
+            ->get();
+
+        // Проверка перед отправкой
+        if ($parts->isEmpty()) {
+            Log::info("Склад $warehouseId не имеет запчастей");
+        }
+
+        $this->dispatch('warehouse-parts-loaded', [
+            'warehouseId' => $warehouseId,
+            'parts' => $parts
+        ]);
     }
 
     public function render()
