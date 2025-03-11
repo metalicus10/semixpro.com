@@ -64,7 +64,7 @@ class TechnicianParts extends Component
         ])
             ->whereIn('warehouse_id', $warehouseIds)
             ->get();
-        dd($warehouseParts );
+
         // Объединяем обе коллекции, убираем дубликаты по id, приоритет - `manualParts`
         $this->allParts = $manualParts->merge($warehouseParts)
             ->unique('id') // Убираем дубликаты по id

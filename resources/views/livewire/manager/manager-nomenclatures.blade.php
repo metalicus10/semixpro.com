@@ -77,7 +77,7 @@
     <!-- Таблица с номенклатурами -->
     <div class="w-full overflow-x-auto">
         <!-- Заголовки -->
-        <div class="hidden md:flex columns-8 w-full content-start text-left text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b dark:bg-gray-700 dark:text-gray-400">
+        <div class="hidden md:grid grid-cols-8 w-full content-start text-left text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b dark:bg-gray-700 dark:text-gray-400">
             <div class="w-1/12 text-center p-2">
                 <input type="checkbox"
                        @click="toggleCheckAll($event)"
@@ -96,7 +96,7 @@
         <!-- Список номенклатур -->
         <div x-data>
             @foreach($nomenclatures as $nomenclature)
-                <div class="flex columns-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1">
+                <div class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1">
                     <!-- Checkbox -->
                     <div class="w-1/12 block sm:hidden absolute top-5 right-5 mb-2">
                         <input type="checkbox" :value="{{$nomenclature['id']}}"

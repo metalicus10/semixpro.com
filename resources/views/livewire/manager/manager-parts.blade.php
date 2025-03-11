@@ -466,7 +466,7 @@
                          class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                         <!-- Заголовок таблицы -->
                         <div
-                            class="hidden md:flex text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                            class="hidden md:flex flex-row text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
                             <!-- Чекбокс -->
                             <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
@@ -513,7 +513,7 @@
                         </div>
 
                         <!-- Строки таблицы -->
-                        <div class="space-y-2 md:space-y-0 dark:bg-gray-900"
+                        <div class="flex flex-row space-y-2 md:space-y-0 dark:bg-gray-900"
                              x-data="{
                                 filteredParts() {
                                     return {{$nomenclatures}}.filter(part =>

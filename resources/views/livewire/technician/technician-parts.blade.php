@@ -33,7 +33,7 @@
 
     <div x-data="{ activeTab: 'tab-1' }">
         <!-- Tabs -->
-        <div class="mb-4">
+        <div class="">
             <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
                 @php
                     $uniqueWarehouses = $partsWithWarehouse->pluck('warehouse')->unique();
@@ -42,16 +42,18 @@
                 <li class="me-2" role="presentation">
                     <button
                         @click="activeTab = 'tab-{{ $warehouse->id }}'"
-                        :class="activeTab === 'tab-'+ {{ $warehouse->id }} ? 'border-blue-500 text-blue-600' : 'hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'"
+                        :class="activeTab === 'tab-{{ $warehouse->id }}' ? 'border-blue-500 text-blue-600' : 'hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'"
                         class="inline-block p-4 border-b-2 rounded-t-lg"
                     >{{ !empty($warehouse) ? $warehouse->name : 'Без склада' }}</button>
                 </li>
                 @endforeach
             </ul>
         </div>
-        <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
+        <hr class="h-px mb-8 bg-gray-200 border-0 dark:bg-gray-700">
 
         <!-- Content -->
+        @foreach($allParts as $part)
+        <div x-show="activeTab === 'tab-{{ $part->warehouse_id }}'" x-cloak class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
             <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -66,9 +68,8 @@
                 </tr>
                 </thead>
                 <tbody>
-                @forelse($allParts as $part)
-                    @dd($allParts)
-                <div x-show="activeTab === 'tab-{{ $part->warehouse_id }}'" x-cloak class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+
+
                     <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
                         <td class="px-5 py-5">@if(!empty($part->sku)){{ $part->sku }}@else --- @endif</td>
                         <td class="px-5 py-5">@if(!empty($part->name)){{ $part->name }}@else --- @endif</td>
@@ -130,20 +131,11 @@
                             </button>
                         </td>
                     </tr>
-                </div>
-                @empty
-                    <div x-show="activeTab === 'tab-'+ {{ $part->warehouse_id }}" x-cloak class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        <tr>
-                            <td colspan="7"
-                                class="px-5 py-5 text-sm text-center bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                                No data
-                            </td>
-                        </tr>
-                    </div>
-                @endforelse
 
                 </tbody>
             </table>
         </div>
+        </div>
+        @endforeach
     </div>
 </div>

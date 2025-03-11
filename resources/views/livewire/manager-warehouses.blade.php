@@ -83,7 +83,7 @@
             <h3 class="font-semibold text-lg text-gray-600 dark:text-gray-300">Move Part</h3>
 
             <!-- Выпадающий список для выбора запчастей -->
-            <div class="relative">
+            <div class="relative z-10">
                 <div @click="open = !open"
                      class="cursor-pointer bg-white border border-gray-300 rounded-lg shadow-sm p-2 flex justify-between items-center">
                     <span
@@ -96,7 +96,7 @@
                     </svg>
                 </div>
                 <div x-show="open" @click.away="open = false" x-transition
-                     class="absolute z-50 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
+                     class="absolute z-20 mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-auto">
                     <div class="p-2">
                         <input type="text" x-model="search"
                                placeholder="Search parts..."

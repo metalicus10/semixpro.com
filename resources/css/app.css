@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "flowbite";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 p {
     @apply leading-[1.6];
 }

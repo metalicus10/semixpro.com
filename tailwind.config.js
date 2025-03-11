@@ -35,6 +35,9 @@ export default {
             },
             borderRadius: {
                 '4xl': '2rem',
+            },
+            flexBasis: {
+                "1/9": "11.11%",
             }
         },
         container: {

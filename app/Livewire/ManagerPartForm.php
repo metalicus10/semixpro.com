@@ -174,6 +174,8 @@ class ManagerPartForm extends Component
             'image' => $fileName,
         ]);
 
+        dd($part);
+
         if($this->pn != null)
         {
             Pn::create([
