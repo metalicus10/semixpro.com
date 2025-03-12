@@ -5,7 +5,7 @@
         isUploading: false,
         uploadProgress: 0
     }" class="flex gallery relative">
-    <div class="flex flex-row h-[80px]">
+    <div class="flex flex-row w-[120px] h-[80px]">
         @if ($nomenclature['image'])
             <img src="{{ asset('storage') . $nomenclature['image'] }}"
                  alt="{{ $nomenclature['name'] }}"

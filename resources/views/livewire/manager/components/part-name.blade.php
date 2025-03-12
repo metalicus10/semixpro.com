@@ -26,7 +26,7 @@
     <div class="flex items-center w-full">
         <!-- Оверлей -->
         <div x-show="editingName || deletePn || addingPn"
-             class="flex fixed inset-0 bg-black bg-opacity-50 z-30"
+             class="flex fixed inset-0 bg-black opacity-50 z-30"
              @click="editingName = false, deletePn = false, addingPn = false;"
              x-cloak>
         </div>
@@ -39,7 +39,7 @@
     </div>
     <!-- Режим редактирования Name -->
     <div x-show="editingName"
-         class="flex justify-center items-center w-full relative z-40"
+         class="flex justify-start items-center w-full absolute top-0 z-40"
          x-cloak>
         <input type="text" x-model="newName"
                class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"

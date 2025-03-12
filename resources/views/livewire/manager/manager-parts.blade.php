@@ -479,7 +479,7 @@
                             <div class="w-[100px] px-4 py-2">SKU</div>
 
                             <!-- Наименование (шире остальных) -->
-                            <div class="flex-[1] px-4 py-2">Наименование</div>
+                            <div class="flex-1 px-4 py-2">Наименование</div>
 
                             <!-- Quantity -->
                             <div class="w-[120px] px-4 py-2">Quantity</div>
@@ -491,10 +491,10 @@
                             <div class="w-[120px] px-4 py-2">Total</div>
 
                             <!-- Изображение -->
-                            <div class="w-[120px] px-4 py-2">Изображение</div>
+                            <div class="w-[150px] px-4 py-2">Изображение</div>
 
                             <!-- URL (шире остальных) -->
-                            <div class="flex-[1] flex px-4 py-2 items-center">
+                            <div class="flex-1 flex px-4 py-2 items-center">
                                 <span>URL</span>
                                 <div x-data="{ showTooltip: false }" @click="showTooltip = !showTooltip"
                                      @click.away="showTooltip = false"
@@ -513,7 +513,7 @@
                         </div>
 
                         <!-- Строки таблицы -->
-                        <div class="flex flex-row space-y-2 md:space-y-0 dark:bg-gray-900"
+                        <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900"
                              x-data="{
                                 filteredParts() {
                                     return {{$nomenclatures}}.filter(part =>
@@ -531,7 +531,7 @@
                                     @foreach($nomenclature->parts as $part)
                                     @if($nomenclature->is_archived === 0)
                                         <div
-                                            class="flex flex-col md:flex-row md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
+                                            class="flex flex-col md:flex-row w-full md:items-center bg-white border dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
                                             <!-- Checkbox -->
                                             <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
                                                 <input type="checkbox" value="{{ $part->id }}"
@@ -583,7 +583,7 @@
 
                                             <!-- PartImage -->
                                             <div
-                                                class="flex flex-row w-[120px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
+                                                class="flex flex-row w-[150px] h-[80px] justify-start space-x-3 px-4 py-2 md:mb-0">
                                                 <!-- Миниатюра -->
                                                 <span class="md:hidden font-semibold">Image:</span>
                                                 <livewire:components.part-image :part="$part"/>

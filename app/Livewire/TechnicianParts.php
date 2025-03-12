@@ -8,6 +8,7 @@ use App\Models\Part;
 use App\Models\TechnicianPart;
 use App\Models\TechnicianPartUsage;
 use App\Models\TechnicianWarehouse;
+use App\Models\Warehouse;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -18,7 +19,7 @@ class TechnicianParts extends Component
     public $brands = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
-    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts;
+    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts, $technicianWarehouses;
     public $selectedWarehouse = null;
     public $groupedParts = null;
 
@@ -35,25 +36,20 @@ class TechnicianParts extends Component
         $technicianId = auth()->id();
 
         // Получаем запчасти, назначенные технику, и приводим к модели Part
-        $manualParts = TechnicianPart::with([
+        $this->allParts = TechnicianPart::with([
             'part.category',
             'part.brands',
-            'part.nomenclatures',
-            'part.warehouse'
+            'nomenclatures',
+            'warehouse'
         ])
             ->where('technician_id', $technicianId)
             ->where('quantity', '>', 0)
-            ->get()
-            ->map(function ($tp) {
-                // Клонируем модель Part, чтобы не менять оригинальные данные
-                $part = clone $tp->part;
-                $part->quantity = $tp->quantity; // Подменяем quantity из TechnicianPart
-                return $part;
-            });
+            ->get();
 
         // Получаем ID складов, доступных технику
-        $warehouseIds = TechnicianWarehouse::where('technician_id', $technicianId)
+        $warehouseIds = TechnicianPart::where('technician_id', $technicianId)
             ->pluck('warehouse_id');
+        $this->technicianWarehouses = Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id');
 
         // Получаем запчасти со складов, к которым у техника есть доступ
         $warehouseParts = Part::with([
@@ -66,13 +62,13 @@ class TechnicianParts extends Component
             ->get();
 
         // Объединяем обе коллекции, убираем дубликаты по id, приоритет - `manualParts`
-        $this->allParts = $manualParts->merge($warehouseParts)
+        /*$this->allParts = $manualParts->merge($warehouseParts)
             ->unique('id') // Убираем дубликаты по id
             ->values(); // Сбрасываем ключи
 
         // Разделяем запчасти на складские и без склада
         $this->partsWithWarehouse = $this->allParts->filter(fn($part) => isset($part->warehouse_id));
-        $this->partsWithoutWarehouse = $this->allParts->filter(fn($part) => !isset($part->warehouse_id));
+        $this->partsWithoutWarehouse = $this->allParts->filter(fn($part) => !isset($part->warehouse_id));*/
     }
 
     public function loadCategoriesAndBrands()

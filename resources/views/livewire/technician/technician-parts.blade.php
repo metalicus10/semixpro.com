@@ -35,25 +35,22 @@
         <!-- Tabs -->
         <div class="">
             <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
-                @php
-                    $uniqueWarehouses = $partsWithWarehouse->pluck('warehouse')->unique();
-                @endphp
-                @foreach($uniqueWarehouses as $warehouse)
+                @foreach($this->technicianWarehouses as $key => $warehouse)
                 <li class="me-2" role="presentation">
                     <button
-                        @click="activeTab = 'tab-{{ $warehouse->id }}'"
-                        :class="activeTab === 'tab-{{ $warehouse->id }}' ? 'border-blue-500 text-blue-600' : 'hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'"
-                        class="inline-block p-4 border-b-2 rounded-t-lg"
-                    >{{ !empty($warehouse) ? $warehouse->name : 'Без склада' }}</button>
+                        @click="activeTab = 'tab-{{ $key }}'"
+                        :class="activeTab === 'tab-{{ $key }}' ? 'border-blue-500 text-blue-600' : 'hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'"
+                        class="inline-block p-4 border-b-4 rounded-t-lg"
+                    >{{ !empty($warehouse) ? $warehouse : 'Без склада' }}</button>
                 </li>
                 @endforeach
             </ul>
         </div>
-        <hr class="h-px mb-8 bg-gray-200 border-0 dark:bg-gray-700">
+        <hr class="h-[1px] mb-8 bg-gray-200 border-0 dark:bg-gray-700">
 
         <!-- Content -->
-        @foreach($allParts as $part)
-        <div x-show="activeTab === 'tab-{{ $part->warehouse_id }}'" x-cloak class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+        @foreach($allParts as $techPart)
+        <div x-show="activeTab === 'tab-{{ $techPart->warehouse_id }}'" x-cloak class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
             <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
@@ -69,50 +66,35 @@
                 </thead>
                 <tbody>
 
-
                     <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
-                        <td class="px-5 py-5">@if(!empty($part->sku)){{ $part->sku }}@else --- @endif</td>
-                        <td class="px-5 py-5">@if(!empty($part->name)){{ $part->name }}@else --- @endif</td>
-                        <td class="px-5 py-5">{{ $part->quantity }}</td>
-                        @if(!empty($part->part->nomenclatures->brands))
+                        <td class="px-5 py-5">@if(!empty($techPart->part->sku)){{ $techPart->part->sku }}@else --- @endif</td>
+                        <td class="px-5 py-5">@if(!empty($techPart->part->name)){{ $techPart->part->name }}@else --- @endif</td>
+                        <td class="px-5 py-5">{{ $techPart->quantity }}</td>
+                        @if(!empty($techPart->nomenclatures->brands))
                             <td class="px-5 py-5 truncate whitespace-nowrap overflow-hidden">
-                                @foreach($part->part->nomenclatures->brands as $brand)
+                                @foreach($techPart->nomenclatures->brands as $brand)
                                     <span>{{ $brand->name }}</span>
                                 @endforeach
                             </td>
                         @else
                             <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">---</td>
                         @endif
-                        @if(!empty($part->part->category) || !empty($part->category))
-                            <td class="px-5 py-5">@if(!empty($part->part->category->name)){{ $part->part->category->name }}@else {{ $part->category->name }} @endif</td>
+                        @if(!empty($techPart->part->category))
+                            <td class="px-5 py-5">@if(!empty($techPart->part->category->name)){{ $techPart->part->category->name }}@else {{ $techPart->category->name }} @endif</td>
                         @else
                             <td class="px-5 py-5">---</td>
                         @endif
                         <td class="px-5 py-5">
                             <div x-data class="gallery h-12 w-12">
-                                @if(!empty($part->part->image) || !empty($part->part->nomenclatures->image))
-                                    @if($part->part->image && $part->part->nomenclatures->image || $part->part->image && $part->part->nomenclatures->image=="")
-                                        <img src="{{ asset('storage') . $part->part->image }}" alt="{{ $part->part->name }}"
-                                             @click="$dispatch('lightbox', '{{ asset('storage') . $part->part->image }}')"
+                                @if(!empty($techPart->part->image) || !empty($techPart->nomenclatures->image))
+                                    @if($techPart->part->image && $techPart->nomenclatures->image || $techPart->part->image && $techPart->nomenclatures->image=="")
+                                        <img src="{{ asset('storage') . $techPart->part->image }}" alt="{{ $techPart->part->name }}"
+                                             @click="$dispatch('lightbox', '{{ asset('storage') . $techPart->part->image }}')"
                                              @click.stop
                                              class="object-cover rounded cursor-zoom-in">
-                                    @elseif($part->part->nomenclatures->image && $part->part->image=="")
-                                        <img src="{{ asset('storage') . $part->part->nomenclatures->image }}" alt="{{ $part->part->name }}"
-                                             @click="$dispatch('lightbox', '{{ asset('storage') . $part->part->nomenclatures->image }}')"
-                                             @click.stop
-                                             class="object-cover rounded cursor-zoom-in">
-                                    @else
-                                        <livewire:components.empty-image/>
-                                    @endif
-                                @else
-                                    @if($part->image && $part->nomenclatures->image || $part->image && $part->nomenclatures->image=="")
-                                        <img src="{{ asset('storage') . $part->image }}" alt="{{ $part->name }}"
-                                             @click="$dispatch('lightbox', '{{ asset('storage') . $part->image }}')"
-                                             @click.stop
-                                             class="object-cover rounded cursor-zoom-in">
-                                    @elseif($part->nomenclatures->image && $part->image=="")
-                                        <img src="{{ asset('storage') . $part->nomenclatures->image }}" alt="{{ $part->nomenclatures->name }}"
-                                             @click="$dispatch('lightbox', '{{ asset('storage') . $part->nomenclatures->image }}')"
+                                    @elseif($techPart->nomenclatures->image && $techPart->part->image=="")
+                                        <img src="{{ asset('storage') . $techPart->nomenclatures->image }}" alt="{{ $techPart->part->name }}"
+                                             @click="$dispatch('lightbox', '{{ asset('storage') . $techPart->nomenclatures->image }}')"
                                              @click.stop
                                              class="object-cover rounded cursor-zoom-in">
                                     @else
@@ -123,9 +105,9 @@
                         </td>
                         <td class="px-5 py-5">
                             <button
-                                wire:click="usePart({{ $part->id }})"
+                                wire:click="usePart({{ $techPart->id }})"
                                 class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                                @if($part->quantity == 0) disabled @endif
+                                @if($techPart->quantity == 0) disabled @endif
                             >
                                 Use
                             </button>

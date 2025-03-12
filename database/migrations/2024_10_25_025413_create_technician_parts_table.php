@@ -13,9 +13,12 @@ return new class extends Migration
     {
         Schema::create('technician_parts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('technician_id')->constrained('users'); // Техники ссылаются на пользователей
+            $table->foreignId('technician_id')->constrained('users');
             $table->foreignId('manager_id')->constrained('users');
-            $table->foreignId('part_id')->constrained('parts')->onDelete('cascade');
+            $table->foreignId('part_id')->constrained('parts');
+            $table->foreignId('nomenclature_id')->constrained('nomenclatures');
+            $table->foreignId('warehouse_id')->constrained('warehouses');
+
             $table->integer('quantity');
             $table->integer('total_transferred')->default(0);
             $table->timestamps();

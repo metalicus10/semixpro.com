@@ -25,4 +25,14 @@ class TechnicianPart extends Model
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
+
+    public function nomenclatures()
+    {
+        return $this->belongsTo(Nomenclature::class, 'nomenclature_id');
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
 }

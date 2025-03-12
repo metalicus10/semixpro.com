@@ -139,6 +139,14 @@ class ManagerPartForm extends Component
             return;
         }
 
+        $existingPart = Part::where('sku', $this->sku)->first();
+
+        if ($existingPart) {
+            // 🔹 Если запись найдена, отправляем уведомление об ошибке
+            $this->dispatch('showNotification', 'error', 'Запчасть с таким SKU уже существует');
+            return;
+        }
+
         $fileName = '';
         if ($this->image) {
 
@@ -163,18 +171,16 @@ class ManagerPartForm extends Component
         $part = Part::create([
             'name' => $this->partName,
             'sku' => $this->sku,
-            'nomenclature_id' => $this->selectedNomenclature,
-            'warehouse_id' => $this->selectedWarehouse,
-            'category_id' => $this->selectedCategory,
+            'nomenclature_id' => (int)$this->selectedNomenclature,
+            'warehouse_id' => (int)$this->selectedWarehouse,
+            'category_id' => (int)$this->selectedCategory,
             'manager_id' => Auth::id(),
-            'quantity' => $this->quantity,
+            'quantity' => (int)$this->quantity,
             'price' => $this->price,
             'url' => json_encode(['url' => $this->url, 'text' => $this->text ?? '']),
             'total' => $this->quantity * $this->price,
             'image' => $fileName,
         ]);
-
-        dd($part);
 
         if($this->pn != null)
         {

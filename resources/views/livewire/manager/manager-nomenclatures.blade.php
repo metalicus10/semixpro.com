@@ -106,7 +106,7 @@
                         <label for="checkbox-table-search-{{$nomenclature['id']}}"
                                class="sr-only">checkbox</label>
                     </div>
-                    <div class="hidden w-1/12 flex items-center justify-center sm:flex p-2">
+                    <div class="hidden w-1/12 md:flex items-center justify-center sm:flex p-2">
                         <input type="checkbox" :value="{{$nomenclature['id']}}"
                                @click="toggleNomenclatureSelection({{$nomenclature['id']}})"
                                :checked="selectedNomenclatures.includes({{$nomenclature['id']}})"

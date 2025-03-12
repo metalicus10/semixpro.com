@@ -62,14 +62,14 @@ class ManagerAssignWarehouses extends Component
 
         $oldWarehouses = $technician->warehouses()->pluck('id')->toArray();
 
-        /*foreach ($this->selectedWarehouses as $warehouseId) {
+        //foreach ($this->selectedWarehouses as $warehouseId) {
 
             DB::table('technician_warehouse')->insert([
-                'technician_id' => $technicianId->id,
-                'warehouse_id' => $warehouseId,
+                'technician_id' => $technicianId,
+                'warehouse_id' => $this->selectedWarehouse,
             ]);
 
-        }*/
+        //}
 
 
         $warehouseParts = Part::where('warehouse_id', $this->selectedWarehouse)->get();
@@ -94,6 +94,7 @@ class ManagerAssignWarehouses extends Component
                 TechnicianPart::create([
                     'technician_id' => $technicianId,
                     'part_id' => $part->id,
+                    'nomenclature_id' => $part->nomenclature_id,
                     'quantity' => $quantityToTransfer,
                     'total_transferred' => $quantityToTransfer,
                     'manager_id' => auth()->id(),
@@ -113,7 +114,7 @@ class ManagerAssignWarehouses extends Component
             ]);
         }
 
-        $this->dispatch('showNotification', 'success', 'Склады успешно назначены технику');
+        $this->dispatch('showNotification', 'success', 'Запчасти со склада успешно назначены технику');
         $this->dispatch('updateAssignedParts');
         $this->reset('selectedWarehouses', 'partQuantities', 'assignAll');
     }
@@ -121,7 +122,7 @@ class ManagerAssignWarehouses extends Component
     public function loadWarehouseParts($warehouseId)
     {
         if (!$warehouseId) return;
-
+        $this->warehouseParts = [];
         $warehouse = Warehouse::find($warehouseId);
         $parts = Part::where('warehouse_id', $warehouseId)
             ->select('id', 'name', 'quantity')
@@ -171,7 +172,7 @@ class ManagerAssignWarehouses extends Component
 
     public function openModal()
     {
-        if (!empty($this->selectedWarehouses)) {
+        if (!empty($this->selectedWarehouse)) {
             $this->modalOpen = true;
         }
     }
@@ -179,6 +180,8 @@ class ManagerAssignWarehouses extends Component
     public function closeModal()
     {
         $this->modalOpen = false;
+        $this->selectedWarehouse = null;
+        $this->warehouseParts = [];
     }
 
     public function render()

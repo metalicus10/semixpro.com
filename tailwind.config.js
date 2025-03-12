@@ -1,12 +1,16 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+    mode: 'jit',
+    safelist: [
+        { pattern: /w-\[.*?\]/ },
+        { pattern: /cursor-.*/ },
+    ],
     content: [
         "./resources/**/*.blade.php",
         "./resources/**/*.js",
         "./resources/**/*.vue",
         "./node_modules/flowbite/**/*.js",
     ],
-
     theme: {
         colors: {
             'red': '#db1313',

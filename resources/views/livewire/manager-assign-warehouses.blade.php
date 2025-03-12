@@ -60,16 +60,21 @@
             </div>
         </div>
 
-        <button wire:click="openModal()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
+        <button wire:click="openModal" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
             Назначить склады
         </button>
     @endif
 
     <!-- Модальное окно выбора количества запчастей -->
     @if($modalOpen)
-        <div class="fixed inset-0 flex items-center justify-center z-50 bg-gray-900 bg-opacity-50">
+        <div class="fixed inset-0 flex items-center justify-center z-50">
+            <!-- Оверлей -->
+            <div class="flex fixed inset-0 bg-black opacity-50 z-20"
+                 @click="editingName = false, deletePn = false, addingPn = false;"
+                 x-cloak>
+            </div>
             <div
-                class="relative bg-white rounded-lg shadow-lg dark:bg-gray-800 border border-solid dark:border-gray-200 rounded-lg max-w-7xl w-full p-6">
+                class="relative z-50 bg-white rounded-lg shadow-lg dark:bg-gray-800 border border-solid dark:border-gray-200 rounded-lg max-w-3xl w-full p-6">
                 <h2 class="dark:text-gray-300 text-lg font-semibold mb-4">Передача запчастей технику</h2>
 
                 <!-- Галочка "Присвоить все запчасти" -->
