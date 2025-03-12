@@ -27,7 +27,6 @@ class Part extends Model
         'manager_id',
         'total',
         'url',
-        'pns',
         'nomenclature_id',
     ];
 

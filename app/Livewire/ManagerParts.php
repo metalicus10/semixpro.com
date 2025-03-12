@@ -28,8 +28,15 @@ class ManagerParts extends Component
 {
     use WithFileUploads;
 
+    public $warehouses;      // Список складов (id, name, order)
+    public ?int $selectedWarehouseId = null; // ID активного склада
+    public ?int $selectedWarehouse = null;
+    public $parts;           // Запчасти по складам
+    public bool $isEditing = false;     // Флаг редактирования названия склада
+    public array $draggingTab = [];     // Перемещаемый склад (drag-and-drop)
+    public ?int $editingWarehouseId = null;
+
     public $brands;
-    public $warehouses;
     public $technicians;
     public $selectedTechnicians;
     public $categories;
@@ -63,7 +70,7 @@ class ManagerParts extends Component
     public $selectedPartPns = null;
     public $urlData, $activeTab = null;
 
-    public $parts, $nomenclatures;
+    public $nomenclatures;
     public $partId;
     public $newImage;
     public $showImageModal = false;
@@ -94,21 +101,106 @@ class ManagerParts extends Component
 
     public function mount()
     {
-        $this->parts = Part::where('manager_id', Auth::id())->get();
+        $this->loadWarehouses();
+        //$this->parts = Part::where('manager_id', Auth::id())->get();
         $this->loadSuppliers();
     }
 
-    /*public function loadUrlData()
+    /**
+     * Загружает список складов и их запчастей
+     */
+    public function loadWarehouses()
     {
-        $parts = Part::where('manager_id', Auth::id())->get();
-        foreach ($parts as $part) {
-            $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
-        }
-    }*/
+        $this->warehouses = Warehouse::where('manager_id', Auth::id())->orderBy('position')
+            ->get();
 
-    public function loadComponent()
+        // Устанавливаем активный склад по умолчанию (первый в списке)
+        if (empty($this->selectedWarehouseId) && !empty($this->warehouses)) {
+            $this->selectedWarehouseId = $this->warehouses[0]['id'];
+        }
+
+        // Загружаем запчасти по складам
+        $this->loadParts($this->selectedWarehouseId);
+    }
+
+    /**
+     * Выбирает активный склад
+     */
+    public function selectWarehouse(int $warehouseId)
     {
-        $this->loaded = true;
+        $this->selectedWarehouseId = $warehouseId;
+        $this->loadParts($warehouseId);
+    }
+
+    /**
+     * Загружает запчасти для указанного склада
+     */
+    public function loadParts(int $warehouseId)
+    {
+        $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)
+            ->get();
+    }
+
+    /**
+     * Переименовываем склад
+     */
+    public function updateWarehouseName(int $warehouseId, string $newName)
+    {
+        Warehouse::where('manager_id', Auth::id())->where('id', $warehouseId)->update(['name' => $newName]);
+
+        // Обновляем локальный список
+        foreach ($this->warehouses as &$warehouse) {
+            if ($warehouse['id'] == $warehouseId) {
+                $warehouse['name'] = $newName;
+                break;
+            }
+        }
+    }
+
+    /**
+     * Запоминаем склад, который начали перетаскивать
+     */
+    public function startDragging(int $warehouseId, int $index)
+    {
+        $this->draggingTab = ['id' => $warehouseId, 'index' => $index];
+    }
+
+    /**
+     * Перемещаем склад в новый порядок
+     */
+    public function reorderWarehouses(int $warehouseId, int $newIndex)
+    {
+        // Получаем текущий порядок складов
+        $orderedWarehouses = collect($this->warehouses)->sortBy('position')->values();
+
+        // Обновляем порядок складов
+        foreach ($orderedWarehouses as $index => $warehouse) {
+            if ($warehouse['id'] == $warehouseId) {
+                $orderedWarehouses[$index]['position'] = $newIndex;
+            } else {
+                $orderedWarehouses[$index]['position'] = $index;
+            }
+        }
+
+        // Сохраняем изменения в БД
+        DB::transaction(function () use ($orderedWarehouses) {
+            foreach ($orderedWarehouses as $warehouse) {
+                Warehouse::where('id', $warehouse['id'])->update(['position' => $warehouse['position']]);
+            }
+        });
+
+        // Обновляем локальный список складов
+        $this->warehouses = $orderedWarehouses->toArray();
+    }
+
+    public function startEditingWarehouse(int $warehouseId)
+    {
+        $this->editingWarehouseId = $warehouseId;
+    }
+
+    public function stopEditingWarehouse()
+    {
+        $this->editingWarehouseId = null;
     }
 
     public function loadSuppliers()
@@ -691,7 +783,7 @@ class ManagerParts extends Component
 
     public function render()
     {
-        $userId = Auth::id();
+        /*$userId = Auth::id();
         $user = Auth::user();
         $this->technicians = Technician::where('manager_id', $userId)->where('is_active', true)->get();
         $this->nomenclatures = $this->getFilteredNomenclatures();
@@ -724,13 +816,9 @@ class ManagerParts extends Component
             foreach ($this->nomenclatures->parts as $part) {
                 $this->urlData[$part->id] = json_decode($part->url, true) ?? [];
             }
-        }
+        }*/
 
-        return view('livewire.manager.manager-parts', [
-            'parts' => $this->parts, 'categories' => $this->categories, 'technicians' => $this->technicians, 'activeTab' => $this->activeTab,
-            'isPriceHistoryModalOpen' => $this->isPriceHistoryModalOpen, 'urlData' => $this->urlData,
-            'selectedPartId' => $this->selectedPartId, 'warehouses' => $this->warehouses, 'paginatedParts' => Part::paginate(30),
-        ])
+        return view('livewire.manager.manager-parts')
             ->layout('layouts.app');
     }
 }

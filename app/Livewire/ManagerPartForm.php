@@ -22,14 +22,13 @@ class ManagerPartForm extends Component
 {
     use WithFileUploads;
 
-    public $categoryName;
+    public $categoryName, $warehouses;
     public $partName;
     public $sku;
     public $pn;
     public $brand;
     public $nomenclatures;
     public $brands;
-    public $warehouses;
     public $categories;
     public $quantity;
     public $image;
@@ -142,7 +141,7 @@ class ManagerPartForm extends Component
         $existingPart = Part::where('sku', $this->sku)->first();
 
         if ($existingPart) {
-            // 🔹 Если запись найдена, отправляем уведомление об ошибке
+            //Если запись найдена, отправляем уведомление об ошибке
             $this->dispatch('showNotification', 'error', 'Запчасть с таким SKU уже существует');
             return;
         }
@@ -156,7 +155,7 @@ class ManagerPartForm extends Component
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($tempImg)
-            ->resize(1024, 768)
+            ->resize('100%', 768)
             ->toWebp(quality: 60);
 
             $imagePath = '/images/parts/' . Auth::id();
@@ -184,11 +183,11 @@ class ManagerPartForm extends Component
 
         if($this->pn != null)
         {
-            Pn::create([
+            $pn = Pn::create([
                 'number' => $this->pn,
                 'part_id' => $part->id,
                 'manager_id' => auth()->id(),
-                'nomenclature_id ' => $part->nomenclature_id,
+                'nomenclature_id' => $part->nomenclature_id,
             ]);
         }
 
