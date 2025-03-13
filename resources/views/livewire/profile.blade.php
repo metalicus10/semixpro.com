@@ -1,4 +1,4 @@
-<div>
+<div x-cloak>
     <x-dropdown-link :href="route('profile')" wire:navigate>
         {{ __('Profile') }}
     </x-dropdown-link>

@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Nomenclature;
 use App\Models\Part;
@@ -97,14 +98,22 @@ class ManagerParts extends Component
         'defaultWarehouseUpdated' => 'refreshComponent',
         'setPart',
         'urlChanged' => '$refresh',
+        'warehouseTabsUpdated' => 'loadWarehouses',
     ];
 
     public function mount()
     {
         $this->loadWarehouses();
-        //$this->parts = Part::where('manager_id', Auth::id())->get();
+        $this->loadCategories();
+        $this->loadBrands();
         $this->loadSuppliers();
+        $this->loadTechnicians();
     }
+
+    /*public function refreshWarehouses()
+    {
+        $this->warehouses = Warehouse::all(); // Обновляем список складов
+    }*/
 
     /**
      * Загружает список складов и их запчастей
@@ -121,6 +130,21 @@ class ManagerParts extends Component
 
         // Загружаем запчасти по складам
         $this->loadParts($this->selectedWarehouseId);
+    }
+
+    public function loadCategories()
+    {
+        $this->categories = Category::where('manager_id', Auth::id())->get();
+    }
+
+    public function loadBrands()
+    {
+        $this->brands = Brand::where('manager_id', Auth::id())->get();
+    }
+
+    public function loadTechnicians()
+    {
+        $this->technicians = Technician::where('manager_id', Auth::id())->get();
     }
 
     /**

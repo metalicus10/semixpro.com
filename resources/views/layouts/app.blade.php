@@ -87,7 +87,7 @@
                     </button>
 
                     <!-- Выпадающее меню пользователя -->
-                    <div x-show="open" @click.away="open = false" x-transition
+                    <div x-show="open" @click.away="open = false" x-transition x-cloak
                         class="z-50 absolute top-12 right-0 my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600">
                         <!-- Информация о пользователе -->
                         <div class="px-4 py-3">
@@ -135,7 +135,7 @@
                 </li>-->
                 @if(auth()->user()->hasAccess('manage_nomenclature'))
                     <li>
-                        <a x-on:click="setTab('nomenclatures'), showSidebar = false"
+                        <a @click="currentTab = 'nomenclatures'"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -150,7 +150,7 @@
                 @endif
                 @if(auth()->user()->hasAccess('manage_warehouses'))
                     <li>
-                        <a x-on:click="setTab('warehouses'), showSidebar = false"
+                        <a @click="currentTab = 'warehouses'"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -165,7 +165,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="setTab('categories'), showSidebar = false"
+                        <a @click="currentTab = 'categories', showSidebar = false"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -179,7 +179,7 @@
                     </li>
                 @endif
                 <li>
-                    <a x-on:click="setTab('parts'), showSidebar = false"
+                    <a @click="currentTab = 'parts'"
                        class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                         <svg
                             class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -193,7 +193,7 @@
                 </li>
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="setTab('brands'), showSidebar = false"
+                        <a @click="currentTab = 'brands'"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -208,7 +208,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="setTab('suppliers'), showSidebar = false"
+                        <a @click="currentTab = 'suppliers'"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -223,7 +223,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="setTab('statistics'), showSidebar = false"
+                        <a @click="currentTab = 'statistics'"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -238,7 +238,7 @@
                 @endif
                 @if(Auth::user()->inRole('manager'))
                     <li>
-                        <a x-on:click="setTab('technicians'), showSidebar = false"
+                        <a @click="currentTab = 'technicians'"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"

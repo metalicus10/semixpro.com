@@ -31,7 +31,7 @@
                             wire:click="setDefaultWarehouse({{ $warehouse->id }})"
                         >
                             <!-- Название склада -->
-                            <span>{{ $warehouse->name }}</span>
+                            <span class="break-all pr-4">{{ $warehouse->name }}</span>
 
                             <!-- Кнопка удаления -->
                             @if($warehouse->name !== 'No warehouse')

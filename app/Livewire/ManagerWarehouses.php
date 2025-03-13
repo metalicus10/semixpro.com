@@ -18,7 +18,7 @@ class ManagerWarehouses extends Component
     public $parts;
     public $errorMessage;
 
-    protected $listeners = ['defaultWarehouseUpdated' => 'render', 'partUpdated' => 'render'];
+    protected $listeners = ['defaultWarehouseUpdated' => 'render', 'partUpdated' => 'render', 'warehouseListUpdated' => '$refresh'];
 
     protected $rules = [
         'newWarehouseName' => 'required|string|max:255',
@@ -62,6 +62,9 @@ class ManagerWarehouses extends Component
             'manager_id' => Auth::id(),
             'name' => $this->newWarehouseName,
         ]);
+
+        $this->dispatch('warehouseListUpdated');
+        $this->dispatch('warehouseTabsUpdated');
 
         // Сброс имени склада и сообщения об ошибке
         $this->dispatch('showNotification', 'success', 'Warehouse '.$this->newWarehouseName.' created successfully');
