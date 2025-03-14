@@ -2,6 +2,11 @@
     $isEditing = fn($id) => $editingWarehouseId === $id;
 @endphp
 <div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+    <!-- Индикатор загрузки -->
+    <div wire:loading.flex wire:target="switchTab" class="absolute inset-0 flex items-center justify-center bg-gray-900 opacity-50 z-50">
+        <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-orange-500"></div>
+    </div>
+
     <!-- Заголовок страницы и фильтры -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
@@ -49,10 +54,12 @@
                 activeTab: @entangle('selectedWarehouseId'),
                 selectedParts: @entangle('selectedParts'),
                 selectedPartNames: @entangle('selectedPartNames'),
+                parts: @entangle('parts'),
 
                 init() {
                     this.scrollContainer = this.$refs.tabContainer;
                     this.checkScroll();
+                    $watch('currentTab', () => search = '');
                 },
 
                 updateTabs(tabs) {
@@ -83,18 +90,15 @@
                     this.canScrollRight = scrollable.scrollLeft + scrollable.clientWidth < scrollable.scrollWidth;
                 },
 
-                startEdit(tab) {
-                    this.editingTabId = tab.id;
-                    this.newTabName = tab.name;
+                startEdit(tabId, tabName) {
+                    this.editingTabId = tabId;
+                    this.newTabName = tabName;
                 },
 
-                saveEdit(tab) {
+                saveEdit(tabId, tabName) {
                     if (this.newTabName.trim() === '') return;
-                    tab.name = this.newTabName;
                     this.editingTabId = null;
-
-                    // Сохранение нового имени на сервере
-                    $wire.updateWarehouseName(tab.id, this.newTabName);
+                    $wire.updateWarehouseName(tabId, this.newTabName);
                 },
 
                 cancelEdit() {
@@ -130,6 +134,17 @@
                         this.selectedPartNames = [];
                     }
                 },
+
+                updateActiveTab(tabId){
+                    this.activeTab = tabId;
+                    search = '';
+                },
+
+                searchValues: {},
+                currentTab: @entangle('selectedWarehouseId'),
+                get search() { return this.searchValues[this.currentTab] || ''; },
+                set search(value) { this.searchValues[this.currentTab] = value; }
+
             }" x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';" @resize.window="checkScroll"
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
              class="relative w-full"
@@ -152,29 +167,33 @@
                                 @drop="reorderWarehouses($event.dataTransfer.getData('warehouseId'), '{{ $warehouse['id'] }}')"
                                 @dragover.prevent>
 
-                                <!-- Режим редактирования -->
-                                <div x-show="editingTabId === {{ $warehouse['id'] }}" class="relative">
-                                    <input type="text"
-                                           x-model="newTabName"
-                                           @keydown.enter.prevent="saveEdit({{ $warehouse }})"
-                                           @keydown.escape="cancelEdit"
-                                           class="block w-full text-start p-2 border rounded text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring focus:ring-blue-500"
-                                    />
-                                    <div class="absolute top-2 right-2">
-                                        <button @click="saveEdit({{ $warehouse }})"
-                                                class="bg-green-500 text-white p-1 rounded hover:bg-green-600">✓
-                                        </button>
-                                        <button @click="cancelEdit"
-                                                class="bg-red-500 text-white p-1 rounded hover:bg-red-600">✗
-                                        </button>
+                                <div x-data="{ isEditing: false }">
+                                    <!-- Режим редактирования -->
+                                    <div x-show="editingTabId === {{ $warehouse['id'] }}" class="relative">
+                                        <input type="text"
+                                               x-model="newTabName"
+                                               @keydown.enter.prevent="isEditing = false; saveEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
+                                               @keydown.escape="isEditing = false; cancelEdit();"
+                                               @focus="isEditing = true"
+                                               @blur="isEditing = false"
+                                               class="block w-full text-start p-2 border rounded text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring focus:ring-blue-500"
+                                        />
+                                        <div class="absolute top-2 right-2">
+                                            <button @click="isEditing = false; saveEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
+                                                    class="bg-green-500 text-white p-1 rounded hover:bg-green-600">✓
+                                            </button>
+                                            <button @click="isEditing = false; cancelEdit()"
+                                                    class="bg-red-500 text-white p-1 rounded hover:bg-red-600">✗
+                                            </button>
+                                        </div>
                                     </div>
+                                    <a href="#" @click.prevent.debounce.500ms="if (!isEditing) { activeTab = {{ $warehouse['id'] }}, updateActiveTab({{ $warehouse['id'] }}) }"
+                                       x-show="editingTabId !== {{ $warehouse['id'] }}"
+                                       @dblclick="isEditing = true; startEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
+                                       :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-[#ff8144] dark:text-orange-500' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                                       class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
+                                    >{{ $warehouse['name'] }}</a>
                                 </div>
-                                <a href="#" @click.prevent.debounce.300ms="activeTab = {{ $warehouse['id'] }}" wire:click="activeTab = {{ $warehouse['id'] }}"
-                                   x-show="editingTabId !== {{ $warehouse['id'] }}"
-                                   @dblclick="startEdit({{ $warehouse }})"
-                                   :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-[#ff8144] dark:text-orange-500' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
-                                   class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
-                                >{{ $warehouse['name'] }}</a>
                             </li>
                         @endforeach
                     </ul>
@@ -222,7 +241,6 @@
                             </button>
                         </div>
                         <!-- Модальное окно перемещения запчастей технику -->
-
                             <div x-show="transferPartsModalOpen" x-cloak
                                  x-data="{
                                     open: false,
@@ -370,20 +388,20 @@
                     </div>
                     <h2 class="text-lg font-semibold mb-2">Запчасти
                         склада {{ $warehouses->where('id', $selectedWarehouseId)->first()?->name }}</h2>
-                    <table class="w-full border">
+                    <table class="w-full border" x-init="console.log(activeTab);">
                         <thead>
-                        <tr class="border-b">
-                            <th class="p-2">Название</th>
-                            <th class="p-2">Количество</th>
-                        </tr>
+                            <tr class="border-b">
+                                <th class="p-2">Название</th>
+                                <th class="p-2">Количество</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        @foreach ($parts as $part)
+                        <template x-for="part in parts" :key="part.id">
                             <tr class="border-b">
-                                <td class="p-2">{{ $part->name }}</td>
-                                <td class="p-2">{{ $part->quantity }}</td>
+                                <td class="p-2" x-text="part.name"></td>
+                                <td class="p-2" x-text="part.quantity"></td>
                             </tr>
-                        @endforeach
+                        </template>
                         </tbody>
                     </table>
                 @else

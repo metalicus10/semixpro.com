@@ -115,6 +115,12 @@ class ManagerParts extends Component
         $this->warehouses = Warehouse::all(); // Обновляем список складов
     }*/
 
+    public function switchTab($tab)
+    {
+        // Просто заглушка, чтобы Livewire понимал, что выполняется обновление
+        $this->dispatch('tabSwitched', $tab);
+    }
+
     /**
      * Загружает список складов и их запчастей
      */

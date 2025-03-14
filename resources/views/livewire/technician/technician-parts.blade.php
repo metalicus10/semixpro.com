@@ -1,4 +1,8 @@
 <div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+    <!-- Индикатор загрузки -->
+    <div wire:loading.flex class="absolute inset-0 flex items-center justify-center bg-gray-900 opacity-50 z-50">
+        <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-orange-500"></div>
+    </div>
 
     <!-- Заголовок страницы -->
     <div class="flex justify-between items-center mb-6">
