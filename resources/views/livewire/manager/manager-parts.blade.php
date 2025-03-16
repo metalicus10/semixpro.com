@@ -141,9 +141,9 @@
                 },
 
                 searchValues: {},
-                currentTab: @entangle('selectedWarehouseId'),
-                get search() { return this.searchValues[this.currentTab] || ''; },
-                set search(value) { this.searchValues[this.currentTab] = value; }
+
+                get search() { return this.searchValues[this.activeTab] || ''; },
+                set search(value) { this.searchValues[this.activeTab] = value; }
 
             }" x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';" @resize.window="checkScroll"
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
@@ -388,22 +388,226 @@
                     </div>
                     <h2 class="text-lg font-semibold mb-2">Запчасти
                         склада {{ $warehouses->where('id', $selectedWarehouseId)->first()?->name }}</h2>
-                    <table class="w-full border" x-init="console.log(activeTab);">
-                        <thead>
-                            <tr class="border-b">
-                                <th class="p-2">Название</th>
-                                <th class="p-2">Количество</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+                    <div id="parts-table"
+                         class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
+                        <!-- Заголовок таблицы -->
+                        <div
+                            class="hidden md:flex flex-row text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                            <!-- Чекбокс -->
+                            <div class="flex items-center justify-center px-4 py-2">
+                                <input type="checkbox" @click="toggleCheckAll($event)"
+                                       :checked="selectedParts.length === @json(collect($nomenclatures)->count())"
+                                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                <label for="checkbox-all-search" class="sr-only">checkbox</label>
+                            </div>
+
+                            <!-- SKU -->
+                            <div class="w-[100px] px-4 py-2">SKU</div>
+
+                            <!-- Наименование -->
+                            <div class="flex-1 px-4 py-2">Наименование</div>
+
+                            <!-- Quantity -->
+                            <div class="w-[120px] px-4 py-2">Quantity</div>
+
+                            <!-- Price -->
+                            <div class="w-[120px] px-4 py-2">Price</div>
+
+                            <!-- Total -->
+                            <div class="w-[120px] px-4 py-2">Total</div>
+
+                            <!-- Изображение -->
+                            <div class="w-[150px] px-4 py-2">Изображение</div>
+
+                            <!-- URL (шире остальных) -->
+                            <div class="flex-1 flex px-4 py-2 items-center">
+                                <span>URL</span>
+                                <div x-data="{ showTooltip: false }" @click="showTooltip = !showTooltip"
+                                     @click.away="showTooltip = false"
+                                     class="relative ml-2 w-5 h-5 bg-blue-500 text-white text-xs font-bold lowercase rounded-full cursor-pointer flex items-center justify-center">
+                                    i
+                                    <!-- Поповер -->
+                                    <div x-show="showTooltip" x-transition
+                                         class="absolute z-50 top-full mt-1 w-max px-2 py-1 text-xs bg-blue-500 lowercase text-white rounded shadow-lg">
+                                        2-click for edit
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Действия -->
+                            <div class="w-[200px] px-4 py-2">Действия</div>
+                        </div>
+                        <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900">
                         <template x-for="part in parts" :key="part.id">
-                            <tr class="border-b">
-                                <td class="p-2" x-text="part.name"></td>
-                                <td class="p-2" x-text="part.quantity"></td>
-                            </tr>
+                            <template x-if="part.nomenclatures.is_archived == false" x-init="console.log(part);">
+                                <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
+                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
+                                    <!-- Checkbox -->
+                                    <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
+                                        <input type="checkbox" :value="part.id"
+                                               @click="togglePartSelection(part.id)"
+                                               :checked="selectedParts.includes(part.id)"
+                                               class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                        <label for="checkbox-table-search-part.id"
+                                               class="sr-only">checkbox</label>
+                                    </div>
+                                    <div
+                                        class="w-[48px] flex items-center justify-center hidden sm:block mb-0 px-4 py-2"
+                                        wire:ignore>
+                                        <input type="checkbox" :value="part.id"
+                                               @click="togglePartSelection(part.id)"
+                                               :checked="selectedParts.includes(part.id)"
+                                               class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                        <label for="checkbox-table-search-part.id"
+                                               class="sr-only">checkbox</label>
+                                    </div>
+                                    <!-- SKU -->
+                                    <div class="w-[100px] px-4 py-2 mb-2 md:mb-0">
+                                        <span class="md:hidden font-semibold">SKU:</span>
+                                        <span x-text="part.sku"></span>
+                                    </div>
+                                    <!-- Name -->
+                                    <div x-data="{
+                                        showEditMenu: false, editingName: false,
+                                        newName: part.name, originalName: part.name,
+                                        errorMessage: '',
+                                        showPnPopover: false, deletePn: false, showingPn: false,
+                                        searchPn: '', newPn: '', addingPn: false,
+                                        //availablePns: Object.keys(@entangle('availablePns') || {}).length ? @entangle('availablePns') : {},
+                                        //selectedPns: @entangle('selectedPns'),
+                                    }"
+                                         @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
+                                         class="flex-1 flex flex-row px-4 py-2 md:mb-0 cursor-pointer relative"
+                                    >
+                                        <!-- PN -->
+                                        <span class="flex items-center md:hidden font-semibold">Name:</span>
+
+                                        <!-- Название с подменю -->
+                                        <div class="flex items-center w-full">
+                                            <!-- Оверлей -->
+                                            <div x-show="editingName || deletePn || addingPn"
+                                                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                                 @click="editingName = false, deletePn = false, addingPn = false;"
+                                                 x-cloak>
+                                            </div>
+
+                                            <!-- Основное отображение -->
+                                            <span x-show="!editingName" @click="editingName = true"
+                                                  class="flex z-35 items-center cursor-pointer hover:underline min-h-[30px]">
+                                                <span x-text="part.name"></span>
+                                            </span>
+                                        </div>
+                                        <!-- Режим редактирования Name -->
+                                        <div x-show="editingName"
+                                             class="flex justify-start items-center w-full absolute top-0 z-40"
+                                             x-cloak>
+                                            <input type="text" x-model="newName"
+                                                   class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2"
+                                                   @keydown.enter="if (newName !== originalName) { $wire.updateName(part.id, newName); originalName = newName; } editingName = false;"
+                                                   @keydown.escape="editingName = false">
+                                            <button
+                                                @click="if (newName !== originalName) { $wire.updateName(part.id, newName); originalName = newName; } editingName = false;"
+                                                class="bg-green-500 text-white px-2 py-1 rounded-full w-[28px]">
+                                                ✓
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quantity -->
+                                    <div class="w-[120px] px-4 py-2 md:mb-0"
+                                         @part-updated="event => {
+                                                         if (event.detail.partId === part.id) {
+                                                            $el.textContent = event.detail.newQuantity;
+                                                         }
+                                                     }"
+                                    >
+                                        <span class="md:hidden font-semibold">Quantity:</span>
+                                        <span x-text="part.quantity"></span>
+                                    </div>
+                                    <div
+                                        class="flex flex-row w-[120px] px-4 py-2 md:mb-0 cursor-pointer relative parent-container"
+                                        x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
+
+                                        <!-- Кликабельная ссылка с ценой запчасти -->
+                                        <span class="md:hidden font-semibold">Price:</span>
+                                        <a id="price-item-part.id"
+                                           @click="
+                                                $nextTick(() => {
+                                                    editing = false; // Сбрасываем редактирование при открытии
+                                                    newPrice = part.price; // Устанавливаем текущее значение
+                                                    const parent = $el.closest('.parent-container');
+                                                    const elementOffsetLeft = $el.offsetLeft;
+                                                    const elementOffsetTop = $el.offsetTop;
+
+                                                    popoverX = elementOffsetLeft / parent.offsetWidth;
+                                                    popoverY = elementOffsetTop / parent.offsetHeight;
+
+                                                    showPopover = true;
+                                                });
+                                           "
+                                           class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
+                                            <span x-text="part.price">$</span>
+                                        </a>
+
+                                        <!-- Поповер с динамическим позиционированием -->
+                                        <div x-show="showPopover" x-transition role="tooltip"
+                                             class="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-56 p-1"
+                                             :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                             @click.away="showPopover = false">
+
+                                            <!-- Оверлей -->
+                                            <div x-show="editing"
+                                                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                                 @click="editing = false"
+                                                 x-cloak>
+                                            </div>
+
+                                            <div class="flex flex-row w-full">
+                                                <!-- Кнопка Edit -->
+                                                <button x-show="!editing"
+                                                        @click.prevent="editing = true; $nextTick(() => { $refs.priceInput.focus() })"
+                                                        class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                    Edit
+                                                </button>
+
+                                                <!-- Поле ввода новой цены и кнопка подтверждения -->
+                                                <div x-show="editing"
+                                                     class="flex justify-center items-center z-40"
+                                                     x-transition>
+                                                    <input type="number" x-ref="priceInput"
+                                                           x-model="newPrice"
+                                                           class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2 focus:outline-none focus:outline-offset-[0px] focus:outline-violet-900"
+                                                           placeholder="part.price">
+                                                    <button @click="
+                                                            if (newPrice !== 'part.price') {
+                                                                $wire.set('newPrice', newPrice)
+                                                                    .then(() => {
+                                                                        $wire.updatePartPrice(part.id, newPrice);
+                                                                    });
+                                                            }
+                                                            showPopover = false;
+                                                            editing = false;
+                                                        "
+                                                            class="bg-green-500 text-white px-2 py-1 rounded-full w-[28px]">
+                                                        ✓
+                                                    </button>
+                                                </div>
+
+                                                <!-- Кнопка для открытия истории цен -->
+                                                <button x-show="!editing"
+                                                        @click="$dispatch('open-price-modal', { partId: part.id })"
+                                                        class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                    History
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </template>
                         </template>
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
                 @else
                     <p class="text-gray-500">Выберите склад для отображения запчастей.</p>
                 @endif

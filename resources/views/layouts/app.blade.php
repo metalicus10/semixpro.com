@@ -17,19 +17,19 @@
 </head>
 <body class="dark font-sans antialiased bg-gray-800">
 <div x-data="{
-        currentTab: localStorage.getItem('activeTab') || 'nomenclatures',
+        currentTab: localStorage.getItem('activeSideTab') || 'nomenclatures',
         role: 'manager',
         showSidebar: false,
         setTab(tabName) {
             this.currentTab = tabName;
-            localStorage.setItem('activeTab', tabName);
+            localStorage.setItem('activeSideTab', tabName);
         },
         setDefaultTabForRole() {
-            if (!localStorage.getItem('activeTab')) {
+            if (!localStorage.getItem('activeSideTab')) {
                 this.currentTab = this.role === 'manager' ? 'nomenclatures' :
                                   this.role === 'technician' ? 'parts' :
                                   this.role === 'admin' ? 'dashboard' : 'nomenclatures';
-                localStorage.setItem('activeTab', this.currentTab);
+                localStorage.setItem('activeSideTab', this.currentTab);
             }
         }
     }" x-init="setDefaultTabForRole()">

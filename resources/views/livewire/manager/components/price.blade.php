@@ -53,16 +53,16 @@
                        class="border border-gray-300 rounded-md text-sm px-2 py-1 w-[180px] mr-2 focus:outline-none focus:outline-offset-[0px] focus:outline-violet-900"
                        placeholder="{{ $part['price'] }}">
                 <button @click="
-                                                                        if (newPrice !== '{{ $part['price'] }}') {
-                                                                            $wire.set('newPrice', newPrice)
-                                                                            .then(() => {
-                                                                                $wire.updatePartPrice({{ $part['id'] }}, newPrice);
-                                                                            });
-                                                                        }
-                                                                        showPopover = false;
-                                                                        editing = false;
-                                                                    "
-                        class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4 w-[28px]">
+                        if (newPrice !== '{{ $part['price'] }}') {
+                            $wire.set('newPrice', newPrice)
+                                .then(() => {
+                                    $wire.updatePartPrice({{ $part['id'] }}, newPrice);
+                                });
+                        }
+                        showPopover = false;
+                        editing = false;
+                    "
+                    class="bg-green-500 text-white px-2 py-1 rounded-full w-[28px]">
                     ✓
                 </button>
             </div>

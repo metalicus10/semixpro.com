@@ -167,8 +167,8 @@ class ManagerParts extends Component
      */
     public function loadParts(int $warehouseId)
     {
-        $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)
-            ->get();
+        $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)->with('nomenclatures')
+            ->get()->toArray();
     }
 
     /**

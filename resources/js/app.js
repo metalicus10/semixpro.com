@@ -8,3 +8,10 @@ if (document.getElementById("search-table") && typeof simpleDatatables.DataTable
         sortable: true
     });
 }
+
+document.addEventListener('alpine:init', () => {
+    Alpine.data('part-name', (part) => ({
+        partId: part.id,
+        partName: part.name,
+    }));
+});
