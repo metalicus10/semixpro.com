@@ -62,7 +62,7 @@ class ManagerParts extends Component
     public $imgUrl, $fullImage;
     public $startDate, $endDate;
     public $managerUrlModalVisible = false;
-    public $managerSupplier, $managerUrl;
+    public $managerSupplier, $managerUrl, $managerUrlText;
     public $loaded = false;
     public $selectedPns = [];
     public $availablePns = [];
@@ -153,6 +153,11 @@ class ManagerParts extends Component
         $this->technicians = Technician::where('manager_id', Auth::id())->get();
     }
 
+    public function loadSuppliers()
+    {
+        $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
+    }
+
     /**
      * Выбирает активный склад
      */
@@ -231,11 +236,6 @@ class ManagerParts extends Component
     public function stopEditingWarehouse()
     {
         $this->editingWarehouseId = null;
-    }
-
-    public function loadSuppliers()
-    {
-        $this->suppliers = Supplier::where('manager_id', Auth::id())->get();
     }
 
     public function refreshComponent()
@@ -534,7 +534,7 @@ class ManagerParts extends Component
         }
     }
 
-    public function handleClick($partId)
+    /*public function handleClick($partId)
     {
         if (isset($this->clickTimers[$partId])) {
             $this->handleDoubleClick($partId);
@@ -551,7 +551,7 @@ class ManagerParts extends Component
     {
         unset($this->clickTimers[$partId]);
         $this->openManagerUrlModal($partId);
-    }
+    }*/
 
     public function openManagerUrlModal($partId)
     {
@@ -559,15 +559,10 @@ class ManagerParts extends Component
         $part = Part::find($partId);
         $data = json_decode($part->url, true) ?? ['text' => '', 'url' => ''];
 
-        $this->managerSupplier = $data['text'] ?? '';
-        $this->managerUrl = $data['url'] ?? '';
-        $this->dispatch('open-modal');
-    }
+        $this->managerUrlText = $data['text'] ?? '';
 
-    public function closeUrlModal()
-    {
-        $this->managerUrlModalVisible = false;
-        $this->dispatch('modal-close');
+        $this->managerUrl = $data['url'] ?? '';
+        $this->dispatch('modal-open', ['partId' => $partId]); // Теперь передаём данные в Alpine
     }
 
     public function updatePartURL($partId, $supplier, $url)
@@ -582,11 +577,8 @@ class ManagerParts extends Component
             $part->save();
         }
 
-        // Отправляем обновленные данные обратно в AlpineJS
-        $this->dispatch('urlUpdated', [
-            'partId' => $partId,
-            'data' => json_decode($part->url, true),
-        ]);
+        // Обновление данных в AlpineJS
+        $this->dispatch('urlUpdated', ['partId' => $partId]);
     }
 
     public function getUrlData($partId)

@@ -165,6 +165,7 @@ class ManagerNomenclatures extends Component
         $nomenclature->save();
 
         $this->dispatch('showNotification', 'success', 'Номенклатура заархивирована.');
+        $this->dispatch('nomenclatureArchived', $nomenclature->id);
 
         $this->WriteActionLog('archive', 'nomenclature', $nomenclature->id, $nomenclature->name);
     }
