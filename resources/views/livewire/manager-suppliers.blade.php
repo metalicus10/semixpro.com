@@ -58,8 +58,14 @@
         </table>
 
         <!-- Модальное окно подтверждения удаления -->
-        <div x-show="showDeleteConfirmModal" class="fixed inset-0 flex items-center justify-center z-50 bg-gray-800 bg-opacity-50">
-            <div class="bg-white p-6 rounded shadow-lg">
+        <div x-show="showDeleteConfirmModal" class="fixed inset-0 flex items-center justify-center">
+            <!-- Оверлей -->
+            <div x-show="showDeleteConfirmModal"
+                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                 @click="showDeleteConfirmModal = false"
+                 x-cloak>
+            </div>
+            <div class="bg-white p-6 rounded shadow-lg z-50">
                 <h2 class="text-lg font-semibold mb-4">Confirm Delete</h2>
                 <p class="mb-4">Are you sure you want to delete this supplier?</p>
 
@@ -74,8 +80,14 @@
     <!-- Модальное окно для добавления поставщика -->
     <div x-show="showAddSupplierModal" x-cloak
          x-transition
-         class="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-        <div class="bg-white rounded-lg shadow-lg p-6 w-1/3">
+         class="fixed inset-0 flex items-center justify-center bg-gray-800">
+        <!-- Оверлей -->
+        <div x-show="showAddSupplierModal"
+             class="flex fixed inset-0 bg-black opacity-50 z-30"
+             @click="showAddSupplierModal = false"
+             x-cloak>
+        </div>
+        <div class="bg-white rounded-lg shadow-lg p-6 w-1/3 z-50">
             <h3 class="text-lg font-semibold mb-4">Add New Supplier</h3>
 
             <!-- Поле ввода имени поставщика -->

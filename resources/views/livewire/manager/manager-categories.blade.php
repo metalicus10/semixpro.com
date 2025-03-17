@@ -49,8 +49,14 @@
     </div>
     <!-- Модальное окно для добавления/редактирования категории -->
     @if($showCategoryModal)
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center">
-            <div class="bg-white p-6 rounded-md shadow-lg">
+        <div class="fixed inset-0 flex items-center justify-center" x-transition>
+            <!-- Оверлей -->
+            <div x-show="{{ $showCategoryModal }}"
+                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                 @click="$wire.closeCategoryModal()"
+                 x-cloak>
+            </div>
+            <div class="bg-white p-6 rounded-md shadow-lg z-50">
                 <h2 class="text-xl mb-4">{{ $isEditMode ? 'Edit Category' : 'Add Category' }}</h2>
 
                 <input type="text" wire:model="categoryName"

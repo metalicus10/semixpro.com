@@ -62,8 +62,14 @@
     @endif
     <!-- Модальное окно -->
     @if($isOpen)
-        <div class="fixed inset-0 flex items-center justify-center">
-            <div class="bg-white rounded-lg shadow-lg w-1/3">
+        <div class="fixed inset-0 flex items-center justify-center" x-transition>
+            <!-- Оверлей -->
+            <div x-show="{{$isOpen}}"
+                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                 @click="{{!$isOpen}}"
+                 x-cloak>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg w-1/3 z-50">
                 <div class="p-4">
                     <h2 class="text-xl mb-4">Add / Edit Brand</h2>
 

@@ -56,6 +56,9 @@
                 selectedParts: @entangle('selectedParts'),
                 selectedPartNames: @entangle('selectedPartNames'),
                 parts: @entangle('parts'),
+                partStock: {},
+                partQuantities: {},
+
 
                 init() {
                     this.scrollContainer = this.$refs.tabContainer;
@@ -141,12 +144,65 @@
                     search = '';
                 },
 
-                searchValues: {},
+                <!-- Метод выбора всех запчастей -->
+                toggleCheckAll(event) {
+                if (event.target.checked) {
+                    // Выбираем все запчасти
+                    this.selectedParts = this.parts.map(part => part.id);
+                } else {
+                    // Снимаем выделение со всех чекбоксов
+                    this.selectedParts = [];
+                }
 
+                    this.selectedParts.forEach(partId => {
+                        if (!this.partQuantities[partId]) {
+                            this.partQuantities[partId] = 1;
+                        }
+                    });
+
+                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                },
+
+                <!-- Метод выбора через чекбоксы запчастей и обновление данных -->
+                togglePartSelection(partId) {
+                    if (this.selectedParts.includes(partId)) {
+                        this.selectedParts = this.selectedParts.filter(id => id !== partId);
+                    } else {
+                        this.selectedParts.push(partId);
+                    }
+
+                    // Проверяем, активен ли 'Выбрать все'
+                    this.isAllSelected = this.selectedParts.length === this.parts.length;
+
+                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                },
+
+                setMaxQuantities() {
+                    if (this.transferAll) {
+                        this.selectedParts.forEach(partId => {
+                            this.partQuantities[partId] = this.partStock[partId] || 0;
+                        });
+                    }
+                },
+
+                limitQuantity(partId) {
+                    if (this.partQuantities[partId] > this.partStock[partId]) {
+                        this.partQuantities[partId] = this.partStock[partId];
+                    }
+                    $dispatch('update-part-quantities', { quantities: this.partQuantities });
+                },
+
+
+
+                searchValues: {},
                 get search() { return this.searchValues[this.activeTab] || ''; },
                 set search(value) { this.searchValues[this.activeTab] = value; }
 
-            }" x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';" @resize.window="checkScroll"
+            }"
+            x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';
+                partStock = {{ collect($parts)->pluck('quantity', 'id')->toJson() }};
+                $watch('selectedParts', () => fetchSelectedNames());
+            " @resize.window="checkScroll"
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
              class="relative w-full"
         >
@@ -162,7 +218,7 @@
                         @foreach ($warehouses as $warehouse)
                             <li class="shrink-0 cursor-pointer"
                                 :class="{'bg-gray-900 text-gray-100': activeTab === {{ $warehouse['id'] }}, 'bg-gray-900': activeTab !== {{ $warehouse['id'] }}}"
-                                wire:click="selectWarehouse({{ $warehouse['id'] }})"
+                                wire:click="selectWarehouse({{ $warehouse['id'] }})" @click="selectedParts = []"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('warehouseId', '{{ $warehouse['id'] }}')"
                                 @drop="reorderWarehouses($event.dataTransfer.getData('warehouseId'), '{{ $warehouse['id'] }}')"
@@ -366,7 +422,7 @@
                                 <form wire:submit.prevent="deleteParts()">
                                     <div class="space-y-4">
                                         <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 max-h-40 overflow-y-auto">
-                                            <template x-for="name in selectedPartNames" :key="name">
+                                            <template x-for="(name, index) in selectedPartNames" :key="index">
                                                 <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600">
                                                     <span x-text="name"></span>
                                                 </li>
@@ -391,18 +447,20 @@
                             </div>
                         </div>
                     </div>
-                    <h2 class="text-lg font-semibold mb-2">Запчасти
-                        склада {{ $warehouses->where('id', $selectedWarehouseId)->first()?->name }}</h2>
+                    <h2 class="text-gray-700 dark:text-gray-400 uppercase text-lg font-semibold p-3">Запчасти
+                        склада <span class="dark:text-orange-500">{{ $warehouses->where('id', $selectedWarehouseId)->first()?->name }}</span></h2>
                     <div id="parts-table"
                          class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                         <!-- Заголовок таблицы -->
                         <div
                             class="hidden md:flex flex-row text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
-                            <!-- Чекбокс -->
+                            <!-- Общий Чекбокс -->
                             <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
-                                       :checked="selectedParts.length === @json(collect($nomenclatures)->count())"
-                                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                       :checked="selectedParts.length > 0 && selectedParts.length === parts.length"
+                                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500
+                                       dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800
+                                       focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                 <label for="checkbox-all-search" class="sr-only">checkbox</label>
                             </div>
 
@@ -438,14 +496,12 @@
                                     </div>
                                 </div>
                             </div>
-
-
                         </div>
                         <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900">
                             <template x-for="part in parts" :key="part.id">
                                 <template x-if="part.nomenclatures.is_archived == false">
                                     <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
-                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-3 pt-5 md:pt-2 relative">
+                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-3 md:pt-2 relative">
                                         <!-- Checkbox -->
                                         <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
                                             <input type="checkbox" :value="part.id"
@@ -461,7 +517,9 @@
                                             <input type="checkbox" :value="part.id"
                                                    @click="togglePartSelection(part.id)"
                                                    :checked="selectedParts.includes(part.id)"
-                                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300
+                                                   rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800
+                                                   dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                                             <label for="checkbox-table-search-part.id"
                                                    class="sr-only">checkbox</label>
                                         </div>
@@ -846,10 +904,16 @@
                                                     x-init="document.body.classList.add('overflow-hidden')"
                                                     @click.away="modalOpen = false"
                                                     @close-modal.window="document.body.classList.remove('overflow-hidden')"
-                                                    class="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 w-full h-full"
+                                                    class="fixed inset-0 flex items-center justify-center w-full h-full"
                                                 >
+                                                    <!-- Оверлей -->
+                                                    <div x-show="modalOpen"
+                                                         class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                                         @click="modalOpen = false"
+                                                         x-cloak>
+                                                    </div>
                                                     <div
-                                                        class="bg-white p-6 rounded-lg shadow-md w-full max-w-144 max-h-full overflow-y-auto" x-init="console.log(suppliers);">
+                                                        class="bg-white p-6 rounded-lg shadow-md w-full max-w-144 max-h-full overflow-y-auto z-50">
                                                         <div class="flex items-center justify-between mb-4">
                                                             <h2 class="text-lg font-semibold text-gray-900">
                                                                 Редактировать ссылку</h2>

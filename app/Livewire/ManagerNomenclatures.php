@@ -25,7 +25,7 @@ class ManagerNomenclatures extends Component
     public bool $showArchived, $managerUrlModalVisible = false;
     public $managerUrl, $selectedId, $managerSupplier;
 
-    protected $listeners = ['update-categories' => 'updateCategories'];
+    protected $listeners = ['update-categories' => 'updateCategories', 'nomenclature-restore' => 'updateNomenclatures'];
 
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
@@ -50,6 +50,12 @@ class ManagerNomenclatures extends Component
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)
             ->with('category', 'suppliers')->get()->toArray();
+    }
+
+    public function updateNomenclatures()
+    {
+        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
+            ->with('category', 'suppliers', 'brands')->get()->toArray();
     }
 
     public function updateCategories()
@@ -160,26 +166,17 @@ class ManagerNomenclatures extends Component
     public function archiveNomenclature($id)
     {
         $nomenclature = Nomenclature::findOrFail($id);
-        $nomenclature->is_archived = true;
-        $nomenclature->archived_at = now();
-        $nomenclature->save();
+        $nomenclature->update([
+            'is_archived' => true,
+            'archived_at' => now(),
+        ]);
 
+        $this->dispatch('nomenclature-updated');
+        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
         $this->dispatch('showNotification', 'success', 'Номенклатура заархивирована.');
-        $this->dispatch('nomenclatureArchived', $nomenclature->id);
 
-        $this->WriteActionLog('archive', 'nomenclature', $nomenclature->id, $nomenclature->name);
-    }
-
-    public function restoreNomenclature($id)
-    {
-        $nomenclature = Nomenclature::findOrFail($id);
-        $nomenclature->is_archived = false;
-        $nomenclature->archived_at = null;
-        $nomenclature->save();
-
-        $this->dispatch('showNotification', 'success', 'Номенклатура восстановлена успешно!');
-
-        $this->WriteActionLog('restore', 'nomenclature', $nomenclature->id, $nomenclature->name);
+        $actionType = $nomenclature->is_archived ? 'archive' : 'restore';
+        $this->WriteActionLog($actionType, 'nomenclature', $nomenclature->id, $nomenclature->name);
     }
 
     public function confirmDeleteNomenclature($id)

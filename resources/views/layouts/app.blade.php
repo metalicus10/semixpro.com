@@ -136,7 +136,9 @@
                 @if(auth()->user()->hasAccess('manage_nomenclature'))
                     <li>
                         <a @click="currentTab = 'nomenclatures'"
-                           class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
+                           x-bind:class="currentTab === 'nomenclatures' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
+                           class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white
+                           hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
                                 aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor"
@@ -151,6 +153,7 @@
                 @if(auth()->user()->hasAccess('manage_warehouses'))
                     <li>
                         <a @click="currentTab = 'warehouses'"
+                           x-bind:class="currentTab === 'warehouses' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -166,6 +169,7 @@
                 @if(Auth::user()->inRole('manager'))
                     <li>
                         <a @click="currentTab = 'categories', showSidebar = false"
+                           x-bind:class="currentTab === 'categories' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -180,6 +184,7 @@
                 @endif
                 <li>
                     <a @click="currentTab = 'parts'"
+                       x-bind:class="currentTab === 'parts' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                        class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                         <svg
                             class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -194,6 +199,7 @@
                 @if(Auth::user()->inRole('manager'))
                     <li>
                         <a @click="currentTab = 'brands'"
+                           x-bind:class="currentTab === 'brands' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -209,6 +215,7 @@
                 @if(Auth::user()->inRole('manager'))
                     <li>
                         <a @click="currentTab = 'suppliers'"
+                           x-bind:class="currentTab === 'suppliers' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -224,6 +231,7 @@
                 @if(Auth::user()->inRole('manager'))
                     <li>
                         <a @click="currentTab = 'statistics'"
+                           x-bind:class="currentTab === 'statistics' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
@@ -239,6 +247,7 @@
                 @if(Auth::user()->inRole('manager'))
                     <li>
                         <a @click="currentTab = 'technicians'"
+                           x-bind:class="currentTab === 'technicians' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                            class="flex items-center cursor-pointer p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 group">
                             <svg
                                 class="flex-shrink-0 w-5 h-5 text-gray-500 transition duration-75 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white"
