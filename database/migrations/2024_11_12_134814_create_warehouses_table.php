@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('manager_id');
             $table->string('name',191);
-            $table->string('location')->nullable();
+            $table->string('location',191)->nullable();
             $table->integer('position')->default(0);
             $table->timestamps();
 

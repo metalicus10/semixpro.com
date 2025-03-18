@@ -14,9 +14,9 @@ return new class extends Migration
         Schema::create('parts', function (Blueprint $table) {
             $table->id();
             $table->string('sku',191)->unique();
-            $table->string('name');
+            $table->string('name',191);
             $table->integer('quantity')->default(0);
-            $table->string('image')->nullable();
+            $table->string('image',191)->nullable();
             $table->foreignId('nomenclature_id')->constrained('nomenclatures');
             $table->foreignId('manager_id')->constrained('users')->onDelete('cascade');
             $table->json('url')->nullable();

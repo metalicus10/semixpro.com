@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('nomenclature_versions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('nomenclature_id')->constrained()->onDelete('cascade');
-            $table->text('changes'); // JSON-объект с изменениями
+            $table->text('changes');
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null'); // Кто изменил
             $table->timestamps(); // Дата изменения
         });

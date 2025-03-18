@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('technicians', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('name',191);
             $table->string('email',191)->unique();
             $table->string('password',191);
             $table->foreignId('manager_id')->constrained('users'); // Связь с менеджером

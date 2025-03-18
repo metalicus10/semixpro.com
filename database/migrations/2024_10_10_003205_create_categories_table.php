@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('categories', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique(); // Название категории
+            $table->string('name',191)->unique(); // Название категории
             $table->foreignId('manager_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });
