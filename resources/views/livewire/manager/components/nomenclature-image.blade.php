@@ -6,7 +6,7 @@
         uploadProgress: 0
     }" class="flex gallery relative">
     <div class="flex flex-row w-[120px] h-[80px]">
-        @if ($nomenclature['image'])
+        @if (!empty($nomenclature['image']))
             <img src="{{ asset('storage') . $nomenclature['image'] }}"
                  alt="{{ $nomenclature['name'] }}"
                  onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . $nomenclature['image'] }}')"

@@ -37,7 +37,14 @@ class NomenclatureArchive extends Component
         // Обновляем список архивных номенклатур
         $this->loadArchivedNomenclatures();
 
-        // Отправляем событие обновления
+        $archivedNomenclatures = collect($this->archivedNomenclatures);
+
+        // Если архив пуст, закрываем модальное окно
+        if ($archivedNomenclatures->isEmpty()) {
+            $this->showArchiveModal = false;
+        }
+
+        // Диспетчер события для обновления в родительском компоненте
         $this->dispatch('nomenclature-updated');
         $this->dispatch('nomenclature-restore');
     }
