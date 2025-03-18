@@ -197,7 +197,7 @@ class ManagerNomenclatures extends Component
             $this->dispatch('showNotification', 'info', 'Номенклатура удалена!');
 
             $this->idToDelete = null;
-            $this->dispatch('nomenclatureUpdated');
+            $this->dispatch('nomenclature-updated');
             $this->WriteActionLog('delete', 'nomenclature', $nomenclature->id, $nomenclature->name);
         }
     }

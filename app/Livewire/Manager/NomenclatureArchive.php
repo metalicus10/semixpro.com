@@ -12,7 +12,7 @@ class NomenclatureArchive extends Component
     public $hasArchived = false;
     public $selectedNomenclature = null;
     public $relatedParts = [];
-    public $showModal = false;
+    public $showArchiveModal = false;
 
     protected $listeners = ['nomenclature-updated' => 'loadArchivedNomenclatures'];
 
@@ -44,12 +44,12 @@ class NomenclatureArchive extends Component
 
     public function openModal()
     {
-        $this->showModal = true;
+        $this->showArchiveModal = true;
     }
 
     public function closeModal()
     {
-        $this->showModal = false;
+        $this->showArchiveModal = false;
     }
 
     public function render()

@@ -1,10 +1,10 @@
-<div x-data="{ showArchiveModal: @entangle('showModal'), archivedNomenclatures: @entangle('archivedNomenclatures') ?? []  }"
+<div x-data="{ showArchiveModal: @entangle('showArchiveModal'), archivedNomenclatures: @entangle('archivedNomenclatures') ?? []  }"
      @nomenclature-updated.window="archivedNomenclatures = $wire.archivedNomenclatures"
      x-effect="if (archivedNomenclatures.length === 0) showArchiveModal = false"
 >
     <!-- Кнопка для открытия модального окна -->
     <button x-show="archivedNomenclatures.length > 0" @click="showArchiveModal = true"
-            class="px-4 py-2 bg-gray-600 text-white rounded">
+            class="px-4 py-2 bg-gray-600 text-white rounded cursor-pointer z-20">
         Архив номенклатур
     </button>
 
