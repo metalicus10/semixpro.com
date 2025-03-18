@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('pns', function (Blueprint $table) {
             $table->id();
-            $table->string('number')->unique(); // Уникальный номер
+            $table->string('number',191)->unique(); // Уникальный номер
             $table->foreignId('part_id')->constrained('parts')->onDelete('cascade'); // Связь с таблицей parts
             $table->foreignId('nomenclature_id')->constrained('nomenclatures')->onDelete('cascade'); // Связь с таблицей nomenclatures
             $table->timestamps();

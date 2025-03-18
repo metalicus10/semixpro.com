@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('parts', function (Blueprint $table) {
             $table->id();
-            $table->string('sku')->unique();
+            $table->string('sku',191)->unique();
             $table->string('name');
             $table->integer('quantity')->default(0);
             $table->string('image')->nullable();

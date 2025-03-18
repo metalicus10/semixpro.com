@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('manager_id');
-            $table->string('name');
+            $table->string('name',191);
             $table->string('location')->nullable();
             $table->integer('position')->default(0);
             $table->timestamps();

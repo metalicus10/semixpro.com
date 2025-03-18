@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('nomenclatures', function (Blueprint $table) {
             $table->id();
-            $table->string('nn')->unique();
+            $table->string('nn',191)->unique();
             $table->string('name');
             $table->foreignId('category_id')->constrained('categories')->onDelete('restrict');
             $table->foreignId('brand_id')->nullable()->constrained('brands')->onDelete('restrict');
