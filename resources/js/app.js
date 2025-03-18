@@ -15,3 +15,4 @@ document.addEventListener('alpine:init', () => {
         partName: part.name,
     }));
 });
+

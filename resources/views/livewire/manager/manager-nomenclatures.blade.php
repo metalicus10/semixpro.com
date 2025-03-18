@@ -130,7 +130,7 @@
                         originalName: '{{$nomenclature['name']}}',
                         errorMessage: '',
                     }"
-                        class="flex flex-col w-2/8 justify-center items-start"
+                        class="flex flex-col justify-center items-start"
                     >
                         <span class="md:hidden font-semibold">Название: </span>
                         <div class="flex relative">
@@ -189,7 +189,7 @@
                         </div>
                     </div>
                     <!-- Nomenclature Image -->
-                    <div class="flex w-2/8 items-center px-2">
+                    <div class="flex items-center px-2">
                         <span class="md:hidden font-semibold">Изображение:</span>
                         <livewire:components.nomenclature-image :nomenclature="$nomenclature" :key="'image-'.$nomenclature['id']"/>
                     </div>

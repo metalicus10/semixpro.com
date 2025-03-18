@@ -192,8 +192,6 @@
                     $dispatch('update-part-quantities', { quantities: this.partQuantities });
                 },
 
-
-
                 searchValues: {},
                 get search() { return this.searchValues[this.activeTab] || ''; },
                 set search(value) { this.searchValues[this.activeTab] = value; }
@@ -204,6 +202,7 @@
                 $watch('selectedParts', () => fetchSelectedNames());
             " @resize.window="checkScroll"
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
+             @image-updated.window="parts = $wire.parts"
              class="relative w-full"
         >
             <div class="overflow-x-auto whitespace-nowrap">
@@ -453,7 +452,7 @@
                          class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                         <!-- Заголовок таблицы -->
                         <div
-                            class="hidden md:flex flex-row text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-3">
+                            class="hidden md:flex flex-row text-xs font-bold text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 p-1">
                             <!-- Общий Чекбокс -->
                             <div class="flex items-center justify-center px-4 py-2">
                                 <input type="checkbox" @click="toggleCheckAll($event)"
@@ -499,9 +498,9 @@
                         </div>
                         <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900">
                             <template x-for="part in parts" :key="part.id">
-                                <template x-if="part.nomenclatures.is_archived == false">
+                                <template x-if="part.nomenclatures?.is_archived == false">
                                     <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
-                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-3 md:pt-2 relative">
+                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative">
                                         <!-- Checkbox -->
                                         <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
                                             <input type="checkbox" :value="part.id"
@@ -684,7 +683,10 @@
                                                 nomenclatureImage:part.nomenclatures.image,
                                                 showTooltip: false,
                                                 isUploading: false,
-                                                uploadProgress: 0
+                                                uploadProgress: 0,
+                                                selectWarehouse(id){
+                                                    $wire.selectWarehouse(id);
+                                                }
                                             }" class="flex gallery relative"
                                             >
                                                 <div class="flex flex-row">
@@ -693,7 +695,7 @@
                                                         <img :src="'{{ asset('storage') }}' + partImage"
                                                              :alt="part.name"
                                                              @click="Livewire.dispatch('lightbox', '{{ asset('storage') }}' + partImage)"
-                                                             class="object-cover rounded cursor-zoom-in">
+                                                             class="object-contain rounded cursor-zoom-in">
                                                     </template>
 
                                                     <!-- Если нет изображения запчасти, но есть изображение номенклатуры -->
@@ -701,7 +703,7 @@
                                                         <img :src="'{{ asset('storage') }}' + nomenclatureImage"
                                                              :alt="part.name"
                                                              @click="Livewire.dispatch('lightbox', '{{ asset('storage') }}' + nomenclatureImage)"
-                                                             class="object-cover rounded cursor-zoom-in">
+                                                             class="object-contain rounded cursor-zoom-in">
                                                     </template>
 
                                                     <!-- Если нет ни изображения запчасти, ни изображения номенклатуры -->
@@ -808,14 +810,14 @@
                                                             </div>
 
                                                             <!-- Action Buttons -->
-                                                            <div class="flex justify-end space-x-4">
+                                                            <div class="flex justify-end space-x-4" x-init="console.log(part.warehouse.id);">
                                                                 <button type="button"
                                                                         @click="showImageModal = false; $wire.closeImageModal();"
                                                                         class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
                                                                     Cancel
                                                                 </button>
                                                                 <button type="button"
-                                                                        wire:click="uploadImage"
+                                                                        wire:click="uploadImage(part.id)"
                                                                         class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                                                                     Upload
                                                                 </button>

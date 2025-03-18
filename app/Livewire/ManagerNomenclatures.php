@@ -6,6 +6,7 @@ use App\Models\ActionLog;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\NomenclatureVersion;
+use App\Models\Part;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
@@ -96,7 +97,7 @@ class ManagerNomenclatures extends Component
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($this->image)
-                ->resize(1024, 768)
+                ->resize(1024, 'auto')
                 ->toWebp(quality: 60);
 
             $imagePath = '/images/nomenclatures/' . Auth::id();

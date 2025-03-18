@@ -5,7 +5,7 @@ namespace App\Livewire\Components;
 use App\Models\Nomenclature;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -14,7 +14,7 @@ class NomenclatureImage extends Component
 {
     use WithFileUploads;
 
-    public $nomenclature, $nomenclatureId, $imgUrl, $newImage, $fullImage;
+    public $nomenclature, $nomenclatureId, $imgUrl, $nomenclatureImage, $fullImage;
     public $showImageModal = false;
 
     public function openImageModal($nomenclatureId)
@@ -25,17 +25,17 @@ class NomenclatureImage extends Component
 
     public function closeImageModal()
     {
-        $this->reset(['showImageModal', 'newImage']);
+        $this->reset(['showImageModal', 'nomenclatureImage']);
     }
 
-    public function uploadImage()
+    public function uploadImage($id)
     {
         $this->validate([
-            'newImage' => 'required|image|max:5200',
+            'nomenclatureImage' => 'required|image|max:5200',
         ]);
 
         // Получаем номенклатуру
-        $nomenclature = Nomenclature::find($this->nomenclatureId);
+        $nomenclature = Nomenclature::find($id);
 
         if (!$nomenclature) {
             $this->dispatch('showNotification', 'error', 'Nomenclature not found');
@@ -47,11 +47,11 @@ class NomenclatureImage extends Component
             Storage::disk('public')->delete($nomenclature->image);
         }
 
-        if ($this->newImage)
+        if ($this->nomenclatureImage)
         {
             $manager = new ImageManager(Driver::class);
 
-            $processedImage = $manager->read($this->newImage)
+            $processedImage = $manager->read($this->nomenclatureImage)
                 ->resize(null, null)
                 ->toWebp(quality: 60);
 
@@ -61,17 +61,16 @@ class NomenclatureImage extends Component
 
             // Сохраняем закодированное изображение в local storage
             Storage::disk('public')->put($fileName, $processedImage);
+            $nomenclature->update(['image' => $fileName]);
         }
 
-        // Обновляем модель
-        $nomenclature->update(['image' => $this->imgUrl]);
         $this->closeImageModal();
 
         $this->dispatch('showNotification', 'success', 'Nomenclature Image updated successfully!');
-        $this->dispatch('imageUpdated', ['nomenclatureId' => $this->nomenclatureId]);
+        $this->dispatch('imageUpdated', ['nomenclatureId' => $id]);
 
         // Сбрасываем состояние
-        $this->reset('newImage');
+        $this->reset('nomenclatureImage');
     }
 
     public function showImage($imageUrl)

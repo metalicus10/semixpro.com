@@ -19,8 +19,9 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Intervention\Image\Drivers\Imagick\Driver;
+use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
@@ -99,6 +100,8 @@ class ManagerParts extends Component
         'setPart',
         'urlChanged' => '$refresh',
         'warehouseTabsUpdated' => 'loadWarehouses',
+        'nomenclature-updated' => 'loadWarehouses',
+        'update-part-image' => 'loadWarehouses'
     ];
 
     public function mount()
@@ -172,7 +175,7 @@ class ManagerParts extends Component
      */
     public function loadParts(int $warehouseId)
     {
-        $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)->with('nomenclatures')
+        $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)->with('nomenclatures', 'warehouse')
             ->get()->toArray();
     }
 
@@ -706,14 +709,14 @@ class ManagerParts extends Component
         $this->isPriceHistoryModalOpen = true;
     }
 
-    public function uploadImage()
+    public function uploadImage($id)
     {
         $this->validate([
             'newImage' => 'required|image|max:5200',
         ]);
 
         // Получаем запчасть
-        $part = Part::find($this->partId);
+        $part = Part::find($id);
 
         if (!$part) {
             $this->dispatch('showNotification', 'error', 'Part not found');
@@ -738,17 +741,37 @@ class ManagerParts extends Component
 
             // Сохраняем закодированное изображение в local storage
             Storage::disk('public')->put($fileName, $processedImage);
+            $part->update(['image' => $fileName]);
         }
 
-        // Обновляем модель
-        $part->update(['image' => $this->imgUrl]);
         $this->closeImageModal();
 
         $this->dispatch('showNotification', 'success', 'PartImage updated successfully!');
-        $this->dispatch('imageUpdated', ['partId' => $this->partId]);
+        $this->dispatch('image-updated', ['partId' => $id]);
 
         // Сбрасываем состояние
         $this->reset('newImage');
+    }
+
+    #[On('image-updated')]
+    public function updatePartImage($partId)
+    {
+        $updatedPart = Part::with('nomenclatures', 'warehouse')->find($partId);
+
+        if ($updatedPart) {
+            // Находим запчасть в массиве и обновляем её данные
+            foreach ($this->parts as &$part) {
+                if ($part['id'] == $partId) {
+                    $part['image'] = $updatedPart->image;
+                    $part['nomenclatures'] = $updatedPart->nomenclatures;
+                    $part['warehouse'] = $updatedPart[0]->warehouse;
+                    break;
+                }
+            }
+        }
+
+        //$this->dispatch('refreshParts');
+        $this->dispatch('update-part-image');
     }
 
     public function showImage($imageUrl)

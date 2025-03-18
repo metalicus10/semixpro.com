@@ -5,12 +5,12 @@
         isUploading: false,
         uploadProgress: 0
     }" class="flex gallery relative">
-    <div class="flex flex-row w-[120px] h-[80px]">
+    <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
         @if (!empty($nomenclature['image']))
             <img src="{{ asset('storage') . $nomenclature['image'] }}"
                  alt="{{ $nomenclature['name'] }}"
                  onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . $nomenclature['image'] }}')"
-                 class="object-cover rounded cursor-zoom-in">
+                 class="object-contain rounded cursor-zoom-in">
         @else
             <span class="w-[56px] h-[56px]">
                 <livewire:components.empty-image/>
@@ -46,7 +46,7 @@
 
                 <!-- File Input -->
                 <div class="mb-4">
-                    <input type="file" wire:model="newImage"
+                    <input type="file" wire:model="nomenclatureImage"
                            class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
                     @error('newImage') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
@@ -59,7 +59,7 @@
                         Cancel
                     </button>
                     <button type="button"
-                            wire:click="uploadImage"
+                            wire:click="uploadImage({{ $nomenclature['id'] }})"
                             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                         Upload
                     </button>
