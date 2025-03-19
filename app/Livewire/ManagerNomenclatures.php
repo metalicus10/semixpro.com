@@ -26,7 +26,12 @@ class ManagerNomenclatures extends Component
     public bool $showArchived, $managerUrlModalVisible = false;
     public $managerUrl, $selectedId, $managerSupplier;
 
-    protected $listeners = ['update-categories' => 'updateCategories', 'nomenclature-restore' => 'updateNomenclatures'];
+    protected $listeners = [
+        'update-categories' => 'updateCategories',
+        'nomenclature-restore' => 'updateNomenclatures',
+        'nomenclature-updated' => 'updateNomenclatures',
+        'image-updated' => 'updateNomenclatures',
+    ];
 
     // Массив для добавления новой номенклатуры
     public $newNomenclature = [
@@ -159,6 +164,7 @@ class ManagerNomenclatures extends Component
             'changes' => json_encode(['name' => $newName]),
             'user_id' => auth()->id(),
         ]);
+        $this->dispatch('nomenclature-updated');
 
         $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, $newName);
         $this->dispatch('showNotification', 'success', 'Название номенклатуры обновлено.');

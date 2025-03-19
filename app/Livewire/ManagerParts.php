@@ -101,7 +101,7 @@ class ManagerParts extends Component
         'urlChanged' => '$refresh',
         'warehouseTabsUpdated' => 'loadWarehouses',
         'nomenclature-updated' => 'loadWarehouses',
-        'update-part-image' => 'loadWarehouses'
+        'image-updated' => 'loadWarehouses'
     ];
 
     public function mount()
@@ -747,13 +747,13 @@ class ManagerParts extends Component
         $this->closeImageModal();
 
         $this->dispatch('showNotification', 'success', 'PartImage updated successfully!');
-        $this->dispatch('image-updated', ['partId' => $id]);
+        $this->dispatch('image-updated');
 
         // Сбрасываем состояние
         $this->reset('newImage');
     }
 
-    #[On('image-updated')]
+    /*#[On('image-updated')]
     public function updatePartImage($partId)
     {
         $updatedPart = Part::with('nomenclatures', 'warehouse')->find($partId);
@@ -772,7 +772,7 @@ class ManagerParts extends Component
 
         //$this->dispatch('refreshParts');
         $this->dispatch('update-part-image');
-    }
+    }*/
 
     public function showImage($imageUrl)
     {

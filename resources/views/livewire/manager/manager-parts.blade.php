@@ -192,6 +192,16 @@
                     $dispatch('update-part-quantities', { quantities: this.partQuantities });
                 },
 
+                filteredParts() {
+                     return $wire.parts.filter(part =>
+                         part.name.toLowerCase().includes(this.search.toLowerCase()) ||
+                         part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
+                         (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
+                         (part.category && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
+                         (part.brand && part.brand.name.toLowerCase().includes(this.search.toLowerCase()))
+                     );
+                },
+
                 searchValues: {},
                 get search() { return this.searchValues[this.activeTab] || ''; },
                 set search(value) { this.searchValues[this.activeTab] = value; }
@@ -497,7 +507,7 @@
                             </div>
                         </div>
                         <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900">
-                            <template x-for="part in parts" :key="part.id">
+                            <template x-for="part in filteredParts()" :key="part.id">
                                 <template x-if="part.nomenclatures?.is_archived == false">
                                     <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
                                 dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative">
