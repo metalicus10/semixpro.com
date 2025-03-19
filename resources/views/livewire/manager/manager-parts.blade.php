@@ -202,9 +202,6 @@
                      );
                 },
 
-                searchValues: {},
-                get search() { return this.searchValues[this.activeTab] || ''; },
-                set search(value) { this.searchValues[this.activeTab] = value; }
 
             }"
             x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';
@@ -820,7 +817,7 @@
                                                             </div>
 
                                                             <!-- Action Buttons -->
-                                                            <div class="flex justify-end space-x-4" x-init="console.log(part.warehouse.id);">
+                                                            <div class="flex justify-end space-x-4">
                                                                 <button type="button"
                                                                         @click="showImageModal = false; $wire.closeImageModal();"
                                                                         class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
