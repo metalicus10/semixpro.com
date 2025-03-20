@@ -545,7 +545,7 @@
                                             //selectedPns: @entangle('selectedPns'),
                                         }"
                                              @pn-added.window="addingPn = false; newPn = ''; errorMessage = ''"
-                                             class="flex-1 flex flex-row px-4 py-2 md:mb-0 cursor-pointer relative"
+                                             class="flex-1 flex flex-row px-4 py-2 md:mb-0 cursor-pointer relative z-10"
                                         >
                                             <!-- PN -->
                                             <span class="flex items-center md:hidden font-semibold">Name:</span>
@@ -595,7 +595,7 @@
 
                                         <!-- Price -->
                                         <div
-                                            class="flex flex-row flex-1 px-4 py-2 md:mb-0 cursor-pointer relative parent-container"
+                                            class="flex flex-row flex-1 px-4 py-2 md:mb-0 cursor-pointer relative parent-container z-10"
                                             x-data="{ showPopover: false, editing: false, newPrice: '', popoverX: 0, popoverY: 0 }">
 
                                             <!-- Кликабельная ссылка с ценой запчасти -->
@@ -913,7 +913,7 @@
                                                     x-init="document.body.classList.add('overflow-hidden')"
                                                     @click.away="modalOpen = false"
                                                     @close-modal.window="document.body.classList.remove('overflow-hidden')"
-                                                    class="fixed inset-0 flex items-center justify-center w-full h-full"
+                                                    class="fixed inset-0 flex items-center justify-center w-full h-full z-20"
                                                 >
                                                     <!-- Оверлей -->
                                                     <div x-show="modalOpen"
