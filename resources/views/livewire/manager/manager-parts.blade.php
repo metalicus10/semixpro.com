@@ -601,7 +601,7 @@
                                             <!-- Кликабельная ссылка с ценой запчасти -->
                                             <span class="md:hidden font-semibold">Price:</span>
                                             <a id="price-item-part.id"
-                                               @click="
+                                                @click="
                                                 $nextTick(() => {
                                                     editing = false; // Сбрасываем редактирование при открытии
                                                     newPrice = part.price; // Устанавливаем текущее значение
@@ -614,7 +614,7 @@
 
                                                     showPopover = true;
                                                 });
-                                           "
+                                                "
                                                class="cursor-pointer text-sm text-blue-600 hover:underline dark:text-blue-400">
                                                 $<span x-text="part.price"></span>
                                             </a>
@@ -835,13 +835,22 @@
                                             </div>
                                         </div>
 
+                                        <!-- URL -->
                                         <div
-                                            class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold truncate"
-                                            x-data="{ partId: part.id, modalOpen: false, urlData: JSON.parse(part.url), clickCount: 0 }"
+                                            class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold truncate parent-container z-10"
+                                            x-data="{
+                                                partId: part.id,
+                                                isModalOpen: false,
+                                                urlData: JSON.parse(part.url),
+                                                clickCount: 0,
+                                                showPopover: false,
+                                                popoverX: 0,
+                                                popoverY: 0
+                                            }"
                                             x-init="
                                                 window.addEventListener('modal-open', event => {
                                                     if (event.detail.partId === partId) {
-                                                        modalOpen = true;
+                                                        isModalOpen = true;
                                                     }
                                                 });
                                                 Livewire.on('urlUpdated', updatedPartId => {
@@ -851,7 +860,14 @@
                                                         });
                                                     }
                                                 });
-                                            ">
+                                            "
+                                        >
+                                            <!-- Оверлей -->
+                                            <div x-show="showPopover"
+                                                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                                 @click="showPopover = false"
+                                                 x-cloak>
+                                            </div>
                                             <template x-if="urlData?.text || urlData?.url">
                                                 <div>
                                                     <span class="md:hidden font-semibold">URL:</span>
@@ -859,34 +875,46 @@
                                                        x-text="urlData.text || urlData.url"
                                                        class="text-blue-500 underline cursor-pointer"
                                                        @click.prevent="
-                                                           clickCount++;
-                                                           setTimeout(() => {
-                                                               if (clickCount === 1) {
-                                                                   // Одиночный клик - переход по ссылке
-                                                                   if (urlData?.url) {
-                                                                       window.open(urlData.url, '_blank');
-                                                                   }
-                                                               } else if (clickCount === 2) {
-                                                                   // Двойной клик - открытие модального окна
-                                                                   modalOpen = true;
-                                                               }
-                                                               clickCount = 0; // Сброс счетчика
-                                                           }, 250); // Таймаут для определения двойного клика
+                                                        $nextTick(() => {
+                                                            const parent = $el.closest('.parent-container');
+                                                            const elementOffsetLeft = $el.offsetLeft;
+                                                            const elementOffsetTop = $el.offsetTop;
+
+                                                            popoverX = elementOffsetLeft / parent.offsetWidth;
+                                                            popoverY = elementOffsetTop / parent.offsetHeight;
+
+                                                            showPopover = true;
+                                                        });
                                                        ">
                                                     </a>
+
+                                                    <!-- Поповер с кнопками -->
+                                                    <div x-show="showPopover" x-transition role="tooltip"
+                                                         class="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-56 p-1"
+                                                         :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
+                                                         @click.self="showPopover = false">
+
+                                                        <div class="flex flex-row w-full">
+                                                            <!-- Кнопка Редактировать -->
+                                                            <button @click.prevent="$dispatch('open-url-modal', { partId: partId }); showPopover = false"
+                                                                    class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                                Редактировать
+                                                            </button>
+
+                                                            <!-- Кнопка Открыть URL -->
+                                                            <button @click.prevent="if (urlData?.url) window.open(urlData.url, '_blank'); showPopover = false"
+                                                                    class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
+                                                                Открыть URL
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </template>
 
                                             <template x-if="!urlData?.text && !urlData?.url">
                                                 <span class="text-gray-500 cursor-pointer"
                                                       @click.prevent="
-                                                          clickCount++;
-                                                          setTimeout(() => {
-                                                              if (clickCount === 2) {
-                                                                  modalOpen = true;
-                                                              }
-                                                              clickCount = 0;
-                                                          }, 250);
+                                                          showPopover = true;
                                                       "
                                                       title="Редактировать URL">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block" fill="none"
@@ -898,97 +926,114 @@
                                                 </span>
                                             </template>
 
-                                            <template x-if="modalOpen">
-                                                <div
-                                                    x-data="{
-                                                        managerSupplier: @entangle('managerSupplier'),
-                                                        managerUrl: @entangle('managerUrl'),
-                                                        managerUrlText: @entangle('managerUrlText'),
-                                                        suppliers: @entangle('suppliers'),
-                                                        updateUrl() {
-                                                            $wire.updatePartURL(partId, managerSupplier, managerUrl);
-                                                            modalOpen = false;
-                                                        }
-                                                    }"
-                                                    x-init="document.body.classList.add('overflow-hidden')"
-                                                    @click.away="modalOpen = false"
-                                                    @close-modal.window="document.body.classList.remove('overflow-hidden')"
-                                                    class="fixed inset-0 flex items-center justify-center w-full h-full z-20"
-                                                >
-                                                    <!-- Оверлей -->
-                                                    <div x-show="modalOpen"
-                                                         class="flex fixed inset-0 bg-black opacity-50 z-30"
-                                                         @click="modalOpen = false"
-                                                         x-cloak>
-                                                    </div>
-                                                    <div
-                                                        class="bg-white p-6 rounded-lg shadow-md w-full max-w-144 max-h-full overflow-y-auto z-50">
-                                                        <div class="flex items-center justify-between mb-4">
-                                                            <h2 class="text-lg font-semibold text-gray-900">
-                                                                Редактировать ссылку</h2>
-                                                            <button @click="modalOpen = false"
-                                                                    class="text-gray-500 hover:text-gray-700 focus:outline-none">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
-                                                                     fill="none"
-                                                                     viewBox="0 0 24 24"
-                                                                     stroke="currentColor" stroke-width="2">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                                          d="M6 18L18 6M6 6l12 12"/>
-                                                                </svg>
-                                                            </button>
-                                                        </div>
 
-                                                        <div class="mb-4">
-                                                            <label class="block text-gray-700 text-sm font-bold mb-2"
-                                                                   for="selectedSupplier">Supplier:</label>
-                                                            <select x-model="managerSupplier" id="selectedSupplier"
-                                                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                    @change="
-                                                                        let selected = suppliers.find(supplier => supplier.name === managerSupplier);
-                                                                        managerUrlText = selected?.text ?? '';
-                                                                        managerUrl = selected?.url ?? '';
-                                                                    "
-                                                            >
-                                                                <option value="">Select Supplier</option>
-                                                                <template x-for="supplier in suppliers" :key="supplier.id">
-                                                                    <option :value="supplier.name" x-text="supplier.name"></option>
-                                                                </template>
-                                                            </select>
-                                                        </div>
-
-                                                        <div class="mb-4" x-init="managerUrlText = urlData?.text ?? ''">
-                                                            <label class="block text-gray-700 text-sm font-bold mb-2"
-                                                                   for="managerUrlText">Text:</label>
-                                                            <input x-model="managerUrlText" type="text" id="managerUrlText"
-                                                                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                   placeholder="Enter Supplier Name">
-                                                        </div>
-
-                                                        <div class="mb-4" x-init="managerUrl = urlData?.url ?? ''">
-                                                            <label class="block text-gray-700 text-sm font-bold mb-2"
-                                                                   for="managerUrl">URL:</label>
-                                                            <input x-model="managerUrl" type="text" id="managerUrl"
-                                                                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                   placeholder="Enter URL">
-                                                        </div>
-
-                                                        <div
-                                                            class="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2">
-                                                            <button @click="modalOpen = false"
-                                                                    class="w-full md:w-auto bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                                                                Отмена
-                                                            </button>
-                                                            <button @click="updateUrl()"
-                                                                    class="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                                                OK
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </template>
                                         </div>
 
                                     </div>
+                                    <!-- Модальное окно для редактирования -->
+                                    <div
+                                        x-data="{
+        isModalOpen: false,
+        partId: null,
+        managerSupplier: @entangle('managerSupplier'),
+        managerUrl: @entangle('managerUrl'),
+        managerUrlText: @entangle('managerUrlText'),
+        suppliers: @entangle('suppliers'),
+        updateUrl() {
+            console.log('Updating URL for partId:', this.partId);
+            $wire.updatePartURL(this.partId, this.managerSupplier, this.managerUrl);
+            this.isModalOpen = false;
+            console.log('isModalOpen set to false after updateUrl call.');
+        }
+    }"
+                                        x-init="
+        console.log('Modal component initialized.');
+        Livewire.on('urlUpdated', updatedPartId => {
+            if (updatedPartId === partId) {
+                console.log('urlUpdated event received for partId:', updatedPartId);
+                $wire.call('getUrlData', updatedPartId).then(data => {
+                    console.log('Data received from Livewire:', data);
+                    managerUrlText = data.text;
+                    managerUrl = data.url;
+                });
+            }
+        });
+
+        window.addEventListener('open-url-modal', event => {
+            console.log('open-url-modal event received:', event.detail);
+            partId = event.detail.partId;
+            isModalOpen = true;
+            console.log('isModalOpen set to:', isModalOpen);
+
+            $wire.call('getUrlData', partId).then(data => {
+                console.log('Data received from getUrlData:', data);
+                managerUrlText = data.text;
+                managerUrl = data.url;
+            });
+        });
+    "
+                                        x-show="isModalOpen"
+                                        x-cloak
+                                        class="fixed inset-0 flex items-center justify-center w-full h-full z-50"
+                                    >
+                                        <!-- Оверлей -->
+                                        <div class="flex fixed inset-0 bg-black opacity-50 z-40" @click="isModalOpen = false; console.log('Overlay clicked. isModalOpen set to false.');"></div>
+
+                                        <div
+                                            class="bg-white p-6 rounded-lg shadow-md w-full max-w-xl z-50">
+                                            <div class="flex items-center justify-between mb-4">
+                                                <h2 class="text-lg font-semibold text-gray-900">Редактировать ссылку</h2>
+                                                <button @click="isModalOpen = false; console.log('Close button clicked. isModalOpen set to false.');"
+                                                        class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+                                                         fill="none"
+                                                         viewBox="0 0 24 24"
+                                                         stroke="currentColor" stroke-width="2">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                              d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="selectedSupplier">Supplier:</label>
+                                                <select x-model="managerSupplier" id="selectedSupplier"
+                                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                    <option value="">Select Supplier</option>
+                                                    <template x-for="supplier in suppliers" :key="supplier.id">
+                                                        <option :value="supplier.name" x-text="supplier.name"></option>
+                                                    </template>
+                                                </select>
+                                            </div>
+
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrlText">Text:</label>
+                                                <input x-model="managerUrlText" type="text" id="managerUrlText"
+                                                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                       placeholder="Enter Supplier Name">
+                                            </div>
+
+                                            <div class="mb-4">
+                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrl">URL:</label>
+                                                <input x-model="managerUrl" type="text" id="managerUrl"
+                                                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                       placeholder="Enter URL">
+                                            </div>
+
+                                            <div class="flex justify-end space-x-2">
+                                                <button @click="isModalOpen = false; console.log('Cancel button clicked. isModalOpen set to false.');"
+                                                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                                    Отмена
+                                                </button>
+                                                <button @click="updateUrl()"
+                                                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
                                 </template>
                             </template>
                         </div>
