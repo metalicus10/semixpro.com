@@ -8,6 +8,14 @@
         <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-orange-500"></div>
     </div>
 
+    <!-- Спиннер, отображаемый при загрузке -->
+    <div x-data="{ isLoading: @entangle('isLoading') }"
+         x-show="isLoading"
+         class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50"
+         style="display: none;">
+        <div class="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+    </div>
+
     <!-- Заголовок страницы и фильтры -->
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
@@ -144,6 +152,10 @@
                     search = '';
                 },
 
+                updateActiveWarehouse(tabId) {
+                    $wire.selectWarehouse(tabId);
+                },
+
                 <!-- Метод выбора всех запчастей -->
                 toggleCheckAll(event) {
                 if (event.target.checked) {
@@ -207,9 +219,9 @@
             x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';
                 partStock = {{ collect($parts)->pluck('quantity', 'id')->toJson() }};
                 $watch('selectedParts', () => fetchSelectedNames());
-            " @resize.window="checkScroll"
+            "
+             @resize.window="checkScroll"
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
-             @image-updated.window="parts = $wire.parts"
              class="relative w-full"
         >
             <div class="overflow-x-auto whitespace-nowrap">
@@ -690,13 +702,29 @@
                                                 nomenclatureImage:part.nomenclatures.image,
                                                 showTooltip: false,
                                                 isUploading: false,
+                                                isLoading: false,
                                                 uploadProgress: 0,
                                                 selectWarehouse(id){
                                                     $wire.selectWarehouse(id);
-                                                }
-                                            }" class="flex gallery relative"
+                                                },
+                                                refreshImage(imageUrl) {
+                                                    this.isLoading = true;
+                                                    this.partImage = imageUrl;
+                                                    setTimeout(() => this.isLoading = false, 500);
+                                                },
+                                            }"
+                                                 @image-updated.window="(event) => {
+                                                    const imageUrl = event.detail[0].imageUrl;
+                                                    refreshImage(imageUrl);
+                                                 }"
+                                                 class="flex gallery relative"
                                             >
                                                 <div class="flex flex-row">
+                                                    <!-- Индикатор загрузки -->
+                                                    <div x-show="isLoading"
+                                                         class="absolute inset-0 bg-black opacity-50 flex items-center justify-center z-10">
+                                                        <div class="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+                                                    </div>
                                                     <!-- Если есть изображение запчасти, оно в приоритете -->
                                                     <template x-if="partImage">
                                                         <img :src="'{{ asset('storage') }}' + partImage"
@@ -786,48 +814,56 @@
                                                         </div>
                                                     </button>
                                                 </div>
-                                                <!-- Прогресс загрузки -->
-                                                <div x-show="isUploading"
-                                                     class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-                                                    <div class="text-white text-lg">Uploading... (<span
-                                                            x-text="uploadProgress"></span>%)
-                                                    </div>
-                                                </div>
 
-                                                <div x-data="{ showImageModal: @entangle('showImageModal') }">
-                                                    <!-- Modal Backdrop -->
-                                                    <div x-show="showImageModal"
-                                                         class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
-                                                         x-transition.opacity x-cloak></div>
+                                                <div x-data="{ isUploading: false, uploadProgress: 0 }"
+                                                     x-on:livewire-upload-start="isUploading = true"
+                                                     x-on:livewire-upload-finish="isUploading = false; uploadProgress = 0"
+                                                     x-on:livewire-upload-error="isUploading = false; uploadProgress = 0"
+                                                     x-on:livewire-upload-progress="uploadProgress = $event.detail.progress">
+                                                    <div x-data="{ showImageModal: @entangle('showImageModal') }">
+                                                        <!-- Modal Backdrop -->
+                                                        <div x-show="showImageModal"
+                                                             class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
+                                                             x-transition.opacity x-cloak></div>
 
-                                                    <!-- Modal Content -->
-                                                    <div x-show="showImageModal"
-                                                         class="fixed inset-0 flex items-center justify-center z-50 p-4">
-                                                        <div
-                                                            class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
-                                                            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-                                                                Upload Image</h3>
+                                                        <!-- Modal Content -->
+                                                        <div x-show="showImageModal"
+                                                             class="fixed inset-0 flex items-center justify-center z-50 p-4">
+                                                            <div
+                                                                class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
+                                                                <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+                                                                    Upload Image</h3>
 
-                                                            <!-- File Input -->
-                                                            <div class="mb-4">
-                                                                <input type="file" wire:model="newImage"
-                                                                       class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
-                                                                @error('newImage') <span
-                                                                    class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                                                            </div>
+                                                                <!-- File Input -->
+                                                                <div class="mb-4">
+                                                                    <input type="file" wire:model="newImage"
+                                                                           class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                                                                    @error('newImage') <span
+                                                                        class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                                                                </div>
 
-                                                            <!-- Action Buttons -->
-                                                            <div class="flex justify-end space-x-4">
-                                                                <button type="button"
-                                                                        @click="showImageModal = false; $wire.closeImageModal();"
-                                                                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
-                                                                    Cancel
-                                                                </button>
-                                                                <button type="button"
-                                                                        wire:click="uploadImage(part.id)"
-                                                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                                                    Upload
-                                                                </button>
+                                                                <!-- Прогресс загрузки -->
+                                                                <div x-show="isUploading" class="mt-4">
+                                                                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2 dark:bg-gray-700">
+                                                                        <div :style="`width: ${uploadProgress}%`"
+                                                                             class="bg-blue-500 h-2.5 rounded-full"></div>
+                                                                    </div>
+                                                                    <div class="text-white text-center">Uploading... (<span x-text="uploadProgress"></span>%)</div>
+                                                                </div>
+
+                                                                <!-- Action Buttons -->
+                                                                <div class="flex justify-end space-x-4">
+                                                                    <button type="button"
+                                                                            @click="showImageModal = false; $wire.closeImageModal();"
+                                                                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
+                                                                        Cancel
+                                                                    </button>
+                                                                    <button type="button"
+                                                                            wire:click="uploadImage(part.id)"
+                                                                            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                                                        Upload
+                                                                    </button>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -837,7 +873,7 @@
 
                                         <!-- URL -->
                                         <div
-                                            class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold truncate parent-container z-10"
+                                            class="flex-1 px-4 py-2 md:mb-0 cursor-pointer font-semibold parent-container z-10 relative overflow-y-visible"
                                             x-data="{
                                                 partId: part.id,
                                                 isModalOpen: false,
@@ -848,11 +884,15 @@
                                                 popoverY: 0
                                             }"
                                             x-init="
-                                                window.addEventListener('modal-open', event => {
-                                                    if (event.detail.partId === partId) {
+                                                window.addEventListener('open-url-modal', event => {
+                                                        partId = event.detail.partId;
                                                         isModalOpen = true;
-                                                    }
-                                                });
+
+                                                        $wire.call('getUrlData', partId).then(data => {
+                                                            managerUrlText = data.text;
+                                                            managerUrl = data.url;
+                                                        });
+                                                    });
                                                 Livewire.on('urlUpdated', updatedPartId => {
                                                     if (updatedPartId === partId) {
                                                         $wire.call('getUrlData', partId).then(data => {
@@ -874,6 +914,7 @@
                                                     <a :href="urlData?.url"
                                                        x-text="urlData.text || urlData.url"
                                                        class="text-blue-500 underline cursor-pointer"
+                                                       :data-part-id="partId"
                                                        @click.prevent="
                                                         $nextTick(() => {
                                                             const parent = $el.closest('.parent-container');
@@ -890,13 +931,24 @@
 
                                                     <!-- Поповер с кнопками -->
                                                     <div x-show="showPopover" x-transition role="tooltip"
-                                                         class="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-56 p-1"
+                                                         class="absolute z-50 bg-white dark:bg-gray-800 rounded-lg shadow-lg w-56 p-1 border border-gray-600"
                                                          :style="'top: ' + popoverY + 'px; left: ' + popoverX + 'px;'"
                                                          @click.self="showPopover = false">
 
                                                         <div class="flex flex-row w-full">
                                                             <!-- Кнопка Редактировать -->
-                                                            <button @click.prevent="$dispatch('open-url-modal', { partId: partId }); showPopover = false"
+                                                            <button @click.prevent="
+                                                                    const targetElement = $el.closest('.parent-container').querySelector(`[data-part-id='${partId}']`);
+                                                                    if (targetElement) {
+                                                                        const rect = targetElement.getBoundingClientRect();
+                                                                        $dispatch('open-url-modal', {
+                                                                            partId: partId,
+                                                                            modalX: rect.left + window.scrollX,
+                                                                            modalY: rect.top + window.scrollY + rect.height
+                                                                        });
+                                                                    }
+                                                                    showPopover = false;
+                                                                "
                                                                     class="w-1/2 text-center py-1 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600 rounded">
                                                                 Редактировать
                                                             </button>
@@ -925,114 +977,136 @@
                                                     </svg>
                                                 </span>
                                             </template>
+                                            <!-- Модальное окно для редактирования -->
+                                            <div
+                                                x-data="{
+                                                    managerSupplier: @entangle('managerSupplier'),
+                                                    managerUrl: @entangle('managerUrl'),
+                                                    managerUrlText: @entangle('managerUrlText'),
+                                                    suppliers: @entangle('suppliers'),
+                                                    modalX: 0,
+                                                    modalY: 0,
+                                                    updateUrl() {
+                                                        $wire.updatePartURL(this.partId, this.managerSupplier, this.managerUrl);
+                                                        isModalOpen = false;
+                                                    },
+                                                    adjustPosition() {
+                                                        const modalWidth = 400;
+                                                        const modalHeight = 300;
+                                                        const viewportWidth = window.innerWidth;
+                                                        const viewportHeight = window.innerHeight;
 
+                                                        // Если окно выходит за правый край
+                                                        if (this.modalX + modalWidth > viewportWidth) {
+                                                            this.modalX = viewportWidth - modalWidth - 100; // Отступ в 100px
+                                                        }
+
+                                                        // Если окно выходит за нижний край
+                                                        if (this.modalY + modalHeight > viewportHeight) {
+                                                            this.modalY = viewportHeight - modalHeight - (modalHeight/2); // Отступ в половину окна
+                                                        }
+                                                    },
+                                                }"
+                                                x-init="
+                                                    Livewire.on('urlUpdated', updatedPartId => {
+                                                        if (updatedPartId === partId) {
+                                                            console.log('urlUpdated event received for partId:', updatedPartId);
+                                                            $wire.call('getUrlData', updatedPartId).then(data => {
+                                                                managerUrlText = data.text;
+                                                                managerUrl = data.url;
+                                                            });
+                                                        }
+                                                    });
+                                                    window.addEventListener('open-url-modal', event => {
+                                                        console.log('open-url-modal event received:', event.detail);
+                                                        partId = event.detail.partId;
+                                                        modalX = event.detail.modalX;
+                                                        modalY = event.detail.modalY;
+
+                                                        isModalOpen = true;
+                                                        console.log('Modal position:', { modalX, modalY });
+                                                        adjustPosition();
+
+                                                        $wire.call('getUrlData', partId).then(data => {
+                                                            console.log('Data received from getUrlData:', data);
+                                                            managerUrlText = data.text;
+                                                            managerUrl = data.url;
+                                                        });
+                                                    });
+
+                                                "
+                                                x-show="isModalOpen"
+                                                x-cloak
+                                                x-transition:enter="transition ease-out duration-300"
+                                                x-transition:enter-start="opacity-0 scale-90"
+                                                x-transition:enter-end="opacity-100 scale-100"
+                                                x-transition:leave="transition ease-in duration-200"
+                                                x-transition:leave-start="opacity-100 scale-100"
+                                                x-transition:leave-end="opacity-0 scale-90"
+                                                class="fixed z-[9999]"
+                                                :style="'top: ' + modalY + 'px; left: ' + modalX + 'px;'"
+                                            >
+                                                <!-- Оверлей -->
+                                                <div class="flex fixed inset-0 bg-black opacity-50 z-[-1]"
+                                                     @click="isModalOpen = false;"></div>
+                                                <div
+                                                    class="bg-white p-2 rounded-lg shadow-md w-[400px] max-h-full z-[9999]"
+                                                >
+                                                    <div class="flex items-center justify-between mb-2">
+                                                        <h2 class="text-lg font-semibold text-gray-900">Редактировать ссылку</h2>
+                                                        <button @click="isModalOpen = false;"
+                                                                class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+                                                                 fill="none"
+                                                                 viewBox="0 0 24 24"
+                                                                 stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                                      d="M6 18L18 6M6 6l12 12"/>
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="flex flex-row w-full mb-1 gap-1">
+                                                        <div class="flex-1">
+                                                            <label class="block text-gray-700 text-sm font-bold mb-2" for="selectedSupplier">Supplier:</label>
+                                                            <select x-model="managerSupplier" id="selectedSupplier"
+                                                                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                                <option value="">Select Supplier</option>
+                                                                <template x-for="supplier in suppliers" :key="supplier.id">
+                                                                    <option :value="supplier.name" x-text="supplier.name"></option>
+                                                                </template>
+                                                            </select>
+                                                        </div>
+                                                        <div class="flex-1">
+                                                            <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrlText">Text:</label>
+                                                            <input x-model="managerUrlText" type="text" id="managerUrlText"
+                                                                   class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                   placeholder="Enter Supplier Name">
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="mb-1">
+                                                        <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrl">URL:</label>
+                                                        <input x-model="managerUrl" type="text" id="managerUrl"
+                                                               class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                               placeholder="Enter URL">
+                                                    </div>
+
+                                                    <div class="flex justify-end space-x-2">
+                                                        <button @click="isModalOpen = false;"
+                                                                class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                                                            Отмена
+                                                        </button>
+                                                        <button @click="updateUrl()"
+                                                                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                                                            OK
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
 
                                         </div>
-
                                     </div>
-                                    <!-- Модальное окно для редактирования -->
-                                    <div
-                                        x-data="{
-        isModalOpen: false,
-        partId: null,
-        managerSupplier: @entangle('managerSupplier'),
-        managerUrl: @entangle('managerUrl'),
-        managerUrlText: @entangle('managerUrlText'),
-        suppliers: @entangle('suppliers'),
-        updateUrl() {
-            console.log('Updating URL for partId:', this.partId);
-            $wire.updatePartURL(this.partId, this.managerSupplier, this.managerUrl);
-            this.isModalOpen = false;
-            console.log('isModalOpen set to false after updateUrl call.');
-        }
-    }"
-                                        x-init="
-        console.log('Modal component initialized.');
-        Livewire.on('urlUpdated', updatedPartId => {
-            if (updatedPartId === partId) {
-                console.log('urlUpdated event received for partId:', updatedPartId);
-                $wire.call('getUrlData', updatedPartId).then(data => {
-                    console.log('Data received from Livewire:', data);
-                    managerUrlText = data.text;
-                    managerUrl = data.url;
-                });
-            }
-        });
-
-        window.addEventListener('open-url-modal', event => {
-            console.log('open-url-modal event received:', event.detail);
-            partId = event.detail.partId;
-            isModalOpen = true;
-            console.log('isModalOpen set to:', isModalOpen);
-
-            $wire.call('getUrlData', partId).then(data => {
-                console.log('Data received from getUrlData:', data);
-                managerUrlText = data.text;
-                managerUrl = data.url;
-            });
-        });
-    "
-                                        x-show="isModalOpen"
-                                        x-cloak
-                                        class="fixed inset-0 flex items-center justify-center w-full h-full z-50"
-                                    >
-                                        <!-- Оверлей -->
-                                        <div class="flex fixed inset-0 bg-black opacity-50 z-40" @click="isModalOpen = false; console.log('Overlay clicked. isModalOpen set to false.');"></div>
-
-                                        <div
-                                            class="bg-white p-6 rounded-lg shadow-md w-full max-w-xl z-50">
-                                            <div class="flex items-center justify-between mb-4">
-                                                <h2 class="text-lg font-semibold text-gray-900">Редактировать ссылку</h2>
-                                                <button @click="isModalOpen = false; console.log('Close button clicked. isModalOpen set to false.');"
-                                                        class="text-gray-500 hover:text-gray-700 focus:outline-none">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
-                                                         fill="none"
-                                                         viewBox="0 0 24 24"
-                                                         stroke="currentColor" stroke-width="2">
-                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                              d="M6 18L18 6M6 6l12 12"/>
-                                                    </svg>
-                                                </button>
-                                            </div>
-
-                                            <div class="mb-4">
-                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="selectedSupplier">Supplier:</label>
-                                                <select x-model="managerSupplier" id="selectedSupplier"
-                                                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                    <option value="">Select Supplier</option>
-                                                    <template x-for="supplier in suppliers" :key="supplier.id">
-                                                        <option :value="supplier.name" x-text="supplier.name"></option>
-                                                    </template>
-                                                </select>
-                                            </div>
-
-                                            <div class="mb-4">
-                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrlText">Text:</label>
-                                                <input x-model="managerUrlText" type="text" id="managerUrlText"
-                                                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                       placeholder="Enter Supplier Name">
-                                            </div>
-
-                                            <div class="mb-4">
-                                                <label class="block text-gray-700 text-sm font-bold mb-2" for="managerUrl">URL:</label>
-                                                <input x-model="managerUrl" type="text" id="managerUrl"
-                                                       class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                       placeholder="Enter URL">
-                                            </div>
-
-                                            <div class="flex justify-end space-x-2">
-                                                <button @click="isModalOpen = false; console.log('Cancel button clicked. isModalOpen set to false.');"
-                                                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                                                    Отмена
-                                                </button>
-                                                <button @click="updateUrl()"
-                                                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                                                    OK
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-
 
                                 </template>
                             </template>

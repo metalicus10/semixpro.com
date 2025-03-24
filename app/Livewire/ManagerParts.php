@@ -77,9 +77,10 @@ class ManagerParts extends Component
     public $newImage;
     public $showImageModal = false;
     public $newPn;
-    public $searchPn = '';
+    public $searchPn = '', $globalImageFileName = '';
     public $partPns;
     public $clickTimers = [];
+    public bool $isLoading = false;
 
     public $warehousesWithParts;
 
@@ -166,8 +167,10 @@ class ManagerParts extends Component
      */
     public function selectWarehouse(int $warehouseId)
     {
+        $this->isLoading = true;
         $this->selectedWarehouseId = $warehouseId;
         $this->loadParts($warehouseId);
+        $this->isLoading = false;
     }
 
     /**
@@ -738,6 +741,7 @@ class ManagerParts extends Component
             $imagePath = '/images/parts/' . Auth::id();
             // Генерируем уникальное имя для файла
             $fileName = $imagePath . '/' . uniqid() . '.webp';
+            $this->globalImageFileName = $fileName;
 
             // Сохраняем закодированное изображение в local storage
             Storage::disk('public')->put($fileName, $processedImage);
@@ -747,7 +751,7 @@ class ManagerParts extends Component
         $this->closeImageModal();
 
         $this->dispatch('showNotification', 'success', 'PartImage updated successfully!');
-        $this->dispatch('image-updated');
+        $this->dispatch('image-updated', ['imageUrl' => $this->globalImageFileName]);
 
         // Сбрасываем состояние
         $this->reset('newImage');
