@@ -3,10 +3,21 @@
         <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Transferred spare parts</h1>
     </div>
 
-    <div class="flex flex-col">
+    <div class="flex flex-col" x-data="technicianTabs">
         <div class="-m-1.5 overflow-x-auto">
             <div class="p-1.5 min-w-full inline-block align-middle">
                 <div class="overflow-hidden">
+                    <!-- Табы с именами техников -->
+                    <div class="flex overflow-x-auto mb-4">
+                        <template x-for="(technician, index) in technicians" :key="index" x-init="console.log(technicians);">
+                            <button
+                                @click="activeTab = index"
+                                :class="{'bg-blue-500 text-white': activeTab === index, 'bg-gray-200 text-gray-700': activeTab !== index}"
+                                class="px-4 py-2 rounded-lg mr-2">
+                                <span x-text="technician.name"></span>
+                            </button>
+                        </template>
+                    </div>
 
                     <!-- Версия таблицы для десктопных устройств -->
                     <div class="flex flex-col">
@@ -52,6 +63,15 @@
                         </div>
                     </div>
                 </div>
+                <!-- AlpineJS инициализация -->
+                <script>
+                    document.addEventListener('alpine:init', () => {
+                        Alpine.data('technicianTabs', () => ({
+                            technicians: @json($this->transfers),
+                            activeTab: 0
+                        }));
+                    });
+                </script>
             </div>
         </div>
     </div>

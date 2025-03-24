@@ -18,7 +18,7 @@
         <livewire:manager-parts :key="'manager-parts-' . auth()->id()" />
     </div>
     <div x-cloak x-show="currentTab == 'statistics'" class="w-full">
-        <livewire:manager-statistics :key="'manager-statistics-' . auth()->id()" />
+        <livewire:manager-statistics :key="'manager-statistics-' . auth()->id()" :managerId="auth()->id()" />
     </div>
     <div x-cloak x-show="currentTab == 'technicians'" class="w-full">
         <livewire:manager-technicians :key="'manager-technicians-' . auth()->id()" />
