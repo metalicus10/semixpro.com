@@ -3,25 +3,31 @@
 namespace App\Livewire;
 
 use App\Models\Part;
+use App\Models\Technician;
 use App\Models\TechnicianPart;
 use App\Models\TechnicianPartUsage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Component;
 
 class ManagerStatistics extends Component
 {
-    public $transfers;
+    public $transfers, $technicians, $parts;
+    public ?int $selectedTechnicianId = null;
     public $usedParts = [];
     public $notificationMessage = '';
     public $notificationType = 'info';
+    public bool $isLoading = false;
 
     protected $listeners = ['partUsedByTechnician' => 'updatePartQuantity', 'partUsed' => 'refreshUsedParts'];
 
     public function mount()
     {
         $managerId = auth()->id();
+        $this->loadTechniciansWithParts();
 
         // Получаем все записи перемещения запчастей от этого менеджера
-        $this->transfers = TechnicianPart::with(['part', 'technician'])
+        $this->transfers = TechnicianPart::with(['parts', 'technician'])
             ->where('manager_id', $managerId)
             ->get();
 
@@ -34,6 +40,41 @@ class ManagerStatistics extends Component
         }
     }
 
+    public function loadTechniciansWithParts()
+    {
+        $this->technicians = Technician::where('manager_id', Auth::id())->orderBy('id')
+            ->get();
+
+        // Устанавливаем активный склад по умолчанию (первый в списке)
+        if (empty($this->selectedTechnicianId) && !empty($this->technicians)) {
+            $this->selectedTechnicianId = $this->technicians[0]['id'];
+        }
+
+        // Загружаем запчасти по складам
+        $this->loadParts($this->selectedTechnicianId);
+    }
+
+    public function loadParts(int $technicianId)
+    {
+        $this->parts = Cache::remember("parts_for_technician_{$technicianId}", 60, function () use ($technicianId) {
+            return TechnicianPart::where('manager_id', Auth::id())
+                ->whereHas('technicianDetails', function ($query) use ($technicianId) {
+                    $query->where('id', $technicianId);
+                })
+                ->with(['parts', 'technicianDetails'])
+                ->get()
+                ->toArray();
+        });
+    }
+
+    public function selectTechnician(int $technicianId)
+    {
+        $this->isLoading = true;
+        $this->selectedTechnicianId = $technicianId;
+        $this->loadParts($technicianId);
+        $this->isLoading = false;
+    }
+
     public function updatePartQuantity($partId)
     {
         // Находим запчасть по ее ID
@@ -41,7 +82,7 @@ class ManagerStatistics extends Component
 
         if ($part) {
             // Получаем список всех техников, которым была передана эта запчасть
-            $transfers = TechnicianPart::with('technician')
+            $transfers = TechnicianPart::with('technicians')
                 ->where('part_id', $partId)
                 ->get();
 

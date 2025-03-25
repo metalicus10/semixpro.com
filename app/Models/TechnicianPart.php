@@ -15,7 +15,7 @@ class TechnicianPart extends Model
     }
 
     // Связь с запчастями
-    public function part()
+    public function parts()
     {
         return $this->belongsTo(Part::class, 'part_id');
     }
@@ -35,4 +35,10 @@ class TechnicianPart extends Model
     {
         return $this->belongsTo(Warehouse::class, 'warehouse_id');
     }
+
+    public function technicianDetails()
+    {
+        return $this->belongsTo(Technician::class, 'technician_id', 'user_id');
+    }
+
 }
