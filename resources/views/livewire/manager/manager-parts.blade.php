@@ -66,12 +66,59 @@
                 parts: @entangle('parts'),
                 partStock: {},
                 partQuantities: {},
-
+                highlightedPart: null,
+                highlightedWarehouse: null,
 
                 init() {
+                    console.log('Parts component initialized');
                     this.scrollContainer = this.$refs.tabContainer;
                     this.checkScroll();
                     $watch('currentTab', () => search = '');
+
+                    // Теперь используем $on через x-on
+                    this.$el.addEventListener('highlight-part', (event) => {
+                        console.log('Received highlight-part event:', event.detail);
+                        this.highlightedPart = event.detail.partId;
+                        this.highlightedWarehouse = event.detail.warehouseId;
+
+                        // Установим активный склад
+                        this.currentWarehouseId = this.highlightedWarehouse;
+                        $wire.selectWarehouse(this.highlightedWarehouse);
+
+                        // Подсветим запчасть после переключения
+                        setTimeout(() => this.highlightPart(), 500);
+                    });
+
+                    window.addEventListener('warehouse-switched', (event) => {
+                        console.log('Livewire reported warehouse switched:', event.detail.warehouseId);
+                        this.activeTab = event.detail.warehouseId;
+
+                        // Переключаем вкладку после переключения склада
+                        this.$nextTick(() => this.highlightPart());
+                    });
+
+                    // Ловим событие переключения вкладки
+                    this.$el.addEventListener('switch-tab', (event) => {
+                        console.log('Switching main tab to:', event.detail.tab);
+                        this.currentTab = event.detail.tab;
+                    });
+                },
+
+                highlightPart() {
+                    if (this.highlightedPart) {
+                        const partElement = document.getElementById(`part-${this.highlightedPart}`);
+                        if (partElement) {
+                            console.log('Part element found:', partElement);
+                            if (!partElement.classList.contains('bg-yellow-300')) {
+                                partElement.classList.add('bg-yellow-300');
+                                setTimeout(() => {
+                                    partElement.classList.remove('bg-yellow-300');
+                                }, 2000);
+                            }
+                        }
+                    } else {
+                        console.warn('Part element not found:', `part-${this.highlightedPart}`);
+                    }
                 },
 
                 updateTabs(tabs) {
@@ -519,7 +566,7 @@
                             <template x-for="part in filteredParts()" :key="part.id">
                                 <template x-if="part.nomenclatures?.is_archived == false">
                                     <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
-                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative">
+                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative" :id="`part-${part.id}`">
                                         <!-- Checkbox -->
                                         <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
                                             <input type="checkbox" :value="part.id"

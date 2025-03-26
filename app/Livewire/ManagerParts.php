@@ -170,6 +170,7 @@ class ManagerParts extends Component
         $this->isLoading = true;
         $this->selectedWarehouseId = $warehouseId;
         $this->loadParts($warehouseId);
+        $this->dispatch('highlight-part', ['warehouseId' => $warehouseId]);
         $this->isLoading = false;
     }
 
