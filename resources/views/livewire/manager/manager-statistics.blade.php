@@ -79,9 +79,7 @@
                                                     <span
                                                         class="cursor-pointer text-blue-500 hover:text-blue-700"
                                                         @click="
-                                                            console.log('Click on part', part.id, 'in warehouse', part.warehouse_id);
-                                                            $dispatch('highlight-part', { partId: part.id, warehouseId: part.warehouse_id });
-
+                                                            $dispatch('switch-tab', { tab: 'parts', partId: part.id, warehouseId: part.warehouse_id });
                                                         ">
                                                         <span x-text="part.parts.name"></span>
                                                     </span>

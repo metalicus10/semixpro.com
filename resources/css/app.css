@@ -40,3 +40,19 @@ p {
 .dark .tooltip-arrow {
     border-bottom-color: #2d3748; /* Цвет фона поповера в темной теме */
 }
+
+@keyframes fadeInOut {
+    0% {
+        background-color: rgba(255, 107, 4, 0);
+    }
+    50% {
+        background-color: rgba(255, 107, 4, 0.7);
+    }
+    100% {
+        background-color: rgba(255, 107, 4, 0);
+    }
+}
+
+.highlighted {
+    animation: fadeInOut 1s ease-in-out;
+}

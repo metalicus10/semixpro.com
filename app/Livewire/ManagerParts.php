@@ -102,7 +102,7 @@ class ManagerParts extends Component
         'urlChanged' => '$refresh',
         'warehouseTabsUpdated' => 'loadWarehouses',
         'nomenclature-updated' => 'loadWarehouses',
-        'image-updated' => 'loadWarehouses'
+        'image-updated' => 'loadWarehouses',
     ];
 
     public function mount()
@@ -165,12 +165,12 @@ class ManagerParts extends Component
     /**
      * Выбирает активный склад
      */
-    public function selectWarehouse(int $warehouseId)
+    public function selectWarehouse(int $warehouseId, int $partId=null)
     {
         $this->isLoading = true;
         $this->selectedWarehouseId = $warehouseId;
         $this->loadParts($warehouseId);
-        $this->dispatch('highlight-part', ['warehouseId' => $warehouseId]);
+        $this->dispatch('warehouse-switched', ['warehouseId' => $warehouseId, 'partId' => $partId]);
         $this->isLoading = false;
     }
 

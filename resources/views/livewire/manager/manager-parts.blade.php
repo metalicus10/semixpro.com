@@ -68,6 +68,7 @@
                 partQuantities: {},
                 highlightedPart: null,
                 highlightedWarehouse: null,
+                currentWarehouseId: null,
 
                 init() {
                     console.log('Parts component initialized');
@@ -75,46 +76,27 @@
                     this.checkScroll();
                     $watch('currentTab', () => search = '');
 
-                    // Теперь используем $on через x-on
-                    this.$el.addEventListener('highlight-part', (event) => {
-                        console.log('Received highlight-part event:', event.detail);
-                        this.highlightedPart = event.detail.partId;
-                        this.highlightedWarehouse = event.detail.warehouseId;
-
-                        // Установим активный склад
-                        this.currentWarehouseId = this.highlightedWarehouse;
-                        $wire.selectWarehouse(this.highlightedWarehouse);
-
-                        // Подсветим запчасть после переключения
-                        setTimeout(() => this.highlightPart(), 500);
-                    });
-
-                    window.addEventListener('warehouse-switched', (event) => {
-                        console.log('Livewire reported warehouse switched:', event.detail.warehouseId);
-                        this.activeTab = event.detail.warehouseId;
-
-                        // Переключаем вкладку после переключения склада
-                        this.$nextTick(() => this.highlightPart());
-                    });
-
-                    // Ловим событие переключения вкладки
-                    this.$el.addEventListener('switch-tab', (event) => {
-                        console.log('Switching main tab to:', event.detail.tab);
+                    window.addEventListener('switch-tab', (event) => {
+                        console.log('Livewire reported tab switched:', event.detail);
                         this.currentTab = event.detail.tab;
+                        this.selectWarehouseTab(event.detail.warehouseId, event.detail.partId);
+                        setTimeout(() => this.highlightPart(event.detail.partId), 1300);
                     });
                 },
 
-                highlightPart() {
-                    if (this.highlightedPart) {
-                        const partElement = document.getElementById(`part-${this.highlightedPart}`);
+                selectWarehouseTab(warehouseId, partId) {
+                    if (warehouseId) {
+                        $wire.selectWarehouse(warehouseId, partId);
+                    }
+                },
+
+                highlightPart(partId) {
+                    if (partId) {
+                        const partElement = document.getElementById(`part-${partId}`);
                         if (partElement) {
-                            console.log('Part element found:', partElement);
-                            if (!partElement.classList.contains('bg-yellow-300')) {
-                                partElement.classList.add('bg-yellow-300');
-                                setTimeout(() => {
-                                    partElement.classList.remove('bg-yellow-300');
-                                }, 2000);
-                            }
+                            partElement.classList.remove('highlighted');
+                            void partElement.offsetWidth;
+                            partElement.classList.add('highlighted');
                         }
                     } else {
                         console.warn('Part element not found:', `part-${this.highlightedPart}`);
