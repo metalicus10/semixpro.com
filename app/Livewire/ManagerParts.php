@@ -144,12 +144,12 @@ class ManagerParts extends Component
 
     public function loadCategories()
     {
-        $this->categories = Category::where('manager_id', Auth::id())->get();
+        $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
     }
 
     public function loadBrands()
     {
-        $this->brands = Brand::where('manager_id', Auth::id())->get();
+        $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
     }
 
     public function loadTechnicians()

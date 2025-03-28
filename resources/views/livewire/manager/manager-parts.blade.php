@@ -16,46 +16,13 @@
         <div class="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
     </div>
 
-    <!-- Заголовок страницы и фильтры -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
-        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-            <!-- Фильтр по категориям -->
-            <div class="flex flex-row justify-between items-center">
-                <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by
-                    Cat:</label>
-                <select wire:model.live="selectedCategory" id="category"
-                        class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">All cats</option>
-                    @foreach ($categories as $cat)
-                        <option class="text-gray-400" value="{{ $cat->id }}">{{ $cat->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <!-- Фильтр по брендам -->
-            <div class="flex flex-row justify-between items-center">
-                <label for="brand" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by
-                    Brand:</label>
-                <select wire:model.live="selectedBrand" id="brand"
-                        class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 text-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">All brands</option>
-                    @foreach ($brands as $brand)
-                        <option class="text-gray-400" value="{{ $brand->id }}">{{ $brand->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-        </div>
-    </div>
-
-    <livewire:manager-part-form/>
-
     <div class="flex flex-row space-x-4">
         <div x-data="{
                 scrollContainer: null,
                 canScrollLeft: false,
                 canScrollRight: false,
                 editingTabId: null,
-                newTabName: '', search: '',
+                newTabName: '', search: '', selectedCategory: '', selectedBrand: '',
                 tabs: [],
                 transferPartsModalOpen: false,
                 deletePartsModalOpen: false,
@@ -64,6 +31,8 @@
                 selectedParts: @entangle('selectedParts'),
                 selectedPartNames: @entangle('selectedPartNames'),
                 parts: @entangle('parts'),
+                categories: @entangle('categories'),
+                brands: @entangle('brands'),
                 partStock: {},
                 partQuantities: {},
                 highlightedPart: null,
@@ -71,13 +40,11 @@
                 currentWarehouseId: null,
 
                 init() {
-                    console.log('Parts component initialized');
                     this.scrollContainer = this.$refs.tabContainer;
                     this.checkScroll();
                     $watch('currentTab', () => search = '');
 
                     window.addEventListener('switch-tab', (event) => {
-                        console.log('Livewire reported tab switched:', event.detail);
                         this.currentTab = event.detail.tab;
                         this.selectWarehouseTab(event.detail.warehouseId, event.detail.partId);
                         setTimeout(() => this.highlightPart(event.detail.partId), 1300);
@@ -234,15 +201,18 @@
                 },
 
                 filteredParts() {
-                     return $wire.parts.filter(part =>
-                         part.name.toLowerCase().includes(this.search.toLowerCase()) ||
-                         part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
-                         (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
-                         (part.category && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
-                         (part.brand && part.brand.name.toLowerCase().includes(this.search.toLowerCase()))
-                     );
+                    return $wire.parts.filter(part =>
+                        (this.selectedCategory === '' || (part.category_id == this.selectedCategory)) &&
+                        (this.selectedBrand === '' || (part.nomenclatures.brands[this.selectedBrand].id == this.selectedBrand)) &&
+                        (
+                            part.name.toLowerCase().includes(this.search.toLowerCase()) ||
+                            part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
+                            (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
+                            (part.category && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
+                            (part.nomenclatures.brands && part.nomenclatures.brands[this.selectedBrand].name.toLowerCase().includes(this.search.toLowerCase()))
+                        )
+                    );
                 },
-
 
             }"
             x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';
@@ -253,6 +223,38 @@
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
              class="relative w-full"
         >
+            <!-- Заголовок страницы и фильтры -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
+                <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <!-- Фильтр по категориям -->
+                    <div class="flex flex-row justify-between items-center">
+                        <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by Cat:</label>
+                        <select x-model="selectedCategory" id="category"
+                                class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All cats</option>
+                            <template x-for="category in categories" :key="category.id">
+                                <option :value="category.id" x-text="category.name" class="text-gray-400"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <!-- Фильтр по брендам -->
+                    <div class="flex flex-row justify-between items-center">
+                        <label for="brand" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by
+                            Brand:</label>
+                        <select x-model="selectedBrand" id="brand"
+                                class="w-28 ml-2 p-2 text-gray-400 border border-gray-300 text-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">All brands</option>
+                            <template x-for="brand in brands" :key="brand.id">
+                                <option :value="brand.id" x-text="brand.name" class="text-gray-400"></option>
+                            </template>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <livewire:manager-part-form/>
+
             <div class="overflow-x-auto whitespace-nowrap">
                 <div class="flex relative overflow-hidden">
                     <!-- Кнопка для прокрутки влево -->
@@ -324,7 +326,7 @@
                                           d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
                                 </svg>
                             </div>
-                            <input type="text" id="table-search" x-model="search"
+                            <input type="text" id="table-search" x-model.debounce.500ms="search"
                                    class="block py-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-md w-80 bg-gray-50
                                 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white
                                 dark:focus:ring-blue-500 dark:focus:border-blue-500"
@@ -548,7 +550,7 @@
                             <template x-for="part in filteredParts()" :key="part.id">
                                 <template x-if="part.nomenclatures?.is_archived == false">
                                     <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
-                                dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative" :id="`part-${part.id}`">
+                                    dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative" :id="`part-${part.id}`">
                                         <!-- Checkbox -->
                                         <div class="block sm:hidden absolute top-5 right-5 mb-2" wire:ignore>
                                             <input type="checkbox" :value="part.id"
@@ -1039,7 +1041,6 @@
                                                 x-init="
                                                     Livewire.on('urlUpdated', updatedPartId => {
                                                         if (updatedPartId === partId) {
-                                                            console.log('urlUpdated event received for partId:', updatedPartId);
                                                             $wire.call('getUrlData', updatedPartId).then(data => {
                                                                 managerUrlText = data.text;
                                                                 managerUrl = data.url;
@@ -1047,17 +1048,14 @@
                                                         }
                                                     });
                                                     window.addEventListener('open-url-modal', event => {
-                                                        console.log('open-url-modal event received:', event.detail);
                                                         partId = event.detail.partId;
                                                         modalX = event.detail.modalX;
                                                         modalY = event.detail.modalY;
 
                                                         isModalOpen = true;
-                                                        console.log('Modal position:', { modalX, modalY });
                                                         adjustPosition();
 
                                                         $wire.call('getUrlData', partId).then(data => {
-                                                            console.log('Data received from getUrlData:', data);
                                                             managerUrlText = data.text;
                                                             managerUrl = data.url;
                                                         });
@@ -1133,12 +1131,17 @@
                                                     </div>
                                                 </div>
                                             </div>
-
                                         </div>
+                                        <span class="" x-text="part.category ? part.category.name : '—'"></span>
+                                        <template x-for="brand in part.nomenclatures.brands">
+                                            <span class="" x-text="brand.name ? '' : '—'" x-init="console.log(part.nomenclatures.brands[selectedBrand]);"></span>
+                                        </template>
                                     </div>
-
                                 </template>
                             </template>
+                            <div x-show="filteredParts().length === 0" x-transition class="text-gray-400 text-center mt-4">
+                                Ничего не нашлось
+                            </div>
                         </div>
                     </div>
                 @else
