@@ -56,3 +56,12 @@ p {
 .highlighted {
     animation: fadeInOut 1s ease-in-out;
 }
+
+/* Добавляем конфигурацию Tailwind для цветов */
+ :root {
+     --brand-light: #F3E8E9;
+     --brand-accent: #B48B74;
+     --brand-primary: #EC4C00;
+     --brand-dark: #957B78;
+     --brand-darker: #1E2939;
+ }

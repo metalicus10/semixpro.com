@@ -203,13 +203,23 @@
                 filteredParts() {
                     return $wire.parts.filter(part =>
                         (this.selectedCategory === '' || (part.category_id == this.selectedCategory)) &&
-                        (this.selectedBrand === '' || (part.nomenclatures.brands[this.selectedBrand].id == this.selectedBrand)) &&
+                        (this.selectedBrand === '' || (
+                            part.nomenclatures &&
+                            Array.isArray(part.nomenclatures.brands) &&
+                            part.nomenclatures.brands.some(brand => brand.id == this.selectedBrand)
+                        )) &&
                         (
-                            part.name.toLowerCase().includes(this.search.toLowerCase()) ||
-                            part.sku.toLowerCase().includes(this.search.toLowerCase()) ||
+                            part.name?.toLowerCase().includes(this.search.toLowerCase()) ||
+                            part.sku?.toLowerCase().includes(this.search.toLowerCase()) ||
                             (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
-                            (part.category && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
-                            (part.nomenclatures.brands && part.nomenclatures.brands[this.selectedBrand].name.toLowerCase().includes(this.search.toLowerCase()))
+                            (part.category?.name && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
+                            (
+                                part.nomenclatures &&
+                                Array.isArray(part.nomenclatures.brands) &&
+                                part.nomenclatures.brands.some(brand =>
+                                    brand.name?.toLowerCase().includes(this.search.toLowerCase())
+                                )
+                            )
                         )
                     );
                 },
@@ -545,6 +555,10 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="w-[150px] px-4 py-2">Категория</div>
+
+                            <div class="w-[150px] px-4 py-2">Брэнд</div>
                         </div>
                         <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900">
                             <template x-for="part in filteredParts()" :key="part.id">
@@ -1132,10 +1146,6 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <span class="" x-text="part.category ? part.category.name : '—'"></span>
-                                        <template x-for="brand in part.nomenclatures.brands">
-                                            <span class="" x-text="brand.name ? '' : '—'" x-init="console.log(part.nomenclatures.brands[selectedBrand]);"></span>
-                                        </template>
                                     </div>
                                 </template>
                             </template>
