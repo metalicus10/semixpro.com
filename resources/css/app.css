@@ -1,5 +1,18 @@
 @import "tailwindcss";
 @import "flowbite";
+@source "../views";
+
+@theme {
+    --color-brand-light: #F4F5EF;
+    --color-brand-primary: #FFE37C;
+    --color-brand-accent: #31d66e;
+    --color-brand-dark: #FF7C4F;
+    --color-brand-darker: #141e22;
+}
+
+[type="checkbox"]:focus{
+    --tw-ring-color: border-gray-50;
+}
 
 p {
     @apply leading-[1.6];

@@ -1,4 +1,5 @@
 /** @type {import('tailwindcss').Config} */
+import { colors } from 'tailwindcss/colors'
 export default {
     mode: 'jit',
     safelist: [
@@ -25,20 +26,21 @@ export default {
         },
         extend: {
             colors: {
-                'red': '#db1313',
-                'first': '#003d88',
-                'second': '#007fbf',
-                'accent-first': '#80102c',
-                'accent-second': '#bfa5a6',
-                'font-main': '#444655',
-                'border-grey': '#a8aabc',
-                'brand': {
-                    light: '#F4F5EF',    // Light shades (GREEN WHITE)
-                    accent: '#31d66e',    // Light accent (MOUNTAIN MEADOW)
-                    primary: '#FFE37C',   // Main brand color (KOURNIKOVA)
-                    dark: '#FF7C4F',      // Dark accent (CORAL)
-                    darker: '#000000'     // Dark shades (BLACK)
-                }
+                ...colors, // ⬅️ Важно: чтобы работали встроенные цвета Tailwind
+
+                // ✅ Брендовые цвета (flat-схема)
+                'brand-light': '#F4F5EF',        // Light shades (GREEN WHITE)
+                'brand-accent': '#31d66e',       // Light accent (MOUNTAIN MEADOW)
+                'brand-primary': '#FFE37C',      // Main brand color (KOURNIKOVA)
+                'brand-dark': '#FF7C4F',         // Dark accent (CORAL)
+                'brand-darker': '#000000',       // Dark shades (BLACK)
+
+                // ✅ Дополнительные брендовые цвета
+                'brand-red': '#d81313',
+                'brand-first': '#003d88',
+                'brand-second': '#007fbf',
+                'brand-font-main': '#444655',
+                'brand-border-grey': '#a8aabc',
             },
             spacing: {
                 '128': '32rem',

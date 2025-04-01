@@ -63,7 +63,7 @@ new #[Layout('layouts.guest')] class extends Component {
         <div>
             <label for="email" class="block text-brand-darker font-medium mb-2">
                 {{ __('Email') }}
-                <span class="text-brand-primary">*</span>
+                <span class="text-brand-dark">*</span>
             </label>
             <input
                 type="email"
@@ -71,7 +71,7 @@ new #[Layout('layouts.guest')] class extends Component {
                 name="email"
                 wire:model="form.email"
                 class="w-full px-4 py-3 rounded-lg border transition duration-200
-                               @error('form.email') border-red-500 bg-red-50 @else border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 @enderror"
+                               @error('form.email') border-red-500 bg-red-50 @else border-gray-200 focus:border-brand-dark focus:ring-2 focus:ring-brand-dark/10 @enderror"
                 placeholder="Введите ваш email"
                 required autofocus autocomplete="username"
             >
@@ -84,7 +84,7 @@ new #[Layout('layouts.guest')] class extends Component {
         <div>
             <label for="password" class="block text-brand-darker font-medium mb-2">
                 {{ __('Password') }}
-                <span class="text-brand-primary">*</span>
+                <span class="text-brand-dark">*</span>
             </label>
 
             <input
@@ -92,7 +92,7 @@ new #[Layout('layouts.guest')] class extends Component {
                 id="password"
                 wire:model="form.password"
                 class="w-full px-4 py-3 rounded-lg border transition duration-200
-                               @error('form.password') border-red-500 bg-red-50 @else border-gray-200 focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 @enderror"
+                               @error('form.password') border-red-500 bg-red-50 @else border-gray-200 focus:border-brand-dark focus:ring-2 focus:ring-brand-dark/10 @enderror"
                 placeholder="Введите ваш пароль" required autocomplete="current-password"
             >
 
@@ -107,7 +107,7 @@ new #[Layout('layouts.guest')] class extends Component {
                 type="checkbox"
                 id="remember"
                 wire:model="form.remember"
-                class="w-4 h-4 text-brand-primary border-gray-300 rounded focus:ring-brand-primary"
+                class="w-4 h-4 border-gray-300 text-brand-dark focus:ring-2 focus:ring-brand-dark focus:border-brand-dark rounded"
             >
             <label for="remember" class="ml-2 text-brand-darker">
                 {{ __('Remember me') }}
@@ -116,14 +116,14 @@ new #[Layout('layouts.guest')] class extends Component {
 
         <button
             type="submit"
-            class="w-full bg-brand-primary hover:bg-brand-primary/90 text-white font-semibold
+            class="w-full bg-brand-dark hover:bg-brand-dark/90 text-brand-darker font-semibold cursor-pointer
                            py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center"
             wire:loading.class="opacity-75 cursor-not-allowed"
             wire:loading.attr="disabled"
         >
             <span wire:loading.remove>{{ __('Log in') }}</span>
             <span wire:loading class="flex items-center">
-                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-[#444655]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -135,7 +135,7 @@ new #[Layout('layouts.guest')] class extends Component {
             <div class="text-right">
                 <a href="{{ route('password.request') }}"
                    wire:navigate
-                   class="text-brand-primary hover:underline text-sm">
+                   class="text-brand-darker hover:underline text-sm">
                     {{ __('Forgot your password?') }}
                 </a>
             </div>
