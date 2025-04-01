@@ -10,6 +10,7 @@ class ManagerSuppliers extends Component
 {
     public $suppliers;
     public $newSupplierName = '';
+    public string $search = '';
     public $showAddSupplierModal = false;
     public $errorMessage = '';
     public $notificationMessage = '';
@@ -28,6 +29,29 @@ class ManagerSuppliers extends Component
     public function loadSuppliers()
     {
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get();
+    }
+
+    public function getFilteredSuppliersProperty()
+    {
+        return Supplier::query()
+            ->when($this->search, fn($q) => $q->where('name', 'like', "%{$this->search}%"))
+            ->withCount('nomenclatures')
+            ->get()
+            ->map(function ($supplier) {
+                return [
+                    'id' => $supplier->id,
+                    'name' => $supplier->name,
+                    'initials' => strtoupper(substr($supplier->name, 0, 1)),
+                    'contact_person' => $supplier->contact_name,
+                    'email' => $supplier->email,
+                    'phone' => $supplier->phone,
+                    'receivables' => number_format($supplier->receivables, 2),
+                    'used_credits' => number_format($supplier->used_credits, 2),
+                    'address' => $supplier->address,
+                    'product_count' => $supplier->products_count,
+                    'active' => $supplier->is_active,
+                ];
+            });
     }
 
     public function addSupplier()
@@ -78,6 +102,8 @@ class ManagerSuppliers extends Component
 
     public function render()
     {
-        return view('livewire.manager-suppliers');
+        return view('livewire.manager-suppliers', [
+            'suppliers' => $this->filteredSuppliers,
+        ]);
     }
 }

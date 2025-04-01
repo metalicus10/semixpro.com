@@ -1,20 +1,114 @@
-<div x-data="{ showAddSupplierModal: false }"
-    @supplier-added.window="showAddSupplierModal = false"
+<div x-data="{ showAddSupplierModal: false, showDeleteConfirmModal: false }"
+     @supplier-added.window="showAddSupplierModal = false"
+     @confirm-delete.window="showDeleteConfirmModal = true"
+     @supplier-deleted.window="showDeleteConfirmModal = false"
     class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
 
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Suppliers</h1>
     </div>
 
-    <!-- Кнопка для добавления поставщика -->
-    <button @click="showAddSupplierModal = true"
-            class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600">
-        Add Supplier
-    </button>
-
-    <hr class="h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
-
     <!-- Таблица поставщиков -->
+    <div x-data="{ view: 'list' }" class="p-4 space-y-4">
+
+        {{-- Верхняя панель --}}
+        <div class="flex items-center justify-between w-full">
+            <div class="flex items-center gap-2 w-2/3">
+                <div class="flex items-center w-2/3 relative">
+                    <input type="text" wire:model.live="search" placeholder="Search product..." class="w-full border border-gray-300 rounded-xl" />
+                    <hr />
+                    <button class="btn btn-sm bg-gray-700 text-white flex items-center gap-1 absolute right-0 w-32">
+                        @include('icons.scan') Scan
+                    </button>
+                </div>
+                <button @click="view = 'list'" :class="view === 'list' ? 'bg-gray-800 text-white' : 'bg-gray-100'" class="btn btn-sm">
+                    @include('icons.list')
+                </button>
+                <button @click="view = 'grid'" :class="view === 'grid' ? 'bg-gray-800 text-white' : 'bg-gray-100'" class="btn btn-sm">
+                    @include('icons.grid')
+                </button>
+            </div>
+            <div class="flex items-center gap-2 w-1/3">
+                <button class="btn btn-sm bg-gray-600">@include('icons.menu')</button>
+                <button @click="showAddSupplierModal = true" class="px-4 py-2 bg-brand-accent text-white rounded-md hover:bg-green-600">Add Supplier</button>
+            </div>
+        </div>
+
+        {{-- Список поставщиков --}}
+        <div>
+            <template x-for="supplier in @js($suppliers)" :key="supplier.id">
+                <div class="bg-gray-800 rounded-xl p-4 text-white flex flex-col gap-2">
+
+                    {{-- Верхняя часть --}}
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm" x-text="supplier.initials"></div>
+                            <div>
+                                <div class="font-semibold text-lg" x-text="supplier.name"></div>
+                                <div class="text-sm text-gray-300" x-text="supplier.contact_person"></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-8 text-sm">
+                            <div>
+                                <div class="text-gray-400">Contacts</div>
+                                <div class="flex flex-col">
+                                    <span x-text="supplier.email"></span>
+                                    <span x-text="supplier.phone"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-gray-400">Receivables</div>
+                                <div>$<span x-text="supplier.receivables"></span></div>
+                            </div>
+                            <div>
+                                <div class="text-gray-400">Used Credits</div>
+                                <div>$<span x-text="supplier.used_credits"></span></div>
+                            </div>
+                        </div>
+
+                        <div x-data="{ open: false }" class="relative">
+                            <button @click="open = !open"
+                                    class="btn btn-sm bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-full">
+                                @include('icons.menu')
+                            </button>
+
+                            <!-- Dropdown -->
+                            <div x-show="open" @click.outside="open = false"
+                                 x-transition
+                                 class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-50 overflow-hidden text-sm text-gray-800">
+                                <button @click="$wire.editSupplier(supplier.id)"
+                                        class="block w-full text-left px-4 py-2 hover:bg-gray-100">
+                                    ✏️ Edit
+                                </button>
+                                <button @click="$wire.confirmDelete(supplier.id)"
+                                        class="block w-full text-left px-4 py-2 hover:bg-red-100 text-red-600">
+                                    🗑 Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Нижняя часть --}}
+                    <div class="flex justify-between items-center text-sm text-gray-300 pt-2 border-t border-gray-700 mt-2">
+                        <div class="flex items-center gap-2">
+                            @include('icons.location')
+                            <a href="#" class="hover:underline" x-text="supplier.address"></a>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @include('icons.package')
+                            <span x-text="`${supplier.product_count} product(s)`"></span>
+                        </div>
+                        <div>
+                            <span :class="supplier.active ? 'bg-blue-600 text-white px-2 py-1 rounded' : 'bg-gray-600 text-gray-300 px-2 py-1 rounded'" x-text="supplier.active ? 'Active' : 'Inactive'"></span>
+                        </div>
+                    </div>
+
+                </div>
+            </template>
+        </div>
+
+    </div>
+
     <div class="overflow-x-auto"
         x-data="{ showDeleteConfirmModal: false }"
         @confirm-delete.window="showDeleteConfirmModal = true"
@@ -57,22 +151,24 @@
             </tbody>
         </table>
 
-        <!-- Модальное окно подтверждения удаления -->
-        <div x-show="showDeleteConfirmModal" class="fixed inset-0 flex items-center justify-center">
-            <!-- Оверлей -->
-            <div x-show="showDeleteConfirmModal"
-                 class="flex fixed inset-0 bg-black opacity-50 z-30"
-                 @click="showDeleteConfirmModal = false"
-                 x-cloak>
-            </div>
-            <div class="bg-white p-6 rounded shadow-lg z-50">
-                <h2 class="text-lg font-semibold mb-4">Confirm Delete</h2>
-                <p class="mb-4">Are you sure you want to delete this supplier?</p>
 
-                <div class="flex justify-end space-x-2">
-                    <button @click="showDeleteConfirmModal = false" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-                    <button wire:click="deleteSupplier" class="px-4 py-2 bg-red-500 text-white rounded">Delete</button>
-                </div>
+    </div>
+
+    <!-- Модальное окно подтверждения удаления -->
+    <div x-show="showDeleteConfirmModal" class="fixed inset-0 flex items-center justify-center">
+        <!-- Оверлей -->
+        <div x-show="showDeleteConfirmModal"
+             class="flex fixed inset-0 bg-black opacity-50 z-30"
+             @click="showDeleteConfirmModal = false"
+             x-cloak>
+        </div>
+        <div class="bg-white p-6 rounded shadow-lg z-50">
+            <h2 class="text-lg font-semibold mb-4">Confirm Delete</h2>
+            <p class="mb-4">Are you sure you want to delete this supplier?</p>
+
+            <div class="flex justify-end space-x-2">
+                <button @click="showDeleteConfirmModal = false" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
+                <button wire:click="deleteSupplier" class="px-4 py-2 bg-red-500 text-white rounded">Delete</button>
             </div>
         </div>
     </div>

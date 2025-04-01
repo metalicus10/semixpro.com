@@ -46,12 +46,14 @@ class ManagerStatistics extends Component
             ->get();
 
         // Устанавливаем активный склад по умолчанию (первый в списке)
-        if (empty($this->selectedTechnicianId) && !empty($this->technicians)) {
-            $this->selectedTechnicianId = $this->technicians[0]['id'];
+        if (empty($this->selectedTechnicianId) && $this->technicians->isNotEmpty()) {
+            $this->selectedTechnicianId = $this->technicians->first()->id;
         }
 
         // Загружаем запчасти по складам
-        $this->loadParts($this->selectedTechnicianId);
+        if (!empty($this->selectedTechnicianId)) {
+            $this->loadParts($this->selectedTechnicianId);
+        }
     }
 
     public function loadParts(int $technicianId)

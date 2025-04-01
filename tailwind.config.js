@@ -20,7 +20,7 @@ export default {
             '2xl': '1536px',
         },
         fontFamily: {
-            sans: ['Graphik', 'sans-serif'],
+            sans: ['Lufga', 'sans-serif'],
             serif: ['Merriweather', 'serif'],
         },
         extend: {
@@ -33,11 +33,11 @@ export default {
                 'font-main': '#444655',
                 'border-grey': '#a8aabc',
                 'brand': {
-                    light: '#F3E8E9',    // Soft Peach
-                    accent: '#B48B74',    // Sandal
-                    primary: '#EC4C00',   // Fire (Main brand color)
-                    dark: '#957B78',      // Hemp
-                    darker: '#1E2939'     // Mirage
+                    light: '#F4F5EF',    // Light shades (GREEN WHITE)
+                    accent: '#31d66e',    // Light accent (MOUNTAIN MEADOW)
+                    primary: '#FFE37C',   // Main brand color (KOURNIKOVA)
+                    dark: '#FF7C4F',      // Dark accent (CORAL)
+                    darker: '#000000'     // Dark shades (BLACK)
                 }
             },
             spacing: {
