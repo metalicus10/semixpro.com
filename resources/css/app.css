@@ -2,12 +2,57 @@
 @import "flowbite";
 @source "../views";
 
+:root {
+    --background: 220 30% 10%;
+    --foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --card: 220 30% 13%;
+    --card-foreground: 0 0% 98%;
+    --border: 220 40% 22%;
+    --input: 220 40% 22%;
+    --primary: 142 71% 56%;
+    --primary-foreground: 141 79% 8%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.5rem;
+}
+* {
+    border-color: hsl(var(--border));
+}
+.hover\:bg-accent:hover {
+    background-color: hsl(var(--accent));
+}
+.hover\:text-accent-foreground:hover {
+    color: hsl(var(--accent-foreground));
+}
+.transition-colors {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+.ring-offset-background {
+    --tw-ring-offset-color: hsl(var(--background));
+}
+.bg-background {
+    background-color: hsl(var(--background));
+}
+
 @theme {
     --color-brand-light: #F4F5EF;
     --color-brand-primary: #FFE37C;
     --color-brand-accent: #31d66e;
     --color-brand-dark: #FF7C4F;
     --color-brand-darker: #141e22;
+    --color-brand-border: hsl(220 40% 22%);
+    --color-brand-background: hsl(var(--background));
 }
 
 [type="checkbox"]:focus{
@@ -20,6 +65,10 @@ p {
 
 .w-11{
     @apply w-[11.11%];
+}
+
+.min-h-screen {
+    min-height: 100vh;
 }
 
 .datatable-top {
