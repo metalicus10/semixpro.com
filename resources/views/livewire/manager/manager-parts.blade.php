@@ -231,7 +231,7 @@
             "
              @resize.window="checkScroll"
              @tabs-updated.window="(event) => { updateTabs(event.detail.tabs); }"
-             class="relative w-full"
+             class="w-full"
         >
             <!-- Заголовок страницы и фильтры -->
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
@@ -266,7 +266,7 @@
             <livewire:manager-part-form/>
 
             <div class="overflow-x-auto whitespace-nowrap">
-                <div class="flex relative overflow-hidden">
+                <div class="flex overflow-hidden">
                     <!-- Кнопка для прокрутки влево -->
                     <livewire:tabs-scroll-left/>
                     <ul class="flex flex-nowrap gap-1 no-scrollbar text-sm font-medium text-center text-gray-500
