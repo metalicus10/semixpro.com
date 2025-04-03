@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
             $table->string('name',191)->unique();
-            $table->string('contact_name',191);
-            $table->string('email',191);
-            $table->string('phone',191);
+            $table->string('contact_name',191)->nullable();
+            $table->string('email',191)->nullable();
+            $table->string('phone',191)->nullable();
             $table->decimal('receivables', 10, 2)->default(0);
             $table->decimal('used_credits', 10, 2)->default(0);
-            $table->string('address',191);
+            $table->string('address',191)->nullable();
+            $table->string('image', 191)->nullable();
             $table->boolean('is_active')->default(true);
             $table->foreignId('manager_id')->constrained('users');
             $table->timestamps();

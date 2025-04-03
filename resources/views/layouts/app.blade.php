@@ -41,7 +41,7 @@
         }
     })" x-init="setDefaultTabForRole()">
 <section
-    class="top-0 z-50 w-full border-b border-gray-200 dark:bg-brand-background border-brand-border">
+    class="top-0 z-50 relative w-full border-b border-gray-200 dark:bg-brand-background border-brand-border">
     <div class="flex items-center justify-between py-3 px-6 lg:px-5 lg:pl-3">
 
         <!-- Левая часть: Логотип, название и название меню -->
