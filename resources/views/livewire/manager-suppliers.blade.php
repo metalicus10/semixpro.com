@@ -5,7 +5,65 @@
     class="p-1 md:p-4 dark:bg-brand-background dark:border-gray-700 shadow-md rounded-lg overflow-hidden">
 
     <!-- Таблица поставщиков -->
-    <div x-data="{ view: 'list' }" class="space-y-4">
+    <div x-data="{
+        view: 'list',
+        scanning: false,
+        html5QrCode: null,
+        async loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        },
+        async startScan() {
+            if (typeof Html5Qrcode === 'undefined') {
+                console.warn('QR script not loaded, loading...');
+                await this.loadScript('https://unpkg.com/html5-qrcode');
+            }
+
+            if (typeof Html5Qrcode === 'undefined') {
+                console.error('html5-qrcode still not available');
+                return;
+            }
+
+            this.scanning = true;
+
+            if (!this.html5QrCode) {
+                this.html5QrCode = new Html5Qrcode('qr-reader');
+            }
+
+            this.html5QrCode.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: 250 },
+                (decodedText) => {
+                    $wire.set('search', decodedText);
+                    this.stopScan();
+                },
+                (err) => {}
+            ).catch((e) => {
+                console.error(e);
+                this.stopScan();
+            });
+        },
+        stopScan() {
+            if (this.html5QrCode) {
+                this.html5QrCode.stop().then(() => {
+                    this.scanning = false;
+                }).catch((err) => {
+                    console.error('Stop scan error', err);
+                });
+            }
+        }
+    }"
+        x-init="setTimeout(() => {
+            if (typeof html5QrCode !== 'undefined') {
+                console.log('QR ready');
+            }
+        }, 300)"
+         class="space-y-4">
 
         {{-- Верхняя панель --}}
         <div class="flex items-center justify-between gap-4 w-full">
@@ -15,7 +73,7 @@
                 <div class="relative w-full max-w-3xl">
                     <input type="text" wire:model.live="search" placeholder="Search product..." class="flex h-10 rounded-md border border-input px-3 text-sm ring-0 ring-offset-background file:border-0 bg-transparent file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10 pr-10 py-2 bg-sidebar w-full" />
                     <div class="absolute inset-y-0 right-0 flex items-center px-3">
-                        <button class="flex items-center gap-1 text-green-400 outline-1 rounded outline-gray-700 hover:text-white hover:bg-[#28282ba3] focus:outline-gray-700 transition cursor-pointer">
+                        <button @click="startScan" class="flex items-center gap-1 text-green-400 outline-1 rounded outline-gray-700 hover:text-white hover:bg-[#28282ba3] focus:outline-gray-700 transition cursor-pointer">
                             @include('icons.scan')
                             <span class="hidden sm:inline">Scan</span>
                         </button>
@@ -24,6 +82,9 @@
                         <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
+                    </div>
+                    <div x-show="scanning" @click.away="scanning = false;" class="fixed inset-0 flex items-center justify-center">
+                        <div id="qr-reader" class="w-64 h-64 bg-black rounded-lg overflow-hidden"></div>
                     </div>
                 </div>
                 <div class="flex items-center space-x-5">
@@ -51,7 +112,7 @@
                         </button>
                     </div>
 
-                    <button class="btn btn-sm bg-gray-600 cursor-pointer">@include('icons.menu')</button>
+                    <button class="p-3 hover:bg-accent text-white text-accent-foreground! hover:text-accent-foreground transition-colors duration-200 rounded-md bg-gray-800 text-sm font-medium ring-offset-background cursor-pointer">@include('icons.menu')</button>
                     <button @click="showAddSupplierModal = true" class="px-4 py-2 bg-brand-accent text-white rounded-md hover:bg-green-600 cursor-pointer">Add Supplier</button>
                 </div>
 
