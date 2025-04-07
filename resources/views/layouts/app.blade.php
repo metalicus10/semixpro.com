@@ -134,7 +134,7 @@
                         </svg>
                     </button>
                 </div>
-                <div x-show="showInventory"
+                <div x-show="showInventory" x-cloak
                      class="absolute z-50 mt-1 w-48 left-0 rounded-md bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                     <div class="py-1">
                         @if(auth()->user()->hasAccess('manage_nomenclature'))

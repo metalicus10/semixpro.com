@@ -61,6 +61,7 @@ export default {
     plugins: [
         require('@tailwindcss/forms'),
         require('@tailwindcss/typography'),
+        require("tailwindcss-animate"),
         require('@tailwindcss/aspect-ratio'),
         require('flowbite/plugin')({
             charts: true,

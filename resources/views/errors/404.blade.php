@@ -138,7 +138,8 @@
                 </div>
                 <div class="relative inline-block">
                     <div class="flex items-center">
-                        <button @click="setTab('parts')" x-bind:class="currentTab == 'parts' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
+                        <button @click="setTab('parts')"
+                                x-bind:class="currentTab == 'parts' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
                                 class="justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none
                             focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none cursor-pointer
                             disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 rounded-md flex items-center px-3 py-2"
@@ -247,20 +248,18 @@
             </div>
         </div>
     </section>
-    <div class="flex flex-row w-full min-h-screen">
+    <div class="flex flex-row w-full justify-center min-h-screen">
 
         <div class="flex flex-col items-center justify-center p-10 mt-20">
-            <h1 class="text-7xl font-bold text-primary mb-4">404</h1>
-            <h2 class="text-2xl font-semibold mb-4">Страница не найдена</h2>
+            <h1 class="text-7xl font-bold text-brand-primary mb-4">404</h1>
+            <h2 class="text-2xl font-semibold text-brand-primary mb-4">Страница не найдена</h2>
             <p class="text-lg text-gray-400 mb-8 text-center max-w-md">
                 Извините, мы не можем найти страницу, которую вы ищете. Она либо была удалена, либо URL указан неверно.
             </p>
             <a href="/">
-                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-primary text-white hover:bg-primary/90">
+                <button
+                    class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-brand-border text-white hover:bg-brand-border/90 cursor-pointer">
                     Вернуться на главную
-                </button>
-                <button class="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-primary text-white hover:bg-primary/90">
-                    Вернуться на склад
                 </button>
             </a>
         </div>

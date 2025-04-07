@@ -2,12 +2,18 @@
 
 namespace App\Livewire;
 
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\ImageManager;
 use Livewire\Component;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
+use Livewire\WithFileUploads;
 
 class ManagerSuppliers extends Component
 {
+    use WithFileUploads;
+
     public $suppliers;
     public $newSupplierName = '';
     public string $search = '';
@@ -16,6 +22,7 @@ class ManagerSuppliers extends Component
     public $notificationMessage = '';
     public $notificationType = 'info';
     public $supplierToDelete = null;
+    public $image;
 
     protected $rules = [
         'newSupplierName' => 'required|unique:suppliers,name',
@@ -54,21 +61,47 @@ class ManagerSuppliers extends Component
             });
     }
 
-    public function addSupplier()
+    public function addSupplier(array $data)
     {
         // Проверка на уникальность имени
         $this->validate();
 
+        $fileName = '';
+        if ($this->image) {
+
+            $tempPath = $this->image->getRealPath();
+            $tempImg = Storage::disk('public')->get($tempPath);
+
+            $manager = new ImageManager(Driver::class);
+
+            $processedImage = $manager->read($tempImg)
+                ->resize(200, 200)
+                ->toWebp(quality: 50);
+
+            $imagePath = '/images/suppliers/' . Auth::id();
+
+            // Генерируем уникальное имя для файла
+            $fileName = $imagePath. '/' . uniqid() . '.webp';
+
+            // Сохраняем закодированное изображение в local
+            Storage::disk('public')->put($fileName, $processedImage);
+        }
+
         Supplier::create([
-            'name' => $this->newSupplierName,
-            'manager_id' => Auth::id(),
+            'name' => $data['name'],
+            'contact_name' => $data['contact_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'address' => $data['address'],
+            'is_active' => $data['is_active'],
+            'image' => $fileName,
+            'manager_id' => auth()->id(),
         ]);
 
-        $this->resetForm();
+        //$this->resetForm();
         $this->loadSuppliers();
         $this->notificationMessage = 'Supplier added successfully';
         $this->notificationType = 'success';
-        $this->showAddSupplierModal = false;
         $this->dispatch('supplier-added');
     }
 
@@ -94,11 +127,11 @@ class ManagerSuppliers extends Component
         $this->notificationMessage = '';
     }
 
-    public function resetForm()
+    /*public function resetForm()
     {
         $this->newSupplierName = '';
         $this->errorMessage = '';
-    }
+    }*/
 
     public function render()
     {

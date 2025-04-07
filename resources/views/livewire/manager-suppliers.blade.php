@@ -181,7 +181,7 @@
                             </div>
                         </div>
 
-                        <div x-data="{ open: false }" class="relative">
+                        <div x-data="{ open: false }" class="">
                             <button @click="open = !open"
                                     class="btn btn-sm bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-full">
                                 @include('icons.menu')
@@ -190,7 +190,7 @@
                             <!-- Dropdown -->
                             <div x-show="open" @click.outside="open = false"
                                  x-transition
-                                 class="absolute right-0 mt-2 w-32 bg-white rounded-md shadow-lg z-50 overflow-hidden text-sm text-gray-800">
+                                 class="absolute right-8 mt-2 w-32 bg-white rounded-md shadow-lg z-50 overflow-hidden text-sm text-gray-800">
                                 <button @click="$wire.editSupplier(supplier.id)"
                                         class="block w-full text-left px-4 py-2 hover:bg-gray-100">
                                     ✏️ Edit
@@ -224,51 +224,6 @@
 
     </div>
 
-    <div class="overflow-x-auto"
-        x-data="{ showDeleteConfirmModal: false }"
-        @confirm-delete.window="showDeleteConfirmModal = true"
-        @supplier-deleted.window="showDeleteConfirmModal = false">
-        <table class="min-w-full divide-y divide-gray-200 dark:divide-neutral-700">
-            <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-            <tr>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
-                    Name
-                </th>
-                <th scope="col" class="px-6 py-3 text-start text-xs font-bold text-gray-400 uppercase dark:text-neutral-500">
-                    Actions
-                </th>
-            </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-neutral-700">
-                @forelse($suppliers as $supplier)
-                    <tr class="hover:bg-[#585c63] dark:hover:bg-[#162033]">
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-400">{{ $supplier->name }}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700 dark:text-gray-400">
-                            <!-- Кнопки действий -->
-                            <button wire:click="editSupplier({{ $supplier->id }})"
-                                    class="bg-yellow-500 text-white px-2 py-1 rounded">
-                                Edit
-                            </button>
-                            <button wire:click="confirmDelete({{ $supplier->id }})"
-                                class="bg-red-500 text-white px-2 py-1 rounded">
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4"
-                            class="px-5 py-5 text-sm text-center text-gray-400 bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
-                            No data
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-
-
-    </div>
-
     <!-- Модальное окно подтверждения удаления -->
     <div x-show="showDeleteConfirmModal" class="fixed inset-0 flex items-center justify-center">
         <!-- Оверлей -->
@@ -289,35 +244,104 @@
     </div>
 
     <!-- Модальное окно для добавления поставщика -->
-    <div x-show="showAddSupplierModal" x-cloak
+    <div x-data="{
+        supplier: {
+            name: '',
+            contact_name: '',
+            email: '',
+            phone: '',
+            receivables: '',
+            used_credits: '',
+            address: '',
+            is_active: true,
+        },
+        imageFile: null,
+        imagePreview: null,
+        open() { showAddSupplierModal = true },
+        close() {
+            showAddSupplierModal = false;
+            this.reset();
+        },
+        reset() {
+            this.supplier = {
+                name: '', contact_name: '', email: '', phone: '',
+                receivables: '', used_credits: '', address: '', is_active: true
+            };
+            this.imageFile = null;
+            this.imagePreview = null;
+            this.$refs.fileInput.value = '';
+        },
+        submit() {
+            const formData = new FormData();
+            Object.entries(this.supplier).forEach(([key, val]) => formData.append(key, val));
+            if (this.imageFile) {
+                formData.append('image', this.imageFile);
+            }
+
+            $wire.upload('image', this.imageFile, () => {
+                $wire.addSupplier(this.supplier);
+                this.close();
+            });
+        },
+        previewImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            this.imageFile = file;
+
+            const reader = new FileReader();
+            reader.onload = e => {
+                this.imagePreview = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        },
+    }"
+         @click.away="showAddSupplierModal = false"
+         x-show="showAddSupplierModal"
+         x-cloak
          x-transition
-         class="fixed inset-0 flex items-center justify-center bg-gray-800">
-        <!-- Оверлей -->
-        <div x-show="showAddSupplierModal"
-             class="flex fixed inset-0 bg-black opacity-50 z-30"
-             @click="showAddSupplierModal = false"
-             x-cloak>
-        </div>
-        <div class="bg-white rounded-lg shadow-lg p-6 w-1/3 z-50">
-            <h3 class="text-lg font-semibold mb-4">Add New Supplier</h3>
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+    >
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-6 relative" @click.away="showAddSupplierModal = false">
+            <h3 class="text-xl font-semibold mb-4">Add New Supplier</h3>
 
-            <!-- Поле ввода имени поставщика -->
-            <input type="text" wire:model="newSupplierName" placeholder="Supplier Name"
-                   class="w-full p-2 border border-gray-300 rounded mb-2">
-            @error('newSupplierName') <span class="text-red-500">{{ $message }}</span> @enderror
-            @if($errorMessage) <span class="text-red-500">{{ $errorMessage }}</span> @endif
+            <div class="grid grid-cols-1 gap-3">
+                <input type="text" x-model="supplier.name" placeholder="Supplier Name" class="input input-bordered w-full">
+                <input type="text" x-model="supplier.contact_name" placeholder="Contact Name" class="input input-bordered w-full">
+                <input type="email" x-model="supplier.email" placeholder="Email" class="input input-bordered w-full">
+                <input type="tel" x-model="supplier.phone" placeholder="Phone" class="input input-bordered w-full">
+                <input type="text" x-model="supplier.address" placeholder="Address" class="input input-bordered w-full">
+                <div class="inline-flex justify-between">
+                    <input type="file" accept="image/*"
+                           @change="previewImage"
+                           x-ref="fileInput"
+                           class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
+                              file:rounded-full file:border-0
+                              file:text-sm file:font-semibold
+                              file:bg-blue-50 file:text-blue-700
+                              hover:file:bg-blue-100 p-4 py-2">
+                    <template x-if="imagePreview">
+                        <img :src="imagePreview" alt="Preview" class="w-24 h-24 rounded object-cover border border-gray-300">
+                    </template>
+                </div>
 
-            <!-- Кнопки -->
-            <div class="flex justify-end mt-4">
-                <button @click="showAddSupplierModal = false; $wire.resetForm()"
-                        class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 mr-2">
+                <label class="flex items-center gap-2 mt-2">
+                    <input type="checkbox" x-model="supplier.is_active" class="form-checkbox">
+                    <span class="text-sm text-gray-700">Active</span>
+                </label>
+            </div>
+
+            <div class="flex justify-end mt-6 gap-2">
+                <button @click="close"
+                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
                     Cancel
                 </button>
-                <button wire:click="addSupplier"
-                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                <button @click="submit"
+                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
                     Add
                 </button>
             </div>
         </div>
     </div>
+
 </div>

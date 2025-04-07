@@ -52,7 +52,7 @@
     --color-brand-dark: #FF7C4F;
     --color-brand-darker: #141e22;
     --color-brand-border: hsl(220 40% 22%);
-    --color-brand-background: hsl(var(--background));
+    --color-brand-background: hsl(220 30% 10%);
 }
 
 [type="checkbox"]:focus{
