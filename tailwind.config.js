@@ -21,12 +21,12 @@ export default {
             '2xl': '1536px',
         },
         fontFamily: {
-            sans: ['Lufga', 'sans-serif'],
+            sans: ['Lufga', 'ui-sans-serif', 'system-ui'],
             serif: ['Merriweather', 'serif'],
         },
         extend: {
             colors: {
-                ...colors, // ⬅️ Важно: чтобы работали встроенные цвета Tailwind
+                background: '#0A0B0F',
 
                 // ✅ Брендовые цвета (flat-схема)
                 'brand-light': '#F4F5EF',        // Light shades (GREEN WHITE)
@@ -41,6 +41,13 @@ export default {
                 'brand-second': '#007fbf',
                 'brand-font-main': '#444655',
                 'brand-border-grey': '#a8aabc',
+
+                primary: '#00F073',
+                dark: '#0B1019',
+                mid: '#111827',
+                border: '#1F2937',
+                text: '#F1F5F9',
+                soft: '#94A3B8',
             },
             spacing: {
                 '128': '32rem',
@@ -55,9 +62,15 @@ export default {
         },
         container: {
             center: true,
+            padding: '1rem',
         },
     },
-
+    future: {
+        hoverOnlyWhenSupported: true,
+        respectDefaultRingColorOpacity: true,
+        disableColorOpacityUtilitiesByDefault: true,
+        relativeContentPathsByDefault: true,
+    },
     plugins: [
         require('@tailwindcss/forms'),
         require('@tailwindcss/typography'),
