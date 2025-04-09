@@ -328,7 +328,7 @@
                 <div class="text-center mb-16"><h2 class="text-3xl font-bold tracking-tight mb-4">
                         Система Управления Складом <br><span class="text-primary">для Вашего Бизнеса</span></h2>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     <div class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
                         <div class="p-6 feature-gradient h-full">
                             <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
