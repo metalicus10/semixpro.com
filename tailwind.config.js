@@ -1,10 +1,14 @@
 /** @type {import('tailwindcss').Config} */
+import defaultTheme from 'tailwindcss/defaultTheme'
 import { colors } from 'tailwindcss/colors'
 export default {
     mode: 'jit',
     safelist: [
         { pattern: /w-\[.*?\]/ },
         { pattern: /cursor-.*/ },
+        // padding
+        'pt-16', 'pt-20', 'pt-24', 'pt-32',
+        'sm:pt-16', 'sm:pt-20', 'sm:pt-24', 'sm:pt-32',
     ],
     content: [
         "./resources/**/*.blade.php",
@@ -26,7 +30,11 @@ export default {
         },
         extend: {
             colors: {
-                background: '#0A0B0F',
+                background: {
+                    DEFAULT: '#0B1019',     // или твой
+                    90: '#0B1019E6',        // hex с альфой E6 = 90%
+                    100: '#0B1019'          // fallback
+                },
 
                 // ✅ Брендовые цвета (flat-схема)
                 'brand-light': '#F4F5EF',        // Light shades (GREEN WHITE)

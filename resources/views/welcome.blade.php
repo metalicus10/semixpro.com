@@ -13,21 +13,23 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="antialiased bg-dark text-text font-sans overflow-x-hidden">
+<body class="antialiased bg-dark text-text font-sans overflow-x-hidden" x-data="{ mobileMenu: false }">
 <div class="min-h-screen bg-background">
     <!-- Navbar -->
     <header
         x-data="{ scrolled: false }"
-        x-init="$watch('scrolled', val => console.log(val)); window.addEventListener('scroll', () => scrolled = window.scrollY > 5)"
-        x-effect="console.log('Scrolled:', scrolled)"
-        :class="scrolled
-        ? 'fixed top-0 left-0 right-0 z-50 transition-all duration-300 inset-x-0 w-full overflow-hidden bg-background/95 backdrop-blur-md shadow-md'
-        : 'fixed top-0 left-0 right-0 z-50 transition-all duration-300 bg-transparent inset-x-0 w-full overflow-hidden'"
+        x-init="
+            window.addEventListener('scroll', () => {
+              scrolled = window.scrollY > 5;
+            });
+        "
+        class="fixed top-0 left-0 right-0 z-50 w-full transition-all duration-300"
+        :class="scrolled ? 'bg-dark\/80 backdrop-blur-sm shadow-md' : 'bg-transparent'"
     >
-
         <div class="container mx-auto max-w-screen-xl px-4 md:px-6">
             <div class="flex h-16 items-center justify-between min-w-0">
-                <div class="flex items-center"><a href="/">
+                <div class="flex items-center">
+                    <a href="/">
                         <div class="flex items-center space-x-2">
                             <div class="flex h-8 w-8 items-center justify-center rounded-md bg-brand-accent">
                                 <svg class="h-5 w-5 text-brand-darker" xmlns="http://www.w3.org/2000/svg"
@@ -38,7 +40,7 @@
                                     <path d="M2 10l10-5 10 5"></path>
                                 </svg>
                             </div>
-                            <span class="text-xl font-bold text-brand-primary">InventoryPro</span></div>
+                            <span class="text-xl font-bold text-brand-primary">SemixPro</span></div>
                     </a>
                     <nav class="ml-10 hidden space-x-6 md:flex">
                         <a href="#" class="text-sm text-brand-light transition-colors hover:text-brand-primary">
@@ -61,18 +63,17 @@
                 <div
                     class="hidden md:flex items-center space-x-4">
                     <button
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 hover:bg-accent h-10 px-4 py-2 text-brand-light hover:text-brand-primary">
+                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent h-10 px-4 py-2 text-brand-light hover:text-brand-primary">
                         Войти
                     </button>
                     <button
-                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 h-10 px-4 py-2 bg-brand-accent hover:bg-brand-accent/90 text-brand-darker">
+                        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 bg-brand-accent hover:bg-brand-accent/90 text-brand-darker">
                         Регистрация
                     </button>
                 </div>
-                <button
-                    class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-10 w-10 md:hidden text-brand-light"
-                    type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r0:"
-                    data-state="closed">
+                <button @click="mobileMenu = true"
+                        class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-10 w-10 md:hidden text-brand-light"
+                        type="button">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                          class="lucide lucide-menu h-6 w-6">
@@ -88,74 +89,53 @@
 
     <main>
 
-        <section class="pt-32 pb-20 relative overflow-hidden">
-            <div
-                class="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full filter blur-3xl"></div>
-            <div
-                class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full filter blur-3xl"></div>
-            <div
-                class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-                <div
-                    class="text-center max-w-4xl mx-auto mb-16"><h1
-
-                        class="text-4xl md:text-5xl lg:text-6xl font-sans font-bold mb-6 leading-none tracking-tight text-brand-light">
-                        Эффективное Управление <br><span
-
-                            class="text-brand-primary">Складом и Запчастями</span></h1>
-                    <p
-                        class="text-xl text-brand-light mb-10 max-w-160 mx-auto leading-none">Современное решение для
-                        управления
-                        номенклатурой, складами и запчастями. Прозрачный учет, гибкие настройки доступа.</p>
-                    <div
-                        class="flex flex-col sm:flex-row justify-center gap-4">
-                        <button
-                            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 h-11 rounded-md px-8 bg-brand-accent hover:bg-brand-accent/90 text-brand-darker">
+        <section class="pt-20 xl:pt-32 pb-20 relative overflow-hidden">
+            <div class="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 rounded-full filter blur-3xl"></div>
+            <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/10 rounded-full filter blur-3xl"></div>
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+                <div class="text-center max-w-4xl mx-auto mb-16">
+                    <h1 class="text-4xl md:text-5xl lg:text-6xl font-sans font-bold mb-6 leading-none tracking-tight text-brand-light">
+                        Эффективное Управление <br><span class="text-brand-primary">Складом и Запчастями</span>
+                    </h1>
+                    <p class="text-xl text-brand-light mb-10 max-w-160 mx-auto leading-none">
+                        Современное решение для управления номенклатурой, складами и запчастями. Прозрачный учет, гибкие настройки доступа.
+                    </p>
+                    <div class="flex flex-col sm:flex-row justify-center gap-4">
+                        <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-11 rounded-md px-8 bg-brand-accent hover:bg-brand-accent/90 text-brand-darker">
                             Начать Работу
                         </button>
-                        <button
-                            class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 border bg-background hover:text-accent-foreground h-11 rounded-md px-8 text-brand-primary border-brand-primary hover:bg-brand-primary/10">
+                        <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border bg-background hover:text-accent-foreground h-11 rounded-md px-8 text-brand-primary border-brand-primary hover:bg-brand-primary/10">
                             Узнать Больше
                         </button>
                     </div>
                 </div>
-                <div
-                    class="relative max-w-5xl mx-auto">
-                    <div
-                        class="dashboard-shadow bg-card rounded-xl overflow-hidden border border-muted relative">
-                        <div
-                            class="relative">
-                            <div
-                                class="w-full h-auto bg-card/50">
-                                <div
-                                    class="p-6 text-left">
+                <div class="relative max-w-5xl mx-auto">
+                    <div class="dashboard-shadow bg-card rounded-xl overflow-hidden border border-muted relative">
+                        <div class="relative">
+                            <div class="w-full h-auto bg-card/50">
+                                <div class="p-6 text-left">
                                     <div class="flex items-center justify-between mb-6">
-                                        <div><p
-                                                class="text-muted-foreground text-sm">Добрый день,
-                                                Александр</p>
+                                        <div class="pr-5">
+                                            <p class="text-muted-foreground text-sm">Добрый день, Александр</p>
                                             <h3 class="text-xl font-medium">Панель управления</h3>
                                         </div>
-                                        <div
-                                            class="text-xs text-muted-foreground flex items-center">Обновлено: <span
-                                                class="text-primary ml-1">5 минут назад</span>
+                                        <div class="text-xs text-muted-foreground flex flex-col xl:flex-row items-center">Обновлено:
+                                            <span class="text-primary ml-1">5 минут назад</span>
                                         </div>
                                     </div>
-                                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                        <div
-                                            class="bg-brand-darker/30 p-4 rounded-lg border border-brand-border-grey/20">
+                                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+                                        <div class="bg-brand-darker/30 p-4 rounded-lg border border-brand-border-grey/20">
                                             <div class="flex justify-between items-start mb-2">
-                                                <div><p
-                                                        class="text-xs text-brand-light/70">Всего
-                                                        Номенклатур</p><h4
-
-                                                        class="text-2xl font-semibold text-brand-light">1,247</h4></div>
+                                                <div><p class="text-xs text-brand-light/70">Всего Номенклатур</p>
+                                                    <h4 class="text-2xl font-semibold text-brand-light">1,247</h4>
+                                                </div>
                                                 <div class="bg-brand-accent/20 p-1 rounded">
                                                     <svg class="h-5 w-5 text-brand-accent"
                                                          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                          fill="none"
                                                          stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                                          stroke-linejoin="round">
-                                                        <path
-                                                            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                                         <path d="M14 2v6h6"></path>
                                                         <path d="M16 13H8"></path>
                                                         <path d="M16 17H8"></path>
@@ -163,124 +143,99 @@
                                                     </svg>
                                                 </div>
                                             </div>
-                                            <div class="flex items-center text-xs"><span
-                                                    class="text-brand-accent">+15</span><span
-                                                    class="text-brand-light/70 ml-1">за последнюю неделю</span>
+                                            <div class="flex items-center text-xs"><span class="text-brand-accent">+15</span><span class="text-brand-light/70 ml-1">за последнюю неделю</span>
                                             </div>
                                         </div>
-                                        <div
-                                            class="bg-brand-darker/30 p-4 rounded-lg border border-brand-border-grey/20">
+                                        <div class="bg-brand-darker/30 p-4 rounded-lg border border-brand-border-grey/20">
                                             <div class="flex justify-between items-start mb-2">
-                                                <div><p
-                                                        class="text-xs text-brand-light/70">
-                                                        Количество Складов</p><h4
-                                                        class="text-2xl font-semibold text-brand-light">8</h4></div>
+                                                <div><p class="text-xs text-brand-light/70">
+                                                        Количество Складов</p>
+                                                    <h4 class="text-2xl font-semibold text-brand-light">8</h4></div>
                                                 <div class="bg-brand-second/20 p-1 rounded">
                                                     <svg class="h-5 w-5 text-brand-second"
                                                          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                          fill="none"
                                                          stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                                          stroke-linejoin="round">
-                                                        <path
-                                                            d="M20 9v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9"></path>
+                                                        <path d="M20 9v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9"></path>
                                                         <path d="M9 22V12h6v10"></path>
                                                         <path d="M2 10l10-5 10 5"></path>
                                                     </svg>
                                                 </div>
                                             </div>
-                                            <div
-                                                class="w-full bg-brand-border-grey/20 rounded-full h-1.5">
+                                            <div class="w-full bg-brand-border-grey/20 rounded-full h-1.5">
                                                 <div class="bg-brand-second h-1.5 rounded-full"
                                                      style="width: 75%;"></div>
                                             </div>
-                                            <div
-                                                class="flex justify-between items-center text-xs mt-1"><span
-                                                    class="text-brand-light/70">6 активных</span><span
-                                                    class="text-brand-second">75%</span></div>
+                                            <div class="flex justify-between items-center text-xs mt-1"><span class="text-brand-light/70">6 активных</span>
+                                                <span class="text-brand-second">75%</span>
+                                            </div>
                                         </div>
-                                        <div
-                                            class="bg-brand-darker/30 p-4 rounded-lg border border-brand-border-grey/20">
+                                        <div class="bg-brand-darker/30 p-4 rounded-lg border border-brand-border-grey/20">
                                             <div class="flex justify-between items-start mb-2">
-                                                <div><p
-                                                        class="text-xs text-brand-light/70">Учтено
-                                                        Запчастей</p><h4
-                                                        class="text-2xl font-semibold text-brand-light">5,892</h4></div>
+                                                <div><p class="text-xs text-brand-light/70">Учтено
+                                                        Запчастей</p>
+                                                    <h4 class="text-2xl font-semibold text-brand-light">5,892</h4>
+                                                </div>
                                                 <div class="bg-brand-dark/20 p-1 rounded">
                                                     <svg class="h-5 w-5 text-brand-dark"
                                                          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                          fill="none"
                                                          stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                                          stroke-linejoin="round">
-                                                        <path
-                                                            d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path>
+                                                        <path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path>
                                                         <path d="M12 8v8"></path>
                                                         <path d="M8 12h8"></path>
                                                     </svg>
                                                 </div>
                                             </div>
-                                            <div class="flex items-center text-xs"><span
-                                                    class="text-brand-dark">+142</span><span
-                                                    class="text-brand-light/70 ml-1">за последний месяц</span>
+                                            <div class="flex items-center text-xs"><span class="text-brand-dark">+142</span>
+                                                <span class="text-brand-light/70 ml-1">за последний месяц</span>
                                             </div>
                                         </div>
                                     </div>
                                     <div>
-                                        <div class="flex items-center justify-between mb-4"><h4
-                                                class="font-medium text-brand-light">Последние
-                                                Действия</h4>
+                                        <div class="flex items-center justify-between mb-4">
+                                            <h4 class="font-medium text-brand-light">Последние Действия</h4>
                                             <button
-                                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 hover:bg-accent h-9 rounded-md px-3 text-xs text-brand-light/70 hover:text-brand-primary">
+                                                class="inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent h-9 rounded-md px-3 text-xs text-brand-light/70 hover:text-brand-primary">
                                                 Показать Все
                                             </button>
                                         </div>
                                         <div class="space-y-3">
-                                            <div
-                                                class="flex items-center justify-between p-3 bg-brand-darker/30 rounded-lg border border-brand-border-grey/20">
+                                            <div class="flex items-center justify-between p-3 bg-brand-darker/30 rounded-lg border border-brand-border-grey/20">
                                                 <div class="flex items-center">
-                                                    <div
-                                                        class="w-10 h-10 rounded-full bg-brand-dark/10 flex items-center justify-center mr-3">
+                                                    <div class="w-10 h-10 rounded-full bg-brand-dark/10 flex items-center justify-center mr-3">
                                                         <svg class="h-5 w-5 text-brand-dark"
                                                              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                              fill="none" stroke="currentColor" stroke-width="2"
                                                              stroke-linecap="round" stroke-linejoin="round">
-                                                            <path
-                                                                d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path>
-                                                            <path
-                                                                d="M12 8v8"></path>
-                                                            <path
-                                                                d="M8 12h8"></path>
+                                                            <path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path>
+                                                            <path d="M12 8v8"></path>
+                                                            <path d="M8 12h8"></path>
                                                         </svg>
                                                     </div>
-                                                    <div><p
-                                                            class="font-medium text-brand-light">
-                                                            Добавлена запчасть: Датчик ABX-12</p>
-                                                        <p class="text-xs text-brand-light/70">07
-                                                            Апреля, 2025</p></div>
+                                                    <div><p class="font-medium text-brand-light">Добавлена запчасть: Датчик ABX-12</p>
+                                                        <p class="text-xs text-brand-light/70">07 Апреля, 2025</p>
+                                                    </div>
                                                 </div>
                                                 <span class="text-brand-light font-medium">+24 шт.</span>
                                             </div>
-                                            <div
-                                                class="flex items-center justify-between p-3 bg-brand-darker/30 rounded-lg border border-brand-border-grey/20">
+                                            <div class="flex items-center justify-between p-3 bg-brand-darker/30 rounded-lg border border-brand-border-grey/20">
                                                 <div class="flex items-center">
-                                                    <div
-                                                        class="w-10 h-10 rounded-full bg-brand-second/10 flex items-center justify-center mr-3">
+                                                    <div class="w-10 h-10 rounded-full bg-brand-second/10 flex items-center justify-center mr-3">
                                                         <svg class="h-5 w-5 text-brand-second"
                                                              xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                              fill="none" stroke="currentColor" stroke-width="2"
                                                              stroke-linecap="round" stroke-linejoin="round">
-                                                            <path
-                                                                d="M20 9v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9"></path>
-                                                            <path
-                                                                d="M9 22V12h6v10"></path>
-                                                            <path
-                                                                d="M2 10l10-5 10 5"></path>
+                                                            <path d="M20 9v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9"></path>
+                                                            <path d="M9 22V12h6v10"></path>
+                                                            <path d="M2 10l10-5 10 5"></path>
                                                         </svg>
                                                     </div>
-                                                    <div><p
-                                                            class="font-medium text-brand-light">
-                                                            Создан новый склад: Южный</p>
-                                                        <p class="text-xs text-brand-light/70">05
-                                                            Апреля, 2025</p></div>
+                                                    <div><p class="font-medium text-brand-light">Создан новый склад: Южный</p>
+                                                        <p class="text-xs text-brand-light/70">05 Апреля, 2025</p>
+                                                    </div>
                                                 </div>
                                                 <span class="text-brand-accent font-medium">Техник: Иванов</span>
                                             </div>
@@ -293,20 +248,15 @@
                     </div>
                     <div
                         class="absolute -top-6 -left-6 bg-brand-darker/80 border border-brand-border-grey/20 rounded-lg p-3 shadow-lg hidden md:block">
-                        <div
-                            class="flex items-center space-x-2">
-                            <div
-                                class="w-3 h-3 rounded-full bg-brand-accent"></div>
-                            <span
-                                class="text-sm font-medium text-brand-light">Отслеживание в реальном времени</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-brand-accent"></div>
+                            <span class="text-sm font-medium text-brand-light">Отслеживание в реальном времени</span>
                         </div>
                     </div>
                     <div
                         class="absolute -bottom-6 -right-6 bg-brand-darker/80 border border-brand-border-grey/20 rounded-lg p-3 shadow-lg hidden md:block">
-                        <div
-                            class="flex items-center space-x-2">
-                            <svg
-                                class="h-5 w-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg"
+                        <div class="flex items-center space-x-2">
+                            <svg class="h-5 w-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg"
                                 viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
@@ -321,18 +271,21 @@
         </section>
 
         <section class="py-16 bg-secondary/30">
-            <div class="container mx-auto px-4 sm:px-6 lg:px-8"><p
-                    class="text-center text-muted-foreground text-sm uppercase tracking-wider font-medium mb-8">Our
-                    Recent
-                    Clients &amp; Partners</p>
+            <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+                <p class="text-center text-muted-foreground text-sm uppercase tracking-wider font-medium mb-8">Our Recent Clients &amp; Partners</p>
                 <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 items-center justify-items-center">
-                    <div
-                        class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                    <div class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
                              class="h-8 w-auto text-muted-foreground hover:text-primary"
                              height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M0 15.415c0 .468.38.85.848.85h5.937V.575L0 7.72v7.695m15.416 8.582c.467 0 .846-.38.846-.849v-5.937H.573l7.146 6.785h7.697M24 8.587a.844.844 0 0 0-.847-.846h-5.938V23.43l6.782-7.148L24 8.586M8.585.003a.847.847 0 0 0-.847.847v5.94h15.688L16.282.003H8.585Z"></path>
+                            <path d="M0 15.415c0 .468.38.85.848.85h5.937V.575L0 7.72v7.695m15.416 8.582c.467 0 .846-.38.846-.849v-5.937H.573l7.146 6.785h7.697M24 8.587a.844.844 0 0 0-.847-.846h-5.938V23.43l6.782-7.148L24 8.586M8.585.003a.847.847 0 0 0-.847.847v5.94h15.688L16.282.003H8.585Z"></path>
+                        </svg>
+                    </div>
+                    <div class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
+                             class="h-8 w-auto text-muted-foreground hover:text-primary"
+                             height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9.112 8.262L5.97 15.758H3.92L2.374 9.775c-.094-.368-.175-.503-.461-.658C1.447 8.864.677 8.627 0 8.479l.046-.217h3.3a.904.904 0 01.894.764l.817 4.338 2.018-5.102zm8.033 5.049c.008-1.979-2.736-2.088-2.717-2.972.006-.269.262-.555.822-.628a3.66 3.66 0 011.913.336l.34-1.59a5.207 5.207 0 00-1.814-.333c-1.917 0-3.266 1.02-3.278 2.479-.012 1.079.963 1.68 1.698 2.04.756.367 1.01.603 1.006.931-.005.504-.602.725-1.16.734-.975.015-1.54-.263-1.992-.473l-.351 1.642c.453.208 1.289.39 2.156.398 2.037 0 3.37-1.006 3.377-2.564m5.061 2.447H24l-1.565-7.496h-1.656a.883.883 0 00-.826.55l-2.909 6.946h2.036l.405-1.12h2.488zm-2.163-2.656l1.02-2.815.588 2.815zm-8.16-4.84l-1.603 7.496H8.34l1.605-7.496z"></path>
                         </svg>
                     </div>
                     <div
@@ -340,8 +293,7 @@
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
                              class="h-8 w-auto text-muted-foreground hover:text-primary"
                              height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M9.112 8.262L5.97 15.758H3.92L2.374 9.775c-.094-.368-.175-.503-.461-.658C1.447 8.864.677 8.627 0 8.479l.046-.217h3.3a.904.904 0 01.894.764l.817 4.338 2.018-5.102zm8.033 5.049c.008-1.979-2.736-2.088-2.717-2.972.006-.269.262-.555.822-.628a3.66 3.66 0 011.913.336l.34-1.59a5.207 5.207 0 00-1.814-.333c-1.917 0-3.266 1.02-3.278 2.479-.012 1.079.963 1.68 1.698 2.04.756.367 1.01.603 1.006.931-.005.504-.602.725-1.16.734-.975.015-1.54-.263-1.992-.473l-.351 1.642c.453.208 1.289.39 2.156.398 2.037 0 3.37-1.006 3.377-2.564m5.061 2.447H24l-1.565-7.496h-1.656a.883.883 0 00-.826.55l-2.909 6.946h2.036l.405-1.12h2.488zm-2.163-2.656l1.02-2.815.588 2.815zm-8.16-4.84l-1.603 7.496H8.34l1.605-7.496z"></path>
+                            <path d="M11.343 18.031c.058.049.12.098.181.146-1.177.783-2.59 1.238-4.107 1.238C3.32 19.416 0 16.096 0 12c0-4.095 3.32-7.416 7.416-7.416 1.518 0 2.931.456 4.105 1.238-.06.051-.12.098-.165.15C9.6 7.489 8.595 9.688 8.595 12c0 2.311 1.001 4.51 2.748 6.031zm5.241-13.447c-1.52 0-2.931.456-4.105 1.238.06.051.12.098.165.15C14.4 7.489 15.405 9.688 15.405 12c0 2.31-1.001 4.507-2.748 6.031-.058.049-.12.098-.181.146 1.177.783 2.588 1.238 4.107 1.238C20.68 19.416 24 16.096 24 12c0-4.094-3.32-7.416-7.416-7.416zM12 6.174c-.096.075-.189.15-.28.231C10.156 7.764 9.169 9.765 9.169 12c0 2.236.987 4.236 2.551 5.595.09.08.185.158.28.232.096-.074.189-.152.28-.232 1.563-1.359 2.551-3.359 2.551-5.595 0-2.235-.987-4.236-2.551-5.595-.09-.08-.184-.156-.28-.231z"></path>
                         </svg>
                     </div>
                     <div
@@ -349,35 +301,21 @@
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
                              class="h-8 w-auto text-muted-foreground hover:text-primary"
                              height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M11.343 18.031c.058.049.12.098.181.146-1.177.783-2.59 1.238-4.107 1.238C3.32 19.416 0 16.096 0 12c0-4.095 3.32-7.416 7.416-7.416 1.518 0 2.931.456 4.105 1.238-.06.051-.12.098-.165.15C9.6 7.489 8.595 9.688 8.595 12c0 2.311 1.001 4.51 2.748 6.031zm5.241-13.447c-1.52 0-2.931.456-4.105 1.238.06.051.12.098.165.15C14.4 7.489 15.405 9.688 15.405 12c0 2.31-1.001 4.507-2.748 6.031-.058.049-.12.098-.181.146 1.177.783 2.588 1.238 4.107 1.238C20.68 19.416 24 16.096 24 12c0-4.094-3.32-7.416-7.416-7.416zM12 6.174c-.096.075-.189.15-.28.231C10.156 7.764 9.169 9.765 9.169 12c0 2.236.987 4.236 2.551 5.595.09.08.185.158.28.232.096-.074.189-.152.28-.232 1.563-1.359 2.551-3.359 2.551-5.595 0-2.235-.987-4.236-2.551-5.595-.09-.08-.184-.156-.28-.231z"></path>
+                            <path d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726a17.617 17.617 0 01-10.951-.577 17.88 17.88 0 01-5.43-3.35c-.1-.074-.151-.15-.151-.22 0-.047.021-.09.051-.13zm6.565-6.218c0-1.005.247-1.863.743-2.577.495-.71 1.17-1.25 2.04-1.615.796-.335 1.756-.575 2.912-.72.39-.046 1.033-.103 1.92-.174v-.37c0-.93-.105-1.558-.3-1.875-.302-.43-.78-.65-1.44-.65h-.182c-.48.046-.896.196-1.246.46-.35.27-.575.63-.675 1.096-.06.3-.206.465-.435.51l-2.52-.315c-.248-.06-.372-.18-.372-.39 0-.046.007-.09.022-.15.247-1.29.855-2.25 1.82-2.88.976-.616 2.1-.975 3.39-1.05h.54c1.65 0 2.957.434 3.888 1.29.135.15.27.3.405.48.12.165.224.314.283.45.075.134.15.33.195.57.06.254.105.42.135.51.03.104.062.3.076.615.01.313.02.493.02.553v5.28c0 .376.06.72.165 1.036.105.313.21.54.315.674l.51.674c.09.136.136.256.136.36 0 .12-.06.226-.18.314-1.2 1.05-1.86 1.62-1.963 1.71-.165.135-.375.15-.63.045a6.062 6.062 0 01-.526-.496l-.31-.347a9.391 9.391 0 01-.317-.42l-.3-.435c-.81.886-1.603 1.44-2.4 1.665-.494.15-1.093.227-1.83.227-1.11 0-2.04-.343-2.76-1.034-.72-.69-1.08-1.665-1.08-2.94l-.05-.076zm3.753-.438c0 .566.14 1.02.425 1.364.285.34.675.512 1.155.512.045 0 .106-.007.195-.02.09-.016.134-.023.166-.023.614-.16 1.08-.553 1.424-1.178.165-.28.285-.58.36-.91.09-.32.12-.59.135-.8.015-.195.015-.54.015-1.005v-.54c-.84 0-1.484.06-1.92.18-1.275.36-1.92 1.17-1.92 2.43l-.035-.02zm9.162 7.027c.03-.06.075-.11.132-.17.362-.243.714-.41 1.05-.5a8.094 8.094 0 011.612-.24c.14-.012.28 0 .41.03.65.06 1.05.168 1.172.33.063.09.099.228.099.39v.15c0 .51-.149 1.11-.424 1.8-.278.69-.664 1.248-1.156 1.68-.073.06-.14.09-.197.09-.03 0-.06 0-.09-.012-.09-.044-.107-.12-.064-.24.54-1.26.806-2.143.806-2.64 0-.15-.03-.27-.087-.344-.145-.166-.55-.257-1.224-.257-.243 0-.533.016-.87.046-.363.045-.7.09-1 .135-.09 0-.148-.014-.18-.044-.03-.03-.036-.047-.02-.077 0-.017.006-.03.02-.063v-.06z"></path>
                         </svg>
                     </div>
-                    <div
-                        class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                    <div class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
                              class="h-8 w-auto text-muted-foreground hover:text-primary"
                              height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M.045 18.02c.072-.116.187-.124.348-.022 3.636 2.11 7.594 3.166 11.87 3.166 2.852 0 5.668-.533 8.447-1.595l.315-.14c.138-.06.234-.1.293-.13.226-.088.39-.046.525.13.12.174.09.336-.12.48-.256.19-.6.41-1.006.654-1.244.743-2.64 1.316-4.185 1.726a17.617 17.617 0 01-10.951-.577 17.88 17.88 0 01-5.43-3.35c-.1-.074-.151-.15-.151-.22 0-.047.021-.09.051-.13zm6.565-6.218c0-1.005.247-1.863.743-2.577.495-.71 1.17-1.25 2.04-1.615.796-.335 1.756-.575 2.912-.72.39-.046 1.033-.103 1.92-.174v-.37c0-.93-.105-1.558-.3-1.875-.302-.43-.78-.65-1.44-.65h-.182c-.48.046-.896.196-1.246.46-.35.27-.575.63-.675 1.096-.06.3-.206.465-.435.51l-2.52-.315c-.248-.06-.372-.18-.372-.39 0-.046.007-.09.022-.15.247-1.29.855-2.25 1.82-2.88.976-.616 2.1-.975 3.39-1.05h.54c1.65 0 2.957.434 3.888 1.29.135.15.27.3.405.48.12.165.224.314.283.45.075.134.15.33.195.57.06.254.105.42.135.51.03.104.062.3.076.615.01.313.02.493.02.553v5.28c0 .376.06.72.165 1.036.105.313.21.54.315.674l.51.674c.09.136.136.256.136.36 0 .12-.06.226-.18.314-1.2 1.05-1.86 1.62-1.963 1.71-.165.135-.375.15-.63.045a6.062 6.062 0 01-.526-.496l-.31-.347a9.391 9.391 0 01-.317-.42l-.3-.435c-.81.886-1.603 1.44-2.4 1.665-.494.15-1.093.227-1.83.227-1.11 0-2.04-.343-2.76-1.034-.72-.69-1.08-1.665-1.08-2.94l-.05-.076zm3.753-.438c0 .566.14 1.02.425 1.364.285.34.675.512 1.155.512.045 0 .106-.007.195-.02.09-.016.134-.023.166-.023.614-.16 1.08-.553 1.424-1.178.165-.28.285-.58.36-.91.09-.32.12-.59.135-.8.015-.195.015-.54.015-1.005v-.54c-.84 0-1.484.06-1.92.18-1.275.36-1.92 1.17-1.92 2.43l-.035-.02zm9.162 7.027c.03-.06.075-.11.132-.17.362-.243.714-.41 1.05-.5a8.094 8.094 0 011.612-.24c.14-.012.28 0 .41.03.65.06 1.05.168 1.172.33.063.09.099.228.099.39v.15c0 .51-.149 1.11-.424 1.8-.278.69-.664 1.248-1.156 1.68-.073.06-.14.09-.197.09-.03 0-.06 0-.09-.012-.09-.044-.107-.12-.064-.24.54-1.26.806-2.143.806-2.64 0-.15-.03-.27-.087-.344-.145-.166-.55-.257-1.224-.257-.243 0-.533.016-.87.046-.363.045-.7.09-1 .135-.09 0-.148-.014-.18-.044-.03-.03-.036-.047-.02-.077 0-.017.006-.03.02-.063v-.06z"></path>
+                            <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"></path>
                         </svg>
                     </div>
-                    <div
-                        class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
+                    <div class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
                         <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
                              class="h-8 w-auto text-muted-foreground hover:text-primary"
                              height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"></path>
-                        </svg>
-                    </div>
-                    <div
-                        class="grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all duration-300 flex items-center justify-center">
-                        <svg stroke="currentColor" fill="currentColor" stroke-width="0" role="img" viewBox="0 0 24 24"
-                             class="h-8 w-auto text-muted-foreground hover:text-primary"
-                             height="1em" width="1em" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"></path>
+                            <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"></path>
                         </svg>
                     </div>
                 </div>
@@ -385,18 +323,15 @@
         </section>
 
         <!-- Hero Section -->
-        <section id="features"
-                 class="py-24">
+        <section id="features" class="py-24">
             <div class="container mx-auto px-4 md:px-6">
                 <div class="text-center mb-16"><h2 class="text-3xl font-bold tracking-tight mb-4">
-                        Система Управления Складом <br><span
-                            class="text-primary">для Вашего Бизнеса</span></h2></div>
+                        Система Управления Складом <br><span class="text-primary">для Вашего Бизнеса</span></h2>
+                </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div
-                        class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
+                    <div class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
                         <div class="p-6 feature-gradient h-full">
-                            <div
-                                class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
+                            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
                                 <svg class="h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                      stroke-linejoin="round">
@@ -409,14 +344,12 @@
                             </div>
                             <h3 class="text-xl font-semibold mb-3">Управление Номенклатурой</h3>
                             <p class="text-muted-foreground leading-none">Создавайте и управляйте каталогом шаблонов
-                                запчастей с удобной
-                                системой версионирования и архивации.</p></div>
+                                запчастей с удобной системой версионирования и архивации.</p>
+                        </div>
                     </div>
-                    <div
-                        class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
+                    <div class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
                         <div class="p-6 feature-gradient h-full">
-                            <div
-                                class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
+                            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
                                 <svg class="h-6 w-6 text-primary"
                                      xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -428,28 +361,24 @@
                             </div>
                             <h3 class="text-xl font-semibold mb-3">Управление Складами</h3>
                             <p class="text-muted-foreground leading-none">Создавайте и настраивайте несколько складов с
-                                гибкой системой
-                                доступа для менеджеров и техников.</p></div>
+                                гибкой системой доступа для менеджеров и техников.</p></div>
                     </div>
-                    <div
-                        class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
+                    <div class="rounded-lg border text-card-foreground shadow-sm bg-secondary/30 border-muted hover:border-primary/30 transition-all duration-300 overflow-hidden h-full group">
                         <div class="p-6 feature-gradient h-full">
-                            <div
-                                class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
+                            <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-colors duration-300">
                                 <svg class="h-6 w-6 text-primary"
                                      xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                      stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                      stroke-linejoin="round">
-                                    <path
-                                        d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path>
+                                    <path d="M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"></path>
                                     <path d="M12 8v8"></path>
                                     <path d="M8 12h8"></path>
                                 </svg>
                             </div>
                             <h3 class="text-xl font-semibold mb-3">Учет Запчастей</h3>
                             <p class="text-muted-foreground leading-none">Отслеживайте запчасти на разных складах,
-                                перемещайте между ними
-                                и управляйте остатками в режиме реального времени.</p></div>
+                                перемещайте между ними и управляйте остатками в режиме реального времени.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -604,15 +533,15 @@
         </section>
 
         <!-- Features Section -->
-        <section id="features" class="py-20 px-4 bg-white/5">
+        <section id="features" class="py-20 px-4 bg-secondary/30">
             <div class="container mx-auto">
                 <h2 class="text-3xl font-bold text-center mb-16">Возможности Системы<br>
-                    <span class="text-emerald-500">Управления Складом</span>
+                    <span class="text-primary">Управления Складом</span>
                 </h2>
                 <div class="grid md:grid-cols-3 gap-8">
-                    <div class="p-6 rounded-xl bg-white/5 border border-white/10">
+                    <div class="p-6 rounded-xl feature-gradient border border-white/10">
                         <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                            <svg class="w-6 h-6 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2">
                                 <path d="M4 7V4h16v3M9 20h6M12 4v16"/>
                             </svg>
@@ -621,9 +550,9 @@
                         <p class="text-gray-400">Автоматический учет складских запасов в реальном времени с точностью до
                             единицы товара.</p>
                     </div>
-                    <div class="p-6 rounded-xl bg-white/5 border border-white/10">
+                    <div class="p-6 rounded-xl feature-gradient border border-white/10">
                         <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                            <svg class="w-6 h-6 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2">
                                 <path
                                     d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7m6 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7"/>
@@ -633,9 +562,9 @@
                         <p class="text-gray-400">Планирование и отслеживание поставок, автоматическое обновление
                             остатков.</p>
                     </div>
-                    <div class="p-6 rounded-xl bg-white/5 border border-white/10">
+                    <div class="p-6 rounded-xl feature-gradient border border-white/10">
                         <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center mb-4">
-                            <svg class="w-6 h-6 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                  stroke-width="2">
                                 <path d="M16 8v8m-8-8v8M4 4h16v16H4V4z"/>
                             </svg>
@@ -654,12 +583,12 @@
                 <div class="grid md:grid-cols-2 gap-12 items-center">
                     <div>
                         <h2 class="text-3xl font-bold mb-6">Аналитика Складских<br>
-                            <span class="text-emerald-500">Операций</span>
+                            <span class="text-primary">Операций</span>
                         </h2>
                         <div class="space-y-6">
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-emerald-500" viewBox="0 0 24 24" fill="none"
+                                    <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none"
                                          stroke="currentColor" stroke-width="2">
                                         <path d="M8 7v14m8-14v14M4 7h16M4 3h16"/>
                                     </svg>
@@ -671,7 +600,7 @@
                             </div>
                             <div class="flex items-center gap-4">
                                 <div class="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                                    <svg class="w-6 h-6 text-emerald-500" viewBox="0 0 24 24" fill="none"
+                                    <svg class="w-6 h-6 text-primary" viewBox="0 0 24 24" fill="none"
                                          stroke="currentColor" stroke-width="2">
                                         <path d="M16 8v8M8 8v8M4 4h16v16H4V4z"/>
                                     </svg>
@@ -1145,7 +1074,7 @@
         <section id="testimonials" class="py-20 px-4">
             <div class="container mx-auto">
                 <h2 class="text-3xl font-bold text-center mb-16">Что Говорят<br>
-                    <span class="text-emerald-500">Наши Клиенты</span>
+                    <span class="text-primary">Наши Клиенты</span>
                 </h2>
                 <div class="grid md:grid-cols-3 gap-8">
                     <div class="p-6 rounded-xl bg-white/5 border border-white/10">
@@ -1379,6 +1308,64 @@
             </div>
         </div>
     </footer>
+</div>
+
+<!-- Mobile Menu Overlay -->
+<div x-show="mobileMenu" x-cloak class="fixed inset-0 z-50 bg-black/80"
+     x-transition
+     style="pointer-events: auto;" data-aria-hidden="true" aria-hidden="true">
+</div>
+
+<div x-show="mobileMenu" x-cloak
+     x-effect="if (mobileMenu) {
+                document.body.style.overflow = 'hidden';
+                document.documentElement.style.overflow = 'hidden';
+             } else {
+                document.body.style.overflow = '';
+                document.documentElement.style.overflow = '';
+             }"
+     @click.outside="mobileMenu = false"
+     x-transition:enter="transition ease-out duration-300"
+     x-transition:enter-start="translate-x-full"
+     x-transition:enter-end="translate-x-0"
+     x-transition:leave="transition ease-in duration-300"
+     x-transition:leave-start="translate-x-0"
+     x-transition:leave-end="translate-x-full"
+     class="fixed z-50 gap-4 p-6 shadow-lg transition ease-in-out inset-y-0 right-0 h-full border-l sm:max-w-sm w-[85%] pt-10 bg-mobile-menu backdrop-blur-md border-brand-border-grey/30"
+     style="pointer-events: auto;">
+    <nav class="flex flex-col space-y-6 pt-6">
+        <a href="#" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+           @click="mobileMenu = false">Главная</a>
+        <a href="#about" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+           @click="mobileMenu = false">О системе</a>
+        <a href="#features" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+           @click="mobileMenu = false">Функции</a>
+        <a href="#pricing" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+           @click="mobileMenu = false">Тарифы</a>
+        <a href="#contact" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+           @click="mobileMenu = false">Контакты</a>
+        <div class="space-y-4 pt-6 border-t border-brand-border-grey/30">
+            <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 border bg-background hover:text-accent-foreground h-10 px-4 py-2 w-full text-brand-primary border-brand-primary hover:bg-brand-primary/10">
+                Войти
+            </button>
+            <button
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 h-10 px-4 py-2 w-full bg-brand-accent hover:bg-brand-accent/90 text-brand-darker">
+                Регистрация
+            </button>
+        </div>
+    </nav>
+    <button type="button"
+            class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
+            @click="mobileMenu = false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="lucide lucide-x h-4 w-4">
+            <path d="M18 6 6 18"></path>
+            <path d="m6 6 12 12"></path>
+        </svg>
+        <span class="sr-only">Close</span>
+    </button>
 </div>
 @livewireScripts
 </body>

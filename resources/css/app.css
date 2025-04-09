@@ -1,7 +1,5 @@
-@import "tailwindcss";
 @import "flowbite";
-
-@source "../views";
+@import "tailwindcss";
 
 :root {
     --background: 220 30% 10%;
@@ -25,6 +23,12 @@
     --ring: 240 4.9% 83.9%;
     --radius: 0.5rem;
     --leading-none: 1;
+}
+
+@layer base {
+    button {
+        @apply cursor-pointer;
+    }
 }
 
 * {
@@ -95,6 +99,9 @@
 }
 .bg-secondary\/50 {
     background-color: hsl(var(--secondary) / 0.5);
+}
+.bg-mobile-menu{
+    background-color: hsla(220, 28.3%, 10.4%, 0.85);
 }
 .border-muted {
     border-color: hsl(var(--muted));
