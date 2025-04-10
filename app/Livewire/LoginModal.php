@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Forms\LoginForm;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -11,6 +12,7 @@ class LoginModal extends Component
     public $password = '';
     public $remember = false;
     public $show = false;
+    //public LoginForm $form;
 
     protected $rules = [
         'email' => 'required|email',
@@ -27,7 +29,14 @@ class LoginModal extends Component
         $this->validate();
 
         try {
-            $this->form->authenticate(); // если используешь Laravel Fortify
+            //$this->form->authenticate(); // если используешь Laravel Fortify
+            if (!Auth::attempt([
+                'email' => $this->email,
+                'password' => $this->password,
+            ], $this->remember)) {
+                $this->addError('email', 'Неверные данные для входа.');
+                return;
+            }
 
             if (Auth::user()->is_blocked) {
                 session()->flash('error', 'Your account has been blocked');
