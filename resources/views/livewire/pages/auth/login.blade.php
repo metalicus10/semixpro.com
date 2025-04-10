@@ -27,7 +27,7 @@ new #[Layout('layouts.guest')] class extends Component {
             Auth::logout();
 
             // Перенаправляем обратно на страницу входа
-            $this->redirect(route('login')); // или ваш маршрут для страницы логина
+            $this->redirect(route('/')); // или ваш маршрут для страницы логина
             return; // Прерываем дальнейшее выполнение
         }
 

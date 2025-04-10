@@ -14,10 +14,17 @@
     @livewireStyles
 </head>
 <body class="antialiased bg-dark text-text font-sans overflow-x-hidden" x-data="{ mobileMenu: false }">
-<div class="min-h-screen bg-background">
+<div class="min-h-screen bg-background" x-data="{ scrolled: false, openLogin: false }"
+     x-effect="if (openLogin) {
+         document.body.style.overflow = 'hidden';
+         document.documentElement.style.overflow = 'hidden';
+     } else {
+         document.body.style.overflow = '';
+         document.documentElement.style.overflow = '';
+     }"
+>
     <!-- Navbar -->
     <header
-        x-data="{ scrolled: false }"
         x-init="
             window.addEventListener('scroll', () => {
               scrolled = window.scrollY > 5;
@@ -1306,12 +1313,13 @@
             </div>
         </div>
     </footer>
+    <livewire:login-modal />
 </div>
 
 <!-- Mobile Menu Overlay -->
 <div x-show="mobileMenu" x-cloak class="fixed inset-0 z-50 bg-black/80"
      x-transition
-     style="pointer-events: auto;" data-aria-hidden="true" aria-hidden="true">
+     style="pointer-events: auto;">
 </div>
 
 <div x-show="mobileMenu" x-cloak

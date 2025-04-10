@@ -13,7 +13,7 @@ class Logout extends Component
         session()->invalidate();
         session()->regenerateToken();
 
-        return redirect('/login'); // Перенаправление на страницу входа после выхода
+        return redirect('/'); // Перенаправление на главную страницу после выхода
     }
     public function render()
     {
