@@ -10,8 +10,19 @@
         showModal: false,
         editingMode: false,
         nn:'', name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '',
+        imageInputKey: Date.now(),
+        duplicateNameError: null, duplicateNnError: null,
         selectedNomenclatures: [],
         selectedImage: null,
+        submitNomenclature() {
+            $wire.call('addNomenclature', this.newNomenclature)
+                .then(() => {
+                    this.resetForm();
+                    this.showModal = false;
+                    this.duplicateNameError = null;
+                    this.duplicateNnError = null;
+                });
+        },
         openNomenclatureModal(mode, nomenclature = null) {
             this.editingMode = mode === 'edit';
             if (this.editingMode && nomenclature) {
@@ -22,7 +33,12 @@
             } else {
                 this.resetForm();
             }
+            this.resetForm();
             this.showModal = true;
+        },
+        closeNomenclatureModal() {
+            this.resetForm();
+            this.showModal = false;
         },
         closeNomenclatureDelModal() {
             this.confirmDeleteNomenclatureId = null;
@@ -36,6 +52,7 @@
             this.supplier_id = '';
             this.image = null;
             this.selectedImage = null;
+            this.imageInputKey = Date.now();
         },
         toggleCheckAll(event) {
             this.selectedNomenclatures = event.target.checked ? Object.values(this.nomenclatures).map(n => n.id) : [];
@@ -64,8 +81,15 @@
                 reader.readAsDataURL(file);
             }
         },
+        init() {
+            window.addEventListener('nomenclature-nn-duplicate', event => {
+                this.duplicateNnError = `Номенклатура с номером '${event.detail.nn}' уже существует`;
+            });
+            window.addEventListener('nomenclature-name-duplicate', event => {
+                this.duplicateNameError = `Номенклатура с названием '${event.detail.name}' уже существует`;
+            });
+        },
     }"
-
 >
     <div class="flex justify-between items-center mb-6">
         <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Nomenclature</h1>
@@ -231,12 +255,12 @@
         <!-- Оверлей -->
         <div x-show="showModal"
              class="flex fixed inset-0 bg-black opacity-50 z-30"
-             @click="showModal = false"
+             @click="showModal = false, closeNomenclatureModal()"
              x-cloak>
         </div>
         <div class="relative w-full max-w-4xl p-4 z-50">
             <!-- Modal content -->
-            <div class="bg-white rounded-lg shadow dark:bg-gray-800 p-5" @click.away="showModal = false">
+            <div class="bg-white rounded-lg shadow dark:bg-gray-800 p-5" @click.away="showModal = false, closeNomenclatureModal()">
                 <!-- Modal header -->
                 <div class="flex items-start justify-between p-4 mb-2 border-b rounded-t dark:border-gray-700">
                     <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
@@ -253,74 +277,71 @@
                     </button>
                 </div>
 
-                <form x-on:submit.prevent="$wire.addNomenclature()">
+                <form x-on:submit.prevent="submitNomenclature">
                     <div class="grid grid-cols-2 gap-6 text-gray-500 dark:text-gray-400">
                         <!-- NN -->
                         <div>
-                            <label for="nn" class="block text-sm font-medium">Номер номенклатуры <span class="relative top-0 text-red-600">*</span></label>
-                            <input type="text" id="nn" x-model="newNomenclature.nn"
-                                   placeholder="Введите номер" required=""
-                                   class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.nn" x-text="$wire.errors?.newNomenclature?.nn"></p>
+                            <label for="nn" class="block text-sm font-medium">Номер номенклатуры <span class="text-red-600">*</span></label>
+                            <input type="text" id="nn" x-model="newNomenclature.nn" required
+                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                            <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.nn"></p>
+                            <p class="mt-1 text-sm text-red-600" x-text="duplicateNnError" x-show="duplicateNnError"></p>
                         </div>
 
                         <!-- Name -->
                         <div>
-                            <label for="name" class="block text-sm font-medium">Название <span class="relative top-0 text-red-600">*</span></label>
-                            <input type="text" id="name" x-model="newNomenclature.name"
-                                placeholder="Введите название" required=""
-                                class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 required:border-red-500">
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.name" x-text="$wire.errors?.newNomenclature?.name"></p>
+                            <label for="name" class="block text-sm font-medium">Название <span class="text-red-600">*</span></label>
+                            <input type="text" id="name" x-model="newNomenclature.name" required
+                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm">
+                            <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.name"></p>
+                            <p class="mt-1 text-sm text-red-600" x-text="duplicateNameError" x-show="duplicateNameError"></p>
                         </div>
 
                         <!-- Category -->
                         <div>
-                            <label for="category" class="block text-sm font-medium">Категория <span class="relative top-0 text-red-600">*</span></label>
-                            <select id="category" x-model="newNomenclature.category_id" x-on:refresh-category-select.window="this.categories = $wire.categories"
-                                    class="required:border-red-500 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                    placeholder="Выберите категорию" required="">
+                            <label for="category" class="block text-sm font-medium">Категория <span class="text-red-600">*</span></label>
+                            <select x-model="newNomenclature.category_id"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white" required>
                                 <option value="">Выберите категорию</option>
-                                <template x-for="(category, index) in categories" :key="category.id">
+                                <template x-for="category in categories" :key="category.id">
                                     <option :value="category.id" x-text="category.name"></option>
                                 </template>
                             </select>
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.category" x-text="$wire.errors?.newNomenclature?.category"></p>
+                            <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.category_id"></p>
                         </div>
 
                         <!-- Supplier -->
                         <div>
                             <label for="supplier" class="block text-sm font-medium">Поставщик</label>
-                            <select id="supplier" x-model="newNomenclature.supplier_id" x-on:refresh-supplier-select.window="this.suppliers = $wire.suppliers"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                    placeholder="Выберите поставщика">
+                            <select x-model="newNomenclature.supplier_id"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
                                 <option value="">Выберите поставщика</option>
-                                <template x-for="(supplier, index) in suppliers" :key="supplier.id">
+                                <template x-for="supplier in suppliers" :key="supplier.id">
                                     <option :value="supplier.id" x-text="supplier.name"></option>
                                 </template>
                             </select>
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.supplier" x-text="$wire.errors?.newNomenclature?.supplier"></p>
+                            <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.supplier_id"></p>
                         </div>
 
                         <!-- Brand -->
                         <div>
-                            <label for="brand" class="block text-sm font-medium">Поставщик</label>
-                            <select id="brand" x-model="newNomenclature.brand_id" x-on:refresh-brand-select.window="this.brands = $wire.brands"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                                    placeholder="Выберите брэнд">
+                            <label for="brand" class="block text-sm font-medium">Брэнд</label>
+                            <select x-model="newNomenclature.brand_id"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
                                 <option value="">Выберите брэнд</option>
-                                <template x-for="(brand, index) in brands" :key="brand.id">
+                                <template x-for="brand in brands" :key="brand.id">
                                     <option :value="brand.id" x-text="brand.name"></option>
                                 </template>
                             </select>
-                            <p class="mt-1 text-sm text-red-600" x-show="$wire.errors?.newNomenclature?.brand" x-text="$wire.errors?.newNomenclature?.brand"></p>
+                            <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.brand_id"></p>
                         </div>
 
-                        <!-- Nomenclature Image -->
+                        <!-- Image -->
                         <div>
                             <label for="image" class="block text-sm font-medium">Изображение</label>
-                            <input type="file" id="image" wire:model="image" @change="previewImage" class="mt-1 p-2 block w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-sm" />
-                            <!-- Превью изображения -->
-
+                            <input type="file" id="image" wire:model="image" @change="previewImage"
+                                   :key="imageInputKey"
+                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-sm" />
                             <div class="mt-4">
                                 <template x-if="selectedImage">
                                     <img :src="selectedImage" alt="Превью изображения" class="w-32 h-32 object-cover rounded" />
@@ -329,18 +350,19 @@
                         </div>
                     </div>
 
-                    <!-- Modal footer -->
-                    <div class="flex items-center p-6 space-x-2 border-t rounded-b dark:border-gray-700">
+                    <!-- Buttons -->
+                    <div class="flex items-center p-6 space-x-2 border-t mt-6 rounded-b dark:border-gray-700">
                         <button type="submit"
                                 class="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <span x-text="editingMode ? 'Сохранить' : 'Создать'"></span>
                         </button>
-                        <button type="button" @click="showModal = false"
+                        <button type="button" @click="closeNomenclatureModal"
                                 class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400">
                             Отмена
                         </button>
                     </div>
                 </form>
+
             </div>
         </div>
     </div>

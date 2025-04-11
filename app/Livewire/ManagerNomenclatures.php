@@ -85,15 +85,43 @@ class ManagerNomenclatures extends Component
     public function addNomenclature()
     {
         $validatedData = $this->validate([
-            'newNomenclature.nn' => 'required|string|max:255',
-            'newNomenclature.name' => 'required|string|max:255',
-            'newNomenclature.category_id' => 'nullable|string|max:255',
-            'newNomenclature.supplier_id' => 'nullable|string|max:255',
-            'newNomenclature.brand_id' => 'nullable|string|max:255',
+            'newNomenclature.nn' => 'required|string|max:10|unique:nomenclatures,nn',
+            'newNomenclature.name' => 'required|string|max:191|unique:nomenclatures,name',
+            'newNomenclature.category_id' => 'required|exists:categories,id',
+            'newNomenclature.supplier_id' => 'nullable|exists:suppliers,id',
+            'newNomenclature.brand_id' => 'nullable|exists:brand,id',
             'newNomenclature.image' => 'nullable|image|max:2048',
         ]);
 
+        $nn = $validatedData['newNomenclature']['nn'];
+        $name = $validatedData['newNomenclature']['name'];
+
+        // Проверка дубликата nn
+        if (Nomenclature::where('nn', $nn)->exists()) {
+            $this->dispatch('nomenclature-nn-duplicate', [
+                'nn' => $nn
+            ]);
+            return;
+        }
+
+        // Проверка дубликата name
+        if (Nomenclature::where('name', $name)->exists()) {
+            $this->dispatch('nomenclature-name-duplicate', [
+                'name' => $name
+            ]);
+            return;
+        }
+
         $validatedData['newNomenclature']['manager_id'] = Auth::id();
+
+        if($validatedData['newNomenclature']['supplier_id'] == null || $validatedData['newNomenclature']['supplier_id'] == '')
+        {
+            $validatedData['newNomenclature']['supplier_id'] = 1;
+        }
+        if($validatedData['newNomenclature']['brand_id'] == null || $validatedData['newNomenclature']['brand_id'] == '')
+        {
+            $validatedData['newNomenclature']['brand_id'] = 1;
+        }
 
         if ($this->image) {
             //$tempPath = $this->image->getRealPath();
@@ -124,6 +152,11 @@ class ManagerNomenclatures extends Component
         $this->reset('newNomenclature');
         $this->dispatch('showNotification', 'success', 'New nomenclature created successfully');
         $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $nomenclature->name);
+    }
+
+    public function clearValidationErrors()
+    {
+        $this->resetErrorBag(); // внутренний метод уже тут доступен
     }
 
     public function updatedNomenclature()

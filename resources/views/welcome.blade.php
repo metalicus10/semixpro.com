@@ -14,7 +14,7 @@
     @livewireStyles
 </head>
 <body class="antialiased bg-dark text-text font-sans overflow-x-hidden" x-data="{ mobileMenu: false }">
-<div class="min-h-screen bg-background" x-data="{ scrolled: false, openLogin: false }"
+<div class="min-h-screen bg-background" x-data="{ scrolled: false, openLogin: false, openRegister: false }"
      x-effect="if (openLogin) {
          document.body.style.overflow = 'hidden';
          document.documentElement.style.overflow = 'hidden';
@@ -1313,65 +1313,62 @@
             </div>
         </div>
     </footer>
+
     <livewire:login-modal />
-</div>
+    <livewire:register-modal />
 
-<!-- Mobile Menu Overlay -->
-<div x-show="mobileMenu" x-cloak class="fixed inset-0 z-50 bg-black/80"
-     x-transition
-     style="pointer-events: auto;">
-</div>
+    <!-- Mobile Menu Overlay -->
+    <div x-show="mobileMenu" x-cloak class="fixed inset-0 z-50 bg-black/80"
+         x-transition
+         style="pointer-events: auto;">
+    </div>
 
-<div x-show="mobileMenu" x-cloak
-     x-effect="if (mobileMenu) {
+    <div x-show="mobileMenu" x-cloak
+         x-effect="if (mobileMenu) {
                 document.body.style.overflow = 'hidden';
                 document.documentElement.style.overflow = 'hidden';
              } else {
                 document.body.style.overflow = '';
                 document.documentElement.style.overflow = '';
              }"
-     @click.outside="mobileMenu = false"
-     x-transition:enter="transition ease-out duration-300"
-     x-transition:enter-start="translate-x-full"
-     x-transition:enter-end="translate-x-0"
-     x-transition:leave="transition ease-in duration-300"
-     x-transition:leave-start="translate-x-0"
-     x-transition:leave-end="translate-x-full"
-     class="fixed z-50 gap-4 p-6 shadow-lg transition ease-in-out inset-y-0 right-0 h-full border-l sm:max-w-sm w-[85%] pt-10 bg-mobile-menu backdrop-blur-md border-brand-border-grey/30"
-     style="pointer-events: auto;">
-    <nav class="flex flex-col space-y-6 pt-6">
-        <a href="#" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
-           @click="mobileMenu = false">Главная</a>
-        <a href="#about" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
-           @click="mobileMenu = false">О системе</a>
-        <a href="#features" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
-           @click="mobileMenu = false">Функции</a>
-        <a href="#pricing" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
-           @click="mobileMenu = false">Тарифы</a>
-        <a href="#contact" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
-           @click="mobileMenu = false">Контакты</a>
-        <div class="space-y-4 pt-6 border-t border-brand-border-grey/30">
-            <button
-                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 border bg-background hover:text-accent-foreground h-10 px-4 py-2 w-full text-brand-primary border-brand-primary hover:bg-brand-primary/10">
-                Войти
-            </button>
-            <button
-                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&amp;_svg]:pointer-events-none [&amp;_svg]:size-4 [&amp;_svg]:shrink-0 h-10 px-4 py-2 w-full bg-brand-accent hover:bg-brand-accent/90 text-brand-darker">
-                Регистрация
-            </button>
-        </div>
-    </nav>
-    <button type="button"
-            class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
-            @click="mobileMenu = false">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             class="lucide lucide-x h-4 w-4">
-            <path d="M18 6 6 18"></path>
-            <path d="m6 6 12 12"></path>
-        </svg>
-        <span class="sr-only">Close</span>
-    </button>
+         @click.outside="mobileMenu = false"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="translate-x-full"
+         x-transition:enter-end="translate-x-0"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="translate-x-0"
+         x-transition:leave-end="translate-x-full"
+         class="fixed z-50 gap-4 p-6 shadow-lg transition ease-in-out inset-y-0 right-0 h-full border-l sm:max-w-sm w-[85%] pt-10 bg-mobile-menu backdrop-blur-md border-brand-border-grey/30"
+         style="pointer-events: auto;">
+        <nav class="flex flex-col space-y-6 pt-6">
+            <!--<a href="#" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+               @click="mobileMenu = false">Главная</a>-->
+            <a href="#about" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+               @click="mobileMenu = false">О системе</a>
+            <a href="#features" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+               @click="mobileMenu = false">Функции</a>
+            <a href="#pricing" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+               @click="mobileMenu = false">Тарифы</a>
+            <a href="#contact" class="text-lg text-brand-light transition-colors hover:text-brand-primary"
+               @click="mobileMenu = false">Контакты</a>
+            <div class="space-y-4 pt-6 border-t border-brand-border-grey/30">
+                @if (Route::has('login'))
+                    <livewire:welcome.navigation />
+                @endif
+            </div>
+        </nav>
+        <button type="button"
+                class="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary"
+                @click="mobileMenu = false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 class="lucide lucide-x h-4 w-4">
+                <path d="M18 6 6 18"></path>
+                <path d="m6 6 12 12"></path>
+            </svg>
+            <span class="sr-only">Close</span>
+        </button>
+    </div>
 </div>
 @livewireScripts
 </body>
