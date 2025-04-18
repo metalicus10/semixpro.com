@@ -12,7 +12,7 @@
                  onclick="Livewire.dispatch('lightbox', '{{ asset('storage') . $nomenclature['image'] }}')"
                  class="object-contain rounded cursor-zoom-in">
         @else
-            <span class="w-[56px] h-[56px]">
+            <span>
                 <livewire:components.empty-image/>
             </span>
         @endif

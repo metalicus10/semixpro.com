@@ -114,13 +114,8 @@ class ManagerNomenclatures extends Component
 
         $validatedData['newNomenclature']['manager_id'] = Auth::id();
 
-        if($validatedData['newNomenclature']['supplier_id'] == null || $validatedData['newNomenclature']['supplier_id'] == '')
-        {
-            $validatedData['newNomenclature']['supplier_id'] = 1;
-        }
-        if($validatedData['newNomenclature']['brand_id'] == null || $validatedData['newNomenclature']['brand_id'] == '')
-        {
-            $validatedData['newNomenclature']['brand_id'] = 1;
+        foreach (['supplier_id', 'brand_id'] as $field) {
+            $validatedData['newNomenclature'][$field] = $validatedData['newNomenclature'][$field] ?: 1;
         }
 
         if ($this->image) {
@@ -212,7 +207,12 @@ class ManagerNomenclatures extends Component
         ]);
 
         $this->dispatch('nomenclature-updated');
-        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
+        //$this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
+        $this->nomenclatures = collect($this->nomenclatures)
+            ->reject(fn ($n) => $n['id'] == $id)
+            ->values()
+            ->toArray();
+
         $this->dispatch('showNotification', 'success', 'Номенклатура заархивирована.');
 
         $actionType = $nomenclature->is_archived ? 'archive' : 'restore';

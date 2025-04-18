@@ -1,8 +1,8 @@
 <div>
     <svg xmlns="http://www.w3.org/2000/svg"
          xmlns:xlink="http://www.w3.org/1999/xlink"
-         version="1.1" width="56"
-         height="56" viewBox="0 0 256 256"
+         version="1.1" width="120"
+         height="67.5" viewBox="0 0 256 256"
          xml:space="preserve">
                      <defs></defs>
         <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
