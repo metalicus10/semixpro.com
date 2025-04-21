@@ -67,7 +67,7 @@ class NomenclatureImage extends Component
         $this->closeImageModal();
 
         $this->dispatch('showNotification', 'success', 'Nomenclature Image updated successfully!');
-        $this->dispatch('image-updated');
+        $this->dispatch('image-updated', ['nomenclatureId' => $id]);
 
         // Сбрасываем состояние
         $this->reset('nomenclatureImage');

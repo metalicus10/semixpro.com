@@ -3,8 +3,43 @@
         nomenclatureImage:'{{ $nomenclature['image'] }}',
         showTooltip: false,
         isUploading: false,
-        uploadProgress: 0
-    }" class="flex gallery relative">
+        uploadProgress: 0,
+        showImageUploading: false,
+        nomenclatureId: null,
+        selectedFile: null,
+        error: null,
+        setup() {
+            window.addEventListener('open-image-modal', event => {
+                this.nomenclatureId = event.detail.id;
+                this.show = true;
+                this.selectedFile = null;
+                this.error = null;
+            });
+        },
+        closeImageModal() {
+            this.show = false;
+            this.selectedFile = null;
+            this.error = null;
+        },
+        handleFileChange(event) {
+            this.selectedFile = event.target.files[0];
+        },
+        uploadImage() {
+            if (!this.selectedFile) {
+                this.error = 'Пожалуйста, выберите файл для загрузки.';
+                return;
+            }
+
+            $wire.uploadImage(this.nomenclatureId, this.selectedFile)
+                .then(() => {
+                    this.close();
+                })
+                .catch(e => {
+                    this.error = 'Ошибка загрузки файла.';
+                    console.error(e);
+                });
+        }
+    }" x-init="setup()" x-cloak class="flex gallery relative">
     <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
         @if (!empty($nomenclature['image']))
             <img src="{{ asset('storage') . $nomenclature['image'] }}"
@@ -35,31 +70,33 @@
 
     <div x-data="{ showImageModal: @entangle('showImageModal') }">
         <!-- Modal Backdrop -->
-        <div x-show="showImageModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
+        <div x-show="showImageUploading" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
              x-transition.opacity x-cloak></div>
 
         <!-- Modal Content -->
-        <div x-show="showImageModal"
+        <div x-show="showImageUploading" x-transition
              class="fixed inset-0 flex items-center justify-center z-50 p-4">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
                 <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">Upload Image</h3>
 
                 <!-- File Input -->
                 <div class="mb-4">
-                    <input type="file" wire:model="nomenclatureImage"
+                    <input type="file" @change="handleFileChange"
                            class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
-                    @error('newImage') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+                    <template x-if="error">
+                        <p class="mt-2 text-red-500 text-sm" x-text="error"></p>
+                    </template>
                 </div>
 
                 <!-- Action Buttons -->
                 <div class="flex justify-end space-x-4">
                     <button type="button"
-                            @click="showImageModal = false; $wire.closeImageModal();"
+                            @click="closeImageModal"
                             class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
                         Cancel
                     </button>
                     <button type="button"
-                            wire:click="uploadImage({{ $nomenclature['id'] }})"
+                            @click="uploadImage"
                             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                         Upload
                     </button>

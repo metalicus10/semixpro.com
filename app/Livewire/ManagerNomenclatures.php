@@ -20,11 +20,11 @@ class ManagerNomenclatures extends Component
 {
     use WithFileUploads;
 
-    public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [];
+    public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [], $selectedBrands = [];
     public $manager_id, $nn, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
     public $editingNomenclature = null, $idToDelete;
     public bool $showArchived, $managerUrlModalVisible = false;
-    public $managerUrl, $selectedId, $managerSupplier;
+    public $managerUrl, $selectedId, $managerSupplier, $nomenclatureImage, $nomenclature;
 
     protected $listeners = [
         'update-categories' => 'updateCategories',
@@ -50,12 +50,21 @@ class ManagerNomenclatures extends Component
         $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
-        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-        ->with('category', 'suppliers', 'brands')->get()->toArray();
+
+        $this->loadNomenclatures();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
             ->where('manager_id', $this->manager_id)
             ->with('category', 'suppliers')->get()->toArray();
+    }
+
+    /**
+     * Загружает номенклатуры менеджера
+     */
+    public function loadNomenclatures()
+    {
+        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
+            ->with('category', 'suppliers', 'brands')->get()->toArray();
     }
 
     public function updateNomenclatures()
@@ -206,7 +215,7 @@ class ManagerNomenclatures extends Component
             'archived_at' => now(),
         ]);
 
-        $this->dispatch('nomenclature-updated');
+        //$this->dispatch('nomenclature-updated');
         //$this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = collect($this->nomenclatures)
             ->reject(fn ($n) => $n['id'] == $id)
@@ -240,6 +249,51 @@ class ManagerNomenclatures extends Component
             $this->dispatch('nomenclature-updated');
             $this->WriteActionLog('delete', 'nomenclature', $nomenclature->id, $nomenclature->name);
         }
+    }
+
+    public function uploadImage($id)
+    {
+        $this->validate([
+            'nomenclatureImage' => 'required|image|max:5200',
+        ]);
+
+        // Получаем номенклатуру
+        $nomenclature = Nomenclature::find($id);
+
+        if (!$nomenclature) {
+            $this->dispatch('showNotification', 'error', 'Nomenclature not found');
+            return;
+        }
+
+        // Удаляем старое изображение, если оно есть
+        if ($nomenclature->image) {
+            Storage::disk('public')->delete($nomenclature->image);
+        }
+
+        if ($this->nomenclatureImage)
+        {
+            $manager = new ImageManager(Driver::class);
+
+            $processedImage = $manager->read($this->nomenclatureImage)
+                ->resize(null, null)
+                ->toWebp(quality: 60);
+
+            $imagePath = '/images/nomenclatures/' . Auth::id();
+            // Генерируем уникальное имя для файла
+            $fileName = $imagePath. '/' . uniqid() . '.webp';
+
+            // Сохраняем закодированное изображение в local storage
+            Storage::disk('public')->put($fileName, $processedImage);
+            $nomenclature->update(['image' => $fileName]);
+        }
+
+        $this->closeImageModal();
+
+        $this->dispatch('showNotification', 'success', 'Nomenclature Image updated successfully!');
+        $this->dispatch('image-updated');
+
+        // Сбрасываем состояние
+        $this->reset('nomenclatureImage');
     }
 
     public function openManagerUrlModal($partId)
