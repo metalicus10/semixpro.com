@@ -1,6 +1,10 @@
 <div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden"
      x-data="{
-        nomenclatures: @entangle('nomenclatures') || [],
+
+        localNomenclatures: [],
+        serverNomenclatures: [],
+        mode: 'alpine',
+        nomenclatureCount: @js($nomenclatureCount),
         newNomenclature: @entangle('newNomenclature'),
         selectedNomenclatures: @entangle('selectedNomenclatures'),
         archived_nomenclatures: @entangle('archived_nomenclatures') || [],
@@ -14,6 +18,49 @@
         duplicateNameError: null, duplicateNnError: null,
         selectedNomenclatures: [],
         selectedImage: null,
+        init() {
+
+
+            if (this.nomenclatureCount > 500) {
+                this.mode = 'livewire';
+                this.loadServerNomenclatures();
+            } else {
+                this.mode = 'alpine';
+            }
+            window.addEventListener('nomenclature-nn-duplicate', event => {
+                this.duplicateNnError = `Номенклатура с номером '${event.detail.nn}' уже существует`;
+            });
+            window.addEventListener('nomenclature-name-duplicate', event => {
+                this.duplicateNameError = `Номенклатура с названием '${event.detail.name}' уже существует`;
+            });
+        },
+        filteredNomenclatures() {
+            return $wire.nomenclatures.filter(nomenclature =>
+                        (this.selectedCategory === '' || (nomenclature.category_id == this.selectedCategory)) &&
+                        (this.selectedBrand === '' || (
+                            nomenclature.nomenclatures &&
+                            Array.isArray(nomenclature.brands) &&
+                            nomenclature.brands.some(brand => brand.id == this.selectedBrand)
+                        )) &&
+                        (
+                            nomenclature.name?.toLowerCase().includes(this.search.toLowerCase()) ||
+                            nomenclature.sku?.toLowerCase().includes(this.search.toLowerCase()) ||
+                            (nomenclature.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
+                            (nomenclature.category?.name && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
+                            (
+                                nomenclature &&
+                                Array.isArray(nomenclature.brands) &&
+                                nomenclature.brands.some(brand =>
+                                    brand.name?.toLowerCase().includes(this.search.toLowerCase())
+                                )
+                            )
+                        )
+                    );
+        },
+        async loadServerNomenclatures() {
+            const response = await fetch(`/api/nomenclatures?search=${this.search}&category=${this.selectedCategory}&brand=${this.selectedBrand}`);
+            this.serverNomenclatures = await response.json();
+        },
         submitNomenclature() {
             $wire.call('addNomenclature', this.newNomenclature)
                 .then(() => {
@@ -81,27 +128,6 @@
                 reader.readAsDataURL(file);
             }
         },
-        init() {
-            window.addEventListener('nomenclature-nn-duplicate', event => {
-                this.duplicateNnError = `Номенклатура с номером '${event.detail.nn}' уже существует`;
-            });
-            window.addEventListener('nomenclature-name-duplicate', event => {
-                this.duplicateNameError = `Номенклатура с названием '${event.detail.name}' уже существует`;
-            });
-        },
-        filteredNomenclatures() {
-            return $wire.nomenclatures.filter(n => {
-                return n.is_archived === 0 &&
-                    (!this.selectedCategory || n.category_id === this.selectedCategory) &&
-                    (!this.selectedBrand || (n.brands && n.brands.some(b => b.id === this.selectedBrand))) &&
-                    (
-                        (n.name && n.name.toLowerCase().includes(this.search.toLowerCase())) ||
-                        (n.nn && n.nn.toLowerCase().includes(this.search.toLowerCase())) ||
-                        (n.category && n.category.name && n.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
-                        (n.brands && n.brands.some(b => b.name.toLowerCase().includes(this.search.toLowerCase())))
-                    );
-            });
-        },
     }" x-init="init();"
 >
     <div class="flex justify-between items-center mb-6">
@@ -135,332 +161,342 @@
         </div>
 
         <!-- Список номенклатур -->
-        <template x-for="nomenclature in filteredNomenclatures()" :key="nomenclature.id">
-            <span x-init="console.log(nomenclature);"></span>
+        <template x-if="mode === 'alpine'">
+            <template x-if="nomenclatures.length > 0">
+                <template x-for="nomenclature in filteredNomenclatures()" :key="nomenclature.id">
+                    <div
+                        class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1" x-init="console.log(nomenclature);">
+                        <div x-init="console.log('This');"></div>
+                        <!-- Checkbox -->
+                        <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">
+                            <input type="checkbox" :value="nomenclature.id"
+                                   @click="toggleNomenclatureSelection(nomenclature.id)"
+                                   :checked="selectedNomenclatures.includes(nomenclature.id)"
+                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                            <label for="checkbox-table-search-nomenclature.id"
+                                   class="sr-only">checkbox</label>
+                        </div>
+                        <div class="hidden w-1/8 md:flex items-center justify-center sm:flex p-2">
+                            <input type="checkbox" :value="nomenclature.id"
+                                   @click="toggleNomenclatureSelection(nomenclature.id)"
+                                   :checked="selectedNomenclatures.includes(nomenclature.id)"
+                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                            <label for="checkbox-table-search-nomenclature.id"
+                                   class="sr-only">checkbox</label>
+                        </div>
+                        <!-- NN -->
+                        <div class="w-1/8 text-center flex items-center p-2">
+                            <span class="md:hidden font-semibold">NN: </span>
+                            <span x-text="nomenclature.nn"></span>
+                        </div>
+                        <!-- Name -->
+                        <div x-data="{
+                                showEditMenu: false,
+                                editingName: false,
+                                newName: 'nomenclature.name',
+                                originalName: 'nomenclature.name',
+                                errorMessage: '',
+                            }"
+                             class="flex flex-col justify-center items-start"
+                        >
+                            <span class="md:hidden font-semibold">Название: </span>
+                            <div class="flex relative">
+                                <!-- Название -->
+                                <div class="flex flex-col w-full p-2">
+                                    <!-- Оверлей -->
+                                    <div x-show="editingName"
+                                         class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                         @click="editingName = false, deletePn = false, addingPn = false;"
+                                         x-cloak>
+                                    </div>
+                                    <!-- Отображение названия -->
+                                    <div x-show="!editingName" @click="editingName = true"
+                                         class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
+                                        <span x-text="nomenclature.name"></span>
+                                    </div>
 
-                <div
-                    class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1">
-                    <!-- Checkbox -->
-                    <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">
-                        <input type="checkbox" :value="nomenclature.id"
-                               @click="toggleNomenclatureSelection(nomenclature.id)"
-                               :checked="selectedNomenclatures.includes(nomenclature.id)"
-                               class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="checkbox-table-search-nomenclature.id"
-                               class="sr-only">checkbox</label>
-                    </div>
-                    <div class="hidden w-1/8 md:flex items-center justify-center sm:flex p-2">
-                        <input type="checkbox" :value="nomenclature.id"
-                               @click="toggleNomenclatureSelection(nomenclature.id)"
-                               :checked="selectedNomenclatures.includes(nomenclature.id)"
-                               class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
-                        <label for="checkbox-table-search-nomenclature.id"
-                               class="sr-only">checkbox</label>
-                    </div>
-                    <!-- NN -->
-                    <div class="w-1/8 text-center flex items-center p-2">
-                        <span class="md:hidden font-semibold">NN: </span>
-                        <span x-text="nomenclature.nn"></span>
-                    </div>
-                    <!-- Name -->
-                    <div x-data="{
-                            showEditMenu: false,
-                            editingName: false,
-                            newName: 'nomenclature.name',
-                            originalName: 'nomenclature.name',
-                            errorMessage: '',
-                        }"
-                         class="flex flex-col justify-center items-start"
-                    >
-                        <span class="md:hidden font-semibold">Название: </span>
-                        <div class="flex relative">
-                            <!-- Название -->
-                            <div class="flex flex-col w-full p-2">
-                                <!-- Оверлей -->
-                                <div x-show="editingName"
-                                     class="flex fixed inset-0 bg-black opacity-50 z-30"
-                                     @click="editingName = false, deletePn = false, addingPn = false;"
-                                     x-cloak>
-                                </div>
-                                <!-- Отображение названия -->
-                                <div x-show="!editingName" @click="editingName = true"
-                                     class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                    <span x-text="nomenclature.name"></span>
-                                </div>
-
-                                <!-- Редактирование названия -->
-                                <div x-show="editingName" class="flex items-center gap-2 z-40" x-cloak>
-                                    <input type="text" x-model="newName"
-                                           class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
-                                           @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName); originalName = newName; } editingName = false;"
-                                           @keydown.escape="editingName = false; newName = originalName;"
-                                    />
-                                    <button
-                                        @click="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName); originalName = newName; } editingName = false;"
-                                        class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
-                                        ✓
-                                    </button>
+                                    <!-- Редактирование названия -->
+                                    <div x-show="editingName" class="flex items-center gap-2 z-40" x-cloak>
+                                        <input type="text" x-model="newName"
+                                               class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
+                                               @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName); originalName = newName; } editingName = false;"
+                                               @keydown.escape="editingName = false; newName = originalName;"
+                                        />
+                                        <button
+                                            @click="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName); originalName = newName; } editingName = false;"
+                                            class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
+                                            ✓
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Category -->
-                    <div class="flex w-1/8 items-center px-2">
-                        <span class="md:hidden font-semibold">Категория: </span>
-                        <span x-text="nomenclature.category ? nomenclature.category.name : '---'"></span>
-                    </div>
-                    <!-- Supplier -->
-                    <div class="flex w-2/8 items-center px-2">
-                        <span class="md:hidden font-semibold">Поставщик: </span>
-                        <span x-text="nomenclature.suppliers ? nomenclature.suppliers.name : '---'"></span>
-                    </div>
-                    <!-- Brand -->
-                    <div class="flex w-1/8 items-center px-2">
-                        <span class="md:hidden font-semibold">Брэнд: </span>
-                        <div id="brand-component-nomenclature.id">
-                            <div id="brand-item-nomenclature.id"
-                                 class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer parent-container"
-                                 x-data="{
-                                     showPopover: false,
-                                     nomenclatureBrands: nomenclature.brands ?? [],
-                                     selectedBrands: @entangle('selectedBrands').live || [],
-                                     search: '',
-                                     popoverX: 0,
-                                     popoverY: 0
-                                }"
-                                 @brands-updated.window="(event) => {
-                                if (event.detail === nomenclature.id) {
-                                    $wire.getUpdatedBrands(nomenclature.id).then((updatedBrands) => {
-                                        selectedBrands = updatedBrands;
-                                    });
-                                }
-                             }"
-                                 @click.away="showPopover = false"
-                                 @mousedown.stop
-                                 @click="
-                                    const { clientX, clientY } = $event;
-                                    $nextTick(() => {
-                                        popoverX = Math.min(clientX, window.innerWidth - 250);
-                                        popoverY = Math.min(clientY, window.innerHeight - 200);
-                                        showPopover = true;
-                                    });
-                                 "
-                            >
-                                <!-- Текущие бренды -->
-                                <div class="flex flex-col h-24 w-20 justify-center p-1">
-                                    <span class="md:hidden font-semibold">Brand:</span>
-                                    <div class="overscroll-contain overflow-y-auto">
-                                        <template x-if="selectedBrands.length === 0">
-                                            <div class="px-3 py-2">---</div>
-                                        </template>
-                                        <template x-if="selectedBrands.length > 0">
-                                                <span
-                                                    x-text="selectedBrands.map(id => brands.find(b => b.id == id)?.name).join(', ')"></span>
-                                        </template>
-                                    </div>
-                                </div>
-
-                                <!-- Поповер с мульти-выбором брендов -->
-                                <div x-show="showPopover"
-                                     class="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
-                                     :style="`top: ${popoverY}px; left: ${popoverX}px;`"
-                                     x-init="const onScroll = () => showPopover = false; window.addEventListener('scroll', onScroll)"
-                                     @click.outside="showPopover = false"
-                                     x-transition>
-
-                                    <!-- Поле поиска -->
-                                    <div class="mb-2" @click.stop>
-                                        <input type="text" x-model="search"
-                                               placeholder="Search brands..."
-                                               class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
-                                    </div>
-
-                                    <!-- Список брендов с мульти-выбором -->
-                                    <div class="flex flex-row justify-between">
-                                        <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 w-2/3 max-h-28 overflow-y-auto">
-                                            <template
-                                                x-for="brand in brands.filter(b => !search || b.name.toLowerCase().includes(search.toLowerCase()))"
-                                                :key="brand.id">
-                                                <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                    @click.stop>
-                                                    <input type="checkbox" :value="brand.id"
-                                                           x-model="selectedBrands"
-                                                           :checked="selectedBrands.includes(brand.id)"
-                                                           class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                           @click.stop>
-                                                    <label class="ml-2" x-text="brand.name"></label>
-                                                </li>
+                        <!-- Category -->
+                        <div class="flex w-1/8 items-center px-2">
+                            <span class="md:hidden font-semibold">Категория: </span>
+                            <span x-text="nomenclature.category ? nomenclature.category.name : '---'"></span>
+                        </div>
+                        <!-- Supplier -->
+                        <div class="flex w-2/8 items-center px-2">
+                            <span class="md:hidden font-semibold">Поставщик: </span>
+                            <span x-text="nomenclature.suppliers ? nomenclature.suppliers.name : '---'"></span>
+                        </div>
+                        <!-- Brand -->
+                        <div class="flex w-1/8 items-center px-2">
+                            <span class="md:hidden font-semibold">Брэнд: </span>
+                            <div id="brand-component-nomenclature.id">
+                                <div id="brand-item-nomenclature.id"
+                                     class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer parent-container"
+                                     x-data="{
+                                         showPopover: false,
+                                         nomenclatureBrands: nomenclature.brands ?? [],
+                                         selectedBrands: @entangle('selectedBrands').live || [],
+                                         search: '',
+                                         popoverX: 0,
+                                         popoverY: 0
+                                    }"
+                                     @brands-updated.window="(event) => {
+                                    if (event.detail === nomenclature.id) {
+                                        $wire.getUpdatedBrands(nomenclature.id).then((updatedBrands) => {
+                                            selectedBrands = updatedBrands;
+                                        });
+                                    }
+                                 }"
+                                     @click.away="showPopover = false"
+                                     @mousedown.stop
+                                     @click="
+                                        const { clientX, clientY } = $event;
+                                        $nextTick(() => {
+                                            popoverX = Math.min(clientX, window.innerWidth - 250);
+                                            popoverY = Math.min(clientY, window.innerHeight - 200);
+                                            showPopover = true;
+                                        });
+                                     "
+                                >
+                                    <!-- Текущие бренды -->
+                                    <div class="flex flex-col h-24 w-20 justify-center p-1">
+                                        <span class="md:hidden font-semibold">Brand:</span>
+                                        <div class="overscroll-contain overflow-y-auto">
+                                            <template x-if="selectedBrands.length === 0">
+                                                <div class="px-3 py-2">---</div>
                                             </template>
-                                        </ul>
+                                            <template x-if="selectedBrands.length > 0">
+                                                    <span
+                                                        x-text="selectedBrands.map(id => brands.find(b => b.id == id)?.name).join(', ')"></span>
+                                            </template>
+                                        </div>
+                                    </div>
 
-                                        <!-- Кнопка подтверждения -->
-                                        <div class="flex justify-center items-center w-1/3">
-                                            <button @click="$wire.set('selectedBrands', selectedBrands).then(() => {
-                                                $wire.updateSelectedBrands(nomenclature.id);
-                                                showPopover = false;
-                                            })"
-                                                    class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
-                                                ✓
-                                            </button>
+                                    <!-- Поповер с мульти-выбором брендов -->
+                                    <div x-show="showPopover"
+                                         class="fixed z-50 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg w-56 p-1"
+                                         :style="`top: ${popoverY}px; left: ${popoverX}px;`"
+                                         x-init="const onScroll = () => showPopover = false; window.addEventListener('scroll', onScroll)"
+                                         @click.outside="showPopover = false"
+                                         x-transition>
+
+                                        <!-- Поле поиска -->
+                                        <div class="mb-2" @click.stop>
+                                            <input type="text" x-model="search"
+                                                   placeholder="Search brands..."
+                                                   class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
+                                        </div>
+
+                                        <!-- Список брендов с мульти-выбором -->
+                                        <div class="flex flex-row justify-between">
+                                            <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 w-2/3 max-h-28 overflow-y-auto">
+                                                <template
+                                                    x-for="brand in brands.filter(b => !search || b.name.toLowerCase().includes(search.toLowerCase()))"
+                                                    :key="brand.id">
+                                                    <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
+                                                        @click.stop>
+                                                        <input type="checkbox" :value="brand.id"
+                                                               x-model="selectedBrands"
+                                                               :checked="selectedBrands.includes(brand.id)"
+                                                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                               @click.stop>
+                                                        <label class="ml-2" x-text="brand.name"></label>
+                                                    </li>
+                                                </template>
+                                            </ul>
+
+                                            <!-- Кнопка подтверждения -->
+                                            <div class="flex justify-center items-center w-1/3">
+                                                <button @click="$wire.set('selectedBrands', selectedBrands).then(() => {
+                                                    $wire.updateSelectedBrands(nomenclature.id);
+                                                    showPopover = false;
+                                                })"
+                                                        class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
+                                                    ✓
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Nomenclature Image -->
-                    <div class="flex items-center px-2">
-                        <span class="md:hidden font-semibold">Изображение:</span>
-                        <div x-data="{
-                                showTooltip: false,
-                                isUploading: false,
-                                uploadProgress: 0,
-                                showImageUploading: false,
-                                nomenclatureId: null,
-                                selectedFile: null,
-                                error: null,
-                                setup() {
-                                    window.addEventListener('open-image-modal', event => {
-                                        this.nomenclatureId = event.detail.id;
-                                        this.showImageUploading = true;
+                        <!-- Nomenclature Image -->
+                        <div class="flex items-center px-2">
+                            <span class="md:hidden font-semibold">Изображение:</span>
+                            <div x-data="{
+                                    showTooltip: false,
+                                    isUploading: false,
+                                    uploadProgress: 0,
+                                    showImageUploading: false,
+                                    nomenclatureId: null,
+                                    selectedFile: null,
+                                    error: null,
+                                    nomenclatureImage: nomenclature.image,
+                                    setup() {
+                                        window.addEventListener('open-image-modal', event => {
+                                            this.nomenclatureId = event.detail.id;
+                                            this.showImageUploading = true;
+                                            this.selectedFile = null;
+                                            this.error = null;
+                                        });
+                                    },
+                                    closeImageModal() {
+                                        this.showImageUploading = false;
                                         this.selectedFile = null;
                                         this.error = null;
-                                    });
-                                },
-                                closeImageModal() {
-                                    this.showImageUploading = false;
-                                    this.selectedFile = null;
-                                    this.error = null;
-                                },
-                                handleFileChange(event) {
-                                    this.selectedFile = event.target.files[0];
-                                },
-                                uploadImage() {
-                                    if (!this.selectedFile) {
-                                        this.error = 'Пожалуйста, выберите файл для загрузки.';
-                                        return;
-                                    }
+                                    },
+                                    handleFileChange(event) {
+                                        this.selectedFile = event.target.files[0];
+                                    },
+                                    uploadImage() {
+                                        if (!this.selectedFile) {
+                                            this.error = 'Пожалуйста, выберите файл для загрузки.';
+                                            return;
+                                        }
 
-                                    $wire.uploadImage(this.nomenclatureId)
-                                        .then(() => {
-                                            this.closeImageModal();
-                                        })
-                                        .catch(e => {
-                                            this.error = 'Ошибка загрузки файла.';
-                                            console.error(e);
-                                        });
-                                },
-                                refreshImage(imageUrl) {
-                                    this.isLoading = true;
-                                    setTimeout(() => {
-                                        this.isLoading = false;
-                                    }, 500);
-                                },
-                            }"
-                             @image-updated.window="(event) => {
-                                const imageUrl = event.detail[0].imageUrl;
-                                refreshImage(imageUrl);
-                            }"
-                             x-init="setup()" x-cloak class="flex gallery relative">
-                            <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
-                                <template x-if="nomenclature && nomenclature.image">
-                                    <img
-                                        :src="'{{ asset('storage') }}' + nomenclature.image"
-                                        :alt="nomenclature.name"
-                                        @click="Livewire.dispatch('lightbox', '{{ asset('storage') }}' + nomenclature.image)"
-                                        class="object-contain rounded cursor-zoom-in"
-                                    >
-                                </template>
+                                        $wire.uploadImage(this.nomenclatureId)
+                                            .then(() => {
+                                                this.closeImageModal();
+                                            })
+                                            .catch(e => {
+                                                this.error = 'Ошибка загрузки файла.';
+                                                console.error(e);
+                                            });
+                                    },
+                                    refreshImage(imageUrl) {
+                                        this.isLoading = true;
+                                        setTimeout(() => {
+                                            this.isLoading = false;
+                                        }, 500);
+                                    },
+                                }"
+                                 @image-updated.window="(event) => {
+                                    const imageUrl = event.detail[0].imageUrl;
+                                    refreshImage(imageUrl);
+                                }"
+                                 x-init="setup()" x-cloak class="flex gallery relative">
+                                <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
+                                    <span x-init="console.log('{{ asset('storage') }}' + nomenclatureImage);"></span>
+                                    <template x-if="nomenclature && nomenclature.image">
+                                        <img
+                                            :src="'{{ asset('storage') }}' + nomenclatureImage"
+                                            :alt="nomenclature.name"
+                                            @click="Livewire.dispatch('lightbox', '{{ asset('storage') }}' + nomenclatureImage)"
+                                            class="object-contain rounded cursor-zoom-in"
+                                        >
+                                    </template>
 
-                                <template x-if="!nomenclature || !nomenclature.image">
-                                        <span>
-                                            <livewire:components.empty-image/>
-                                        </span>
-                                </template>
-                            </div>
-                            <!-- Tooltip и кнопка загрузки -->
-                            <div x-data="{ showTooltip: false }" @mouseenter="showTooltip = true"
-                                 @mouseleave="showTooltip = false">
-                                <div x-show="showTooltip" x-transition
-                                     class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
-                                    Change Image
+                                    <template x-if="!nomenclature || !nomenclature.image">
+                                            <span>
+                                                <livewire:components.empty-image/>
+                                            </span>
+                                    </template>
                                 </div>
-                                <button @click="showImageUploading = true"
-                                        class="text-white rounded-full p-1 cursor-pointer h-[20px]">
-                                    <livewire:components.upload-green-arrow
-                                        :key="'upload-green-arrow-nomenclatures'.auth()->id()"/>
-                                </button>
-                            </div>
-                            <!-- Прогресс загрузки -->
-                            <div x-show="isUploading"
-                                 class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-                                <div class="text-white text-lg">Uploading... (<span x-text="uploadProgress"></span>%)
+                                <!-- Tooltip и кнопка загрузки -->
+                                <div x-data="{ showTooltip: false }" @mouseenter="showTooltip = true"
+                                     @mouseleave="showTooltip = false">
+                                    <div x-show="showTooltip" x-transition
+                                         class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
+                                        Change Image
+                                    </div>
+                                    <button @click="showImageUploading = true"
+                                            class="text-white rounded-full p-1 cursor-pointer h-[20px]">
+                                        <livewire:components.upload-green-arrow
+                                            :key="'upload-green-arrow-nomenclatures'.auth()->id()"/>
+                                    </button>
                                 </div>
-                            </div>
+                                <!-- Прогресс загрузки -->
+                                <div x-show="isUploading"
+                                     class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+                                    <div class="text-white text-lg">Uploading... (<span x-text="uploadProgress"></span>%)
+                                    </div>
+                                </div>
 
-                            <div>
-                                <!-- Modal Backdrop -->
-                                <div x-show="showImageUploading"
-                                     class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
-                                     x-transition.opacity x-cloak></div>
+                                <div>
+                                    <!-- Modal Backdrop -->
+                                    <div x-show="showImageUploading"
+                                         class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
+                                         x-transition.opacity x-cloak></div>
 
-                                <!-- Modal Content -->
-                                <div x-show="showImageUploading" x-transition
-                                     class="fixed inset-0 flex items-center justify-center z-50 p-4">
-                                    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
-                                        <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-                                            Upload Image</h3>
+                                    <!-- Modal Content -->
+                                    <div x-show="showImageUploading" x-transition
+                                         class="fixed inset-0 flex items-center justify-center z-50 p-4">
+                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
+                                            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+                                                Upload Image</h3>
 
-                                        <!-- File Input -->
-                                        <div class="mb-4">
-                                            <input type="file" @change="handleFileChange"
-                                                   wire:model="nomenclatureImage"
-                                                   class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
-                                            <template x-if="error">
-                                                <p class="mt-2 text-red-500 text-sm" x-text="error"></p>
-                                            </template>
-                                        </div>
+                                            <!-- File Input -->
+                                            <div class="mb-4">
+                                                <input type="file" @change="handleFileChange"
+                                                       wire:model="nomenclatureImage"
+                                                       class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                                                <template x-if="error">
+                                                    <p class="mt-2 text-red-500 text-sm" x-text="error"></p>
+                                                </template>
+                                            </div>
 
-                                        <!-- Action Buttons -->
-                                        <div class="flex justify-end space-x-4">
-                                            <button type="button"
-                                                    @click="closeImageModal"
-                                                    class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
-                                                Cancel
-                                            </button>
-                                            <button type="button"
-                                                    @click="uploadImage"
-                                                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                                Upload
-                                            </button>
+                                            <!-- Action Buttons -->
+                                            <div class="flex justify-end space-x-4">
+                                                <button type="button"
+                                                        @click="closeImageModal"
+                                                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
+                                                    Cancel
+                                                </button>
+                                                <button type="button"
+                                                        @click="uploadImage"
+                                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                                                    Upload
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Actions -->
-                    <div class="flex w-2/8 items-center px-2 gap-2">
-                        @if(Auth::user()->inRole('admin'))
-                            <button @click="openNomenclatureModal('edit', nomenclature.id)"
-                                    class="cursor-pointer px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
-                                Ред.
-                            </button>
-                        @endif
+                        <!-- Actions -->
+                        <div class="flex w-2/8 items-center px-2 gap-2">
+                            @if(Auth::user()->inRole('admin'))
+                                <button @click="openNomenclatureModal('edit', nomenclature.id)"
+                                        class="cursor-pointer px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
+                                    Ред.
+                                </button>
+                            @endif
 
-                        <button @click="$wire.archiveNomenclature(nomenclature.id)"
-                                class="cursor-pointer px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
-                            Archive
-                        </button>
-
-                        @if(Auth::user()->inRole('admin'))
-                            <button @click="openNomenclatureDelModal(nomenclature.id)"
-                                    class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600">
-                                Удалить
+                            <button @click="$wire.archiveNomenclature(nomenclature.id)"
+                                    class="cursor-pointer px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600">
+                                Archive
                             </button>
-                        @endif
+
+                            @if(Auth::user()->inRole('admin'))
+                                <button @click="openNomenclatureDelModal(nomenclature.id)"
+                                        class="px-2 py-1 bg-red-500 text-white rounded-md hover:bg-red-600">
+                                    Удалить
+                                </button>
+                            @endif
+                        </div>
                     </div>
-                </div>
+                </template>
+            </template>
+        </template>
+        <template x-if="mode === 'livewire'">
+            <template x-for="nomenclature in serverNomenclatures" :key="nomenclature.id">
+                <div x-text="nomenclature.name"></div>
+            </template>
         </template>
         <template x-if="nomenclatures.length === 0">
             <div

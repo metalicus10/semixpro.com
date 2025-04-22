@@ -20,11 +20,13 @@ class ManagerNomenclatures extends Component
 {
     use WithFileUploads;
 
-    public $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [], $selectedBrands = [];
+    public array $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [], $selectedBrands = [];
     public $manager_id, $nn, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
     public $editingNomenclature = null, $idToDelete;
     public bool $showArchived, $managerUrlModalVisible = false;
     public $managerUrl, $selectedId, $managerSupplier, $nomenclatureImage, $nomenclature;
+
+    public int $nomenclatureCount = 0;
 
     protected $listeners = [
         'update-categories' => 'updateCategories',
@@ -51,6 +53,7 @@ class ManagerNomenclatures extends Component
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
 
+        $this->nomenclatureCount = Nomenclature::where('manager_id', Auth::id())->count();
         $this->loadNomenclatures();
 
         $this->archived_nomenclatures = Nomenclature::where('is_archived', true)
@@ -63,8 +66,16 @@ class ManagerNomenclatures extends Component
      */
     public function loadNomenclatures()
     {
-        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
-            ->with('category', 'suppliers', 'brands')->get()->toArray();
+        if ($this->nomenclatureCount <= 500) {
+            // Мало записей: грузим ВСЕ для Alpine
+            $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
+                ->with('category', 'suppliers', 'brands')
+                ->get()
+                ->toArray();
+        } else {
+            // Много записей: грузим ПУСТОЙ список, будем подгружать через запросы
+            $this->nomenclatures = [];
+        }
     }
 
     public function updateNomenclatures()
