@@ -1,6 +1,6 @@
 <div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden"
      x-data="{
-
+        nomenclatures: @js($nomenclatures) || [],
         localNomenclatures: [],
         serverNomenclatures: [],
         mode: 'alpine',
@@ -35,27 +35,10 @@
             });
         },
         filteredNomenclatures() {
-            return $wire.nomenclatures.filter(nomenclature =>
-                        (this.selectedCategory === '' || (nomenclature.category_id == this.selectedCategory)) &&
-                        (this.selectedBrand === '' || (
-                            nomenclature.nomenclatures &&
-                            Array.isArray(nomenclature.brands) &&
-                            nomenclature.brands.some(brand => brand.id == this.selectedBrand)
-                        )) &&
-                        (
-                            nomenclature.name?.toLowerCase().includes(this.search.toLowerCase()) ||
-                            nomenclature.sku?.toLowerCase().includes(this.search.toLowerCase()) ||
-                            (nomenclature.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
-                            (nomenclature.category?.name && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
-                            (
-                                nomenclature &&
-                                Array.isArray(nomenclature.brands) &&
-                                nomenclature.brands.some(brand =>
-                                    brand.name?.toLowerCase().includes(this.search.toLowerCase())
-                                )
-                            )
-                        )
-                    );
+            console.log(this.nomenclatures)
+            return this.nomenclatures
+                .filter(n => !n.is_archived)
+                .filter(n => this.search === '' || n.name.toLowerCase().includes(this.search.toLowerCase()));
         },
         async loadServerNomenclatures() {
             const response = await fetch(`/api/nomenclatures?search=${this.search}&category=${this.selectedCategory}&brand=${this.selectedBrand}`);
@@ -162,11 +145,11 @@
 
         <!-- Список номенклатур -->
         <template x-if="mode === 'alpine'">
-            <template x-if="nomenclatures.length > 0">
+            <template x-if="nomenclatures && nomenclatures.length > 0">
                 <template x-for="nomenclature in filteredNomenclatures()" :key="nomenclature.id">
+
                     <div
-                        class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1" x-init="console.log(nomenclature);">
-                        <div x-init="console.log('This');"></div>
+                        class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1">
                         <!-- Checkbox -->
                         <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">
                             <input type="checkbox" :value="nomenclature.id"
@@ -345,7 +328,7 @@
                                     showImageUploading: false,
                                     nomenclatureId: null,
                                     selectedFile: null,
-                                    error: null,
+                                    imgError: null,
                                     nomenclatureImage: nomenclature.image,
                                     setup() {
                                         window.addEventListener('open-image-modal', event => {
@@ -358,14 +341,14 @@
                                     closeImageModal() {
                                         this.showImageUploading = false;
                                         this.selectedFile = null;
-                                        this.error = null;
+                                        this.imgError = null;
                                     },
                                     handleFileChange(event) {
                                         this.selectedFile = event.target.files[0];
                                     },
                                     uploadImage() {
                                         if (!this.selectedFile) {
-                                            this.error = 'Пожалуйста, выберите файл для загрузки.';
+                                            this.imgError = 'Пожалуйста, выберите файл для загрузки.';
                                             return;
                                         }
 
@@ -374,7 +357,7 @@
                                                 this.closeImageModal();
                                             })
                                             .catch(e => {
-                                                this.error = 'Ошибка загрузки файла.';
+                                                this.imgError = 'Ошибка загрузки файла.';
                                                 console.error(e);
                                             });
                                     },
@@ -391,17 +374,16 @@
                                 }"
                                  x-init="setup()" x-cloak class="flex gallery relative">
                                 <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
-                                    <span x-init="console.log('{{ asset('storage') }}' + nomenclatureImage);"></span>
                                     <template x-if="nomenclature && nomenclature.image">
                                         <img
-                                            :src="'{{ asset('storage') }}' + nomenclatureImage"
+                                            :src="{{ asset('storage') }} + nomenclatureImage"
                                             :alt="nomenclature.name"
-                                            @click="Livewire.dispatch('lightbox', '{{ asset('storage') }}' + nomenclatureImage)"
+                                            @click="Livewire.dispatch('lightbox', {{ asset('storage') }} + nomenclatureImage)"
                                             class="object-contain rounded cursor-zoom-in"
                                         >
                                     </template>
 
-                                    <template x-if="!nomenclature || !nomenclature.image">
+                                    <template x-if="!nomenclature || !nomenclatureImage">
                                             <span>
                                                 <livewire:components.empty-image/>
                                             </span>
@@ -445,8 +427,8 @@
                                                 <input type="file" @change="handleFileChange"
                                                        wire:model="nomenclatureImage"
                                                        class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
-                                                <template x-if="error">
-                                                    <p class="mt-2 text-red-500 text-sm" x-text="error"></p>
+                                                <template x-if="imgError">
+                                                    <p class="mt-2 text-red-500 text-sm" x-text="imgError"></p>
                                                 </template>
                                             </div>
 
@@ -490,6 +472,7 @@
                             @endif
                         </div>
                     </div>
+
                 </template>
             </template>
         </template>

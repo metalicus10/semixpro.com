@@ -345,6 +345,7 @@ class ManagerNomenclatures extends Component
 
     public function render()
     {
-        return view('livewire.manager.manager-nomenclatures')->layout('layouts.app');
+        $nomenclatures = $this->nomenclatures;
+        return view('livewire.manager.manager-nomenclatures', compact('nomenclatures'))->layout('layouts.app');
     }
 }
