@@ -157,6 +157,8 @@ class ManagerNomenclatures extends Component
             //$this->image = Storage::disk('public')->url($fileName);
 
             $validatedData['newNomenclature']['image'] = $fileName;
+        }else{
+            $validatedData['newNomenclature']['image'] = '';
         }
 
         // Создаём запись в БД
@@ -346,6 +348,6 @@ class ManagerNomenclatures extends Component
     public function render()
     {
         $nomenclatures = $this->nomenclatures;
-        return view('livewire.manager.manager-nomenclatures', compact('nomenclatures'))->layout('layouts.app');
+        return view('livewire.manager.manager-nomenclatures')->layout('layouts.app');
     }
 }

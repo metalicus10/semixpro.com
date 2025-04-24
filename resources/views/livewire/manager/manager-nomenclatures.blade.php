@@ -20,7 +20,6 @@
         selectedImage: null,
         init() {
 
-
             if (this.nomenclatureCount > 500) {
                 this.mode = 'livewire';
                 this.loadServerNomenclatures();
@@ -33,9 +32,14 @@
             window.addEventListener('nomenclature-name-duplicate', event => {
                 this.duplicateNameError = `Номенклатура с названием '${event.detail.name}' уже существует`;
             });
+            window.addEventListener('open-image-modal', event => {
+                nomenclatureId = event.detail.id;
+                showImageUploading = true;
+                selectedFile = null;
+                imgError = null;
+            });
         },
         filteredNomenclatures() {
-            console.log(this.nomenclatures)
             return this.nomenclatures
                 .filter(n => !n.is_archived)
                 .filter(n => this.search === '' || n.name.toLowerCase().includes(this.search.toLowerCase()));
@@ -237,14 +241,14 @@
                                          search: '',
                                          popoverX: 0,
                                          popoverY: 0
-                                    }"
+                                     }"
                                      @brands-updated.window="(event) => {
-                                    if (event.detail === nomenclature.id) {
-                                        $wire.getUpdatedBrands(nomenclature.id).then((updatedBrands) => {
-                                            selectedBrands = updatedBrands;
-                                        });
-                                    }
-                                 }"
+                                        if (event.detail === nomenclature.id) {
+                                            $wire.getUpdatedBrands(nomenclature.id).then((updatedBrands) => {
+                                                selectedBrands = updatedBrands;
+                                            });
+                                        }
+                                     }"
                                      @click.away="showPopover = false"
                                      @mousedown.stop
                                      @click="
@@ -322,84 +326,75 @@
                         <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Изображение:</span>
                             <div x-data="{
-                                    showTooltip: false,
-                                    isUploading: false,
-                                    uploadProgress: 0,
-                                    showImageUploading: false,
-                                    nomenclatureId: null,
-                                    selectedFile: null,
-                                    imgError: null,
-                                    nomenclatureImage: nomenclature.image,
-                                    setup() {
-                                        window.addEventListener('open-image-modal', event => {
-                                            this.nomenclatureId = event.detail.id;
-                                            this.showImageUploading = true;
-                                            this.selectedFile = null;
-                                            this.error = null;
-                                        });
-                                    },
-                                    closeImageModal() {
-                                        this.showImageUploading = false;
-                                        this.selectedFile = null;
-                                        this.imgError = null;
-                                    },
-                                    handleFileChange(event) {
-                                        this.selectedFile = event.target.files[0];
-                                    },
-                                    uploadImage() {
-                                        if (!this.selectedFile) {
-                                            this.imgError = 'Пожалуйста, выберите файл для загрузки.';
-                                            return;
-                                        }
+                                isUploading: false,
+                                uploadProgress: 0,
+                                showImageUploading: false,
+                                isLoading: false,
+                                showTooltip: false,
+                                selectedFile: null,
+                                imgError: null,
+                                baseStoragePath: '{{ asset('storage') }}',
+                                closeImageModal() {
+                                    this.showImageUploading = false;
+                                    this.selectedFile = null;
+                                    this.imgError = null;
+                                },
+                                handleFileChange(event) {
+                                    this.selectedFile = event.target.files[0];
+                                },
+                                uploadImage() {
+                                    if (!this.selectedFile) {
+                                        this.imgError = 'Пожалуйста, выберите файл для загрузки.';
+                                        return;
+                                    }
 
-                                        $wire.uploadImage(this.nomenclatureId)
-                                            .then(() => {
-                                                this.closeImageModal();
-                                            })
-                                            .catch(e => {
-                                                this.imgError = 'Ошибка загрузки файла.';
-                                                console.error(e);
-                                            });
-                                    },
-                                    refreshImage(imageUrl) {
-                                        this.isLoading = true;
-                                        setTimeout(() => {
-                                            this.isLoading = false;
-                                        }, 500);
-                                    },
-                                }"
-                                 @image-updated.window="(event) => {
-                                    const imageUrl = event.detail[0].imageUrl;
-                                    refreshImage(imageUrl);
-                                }"
-                                 x-init="setup()" x-cloak class="flex gallery relative">
+                                    $wire.uploadImage(nomenclatureId)
+                                    .then(() => {
+                                            this.closeImageModal();
+                                        })
+                                        .catch(e => {
+                                            this.imgError = 'Ошибка загрузки файла.';
+                                            console.error(e);
+                                    });
+                                },
+                                refreshImage(imageUrl) {
+                                    this.isLoading = true;
+                                    setTimeout(() => {
+                                        this.isLoading = false;
+                                    }, 500);
+                                },
+                                computedImagePath(img) {
+                                    return img && typeof img === 'string' && img.trim() !== '' ? 'baseStoragePath/' + img : '';
+                                },
+                                closeModal() {
+                                    this.showModal = false;
+                                    this.selectedFile = null;
+                                    this.imgError = null;
+                                },
+                            }" x-cloak class="flex gallery relative">
                                 <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
-                                    <template x-if="nomenclature && nomenclature.image">
+                                    <template x-if="nomenclature && typeof nomenclature.image === 'string' && nomenclature.image.trim() !== ''">
                                         <img
-                                            :src="{{ asset('storage') }} + nomenclatureImage"
+                                            :src="computedImagePath(nomenclature.image)"
                                             :alt="nomenclature.name"
-                                            @click="Livewire.dispatch('lightbox', {{ asset('storage') }} + nomenclatureImage)"
+                                            @click="Livewire.dispatch('lightbox', computedImagePath(nomenclature.image))"
                                             class="object-contain rounded cursor-zoom-in"
                                         >
                                     </template>
 
-                                    <template x-if="!nomenclature || !nomenclatureImage">
-                                            <span>
-                                                <livewire:components.empty-image/>
-                                            </span>
+                                    <template x-if="!nomenclature || !nomenclature.image || nomenclature.image.trim() === ''">
+                                        <livewire:components.empty-image/>
                                     </template>
                                 </div>
                                 <!-- Tooltip и кнопка загрузки -->
-                                <div x-data="{ showTooltip: false }" @mouseenter="showTooltip = true"
-                                     @mouseleave="showTooltip = false">
+                                <div @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
                                     <div x-show="showTooltip" x-transition
                                          class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
                                         Change Image
                                     </div>
                                     <button @click="showImageUploading = true"
                                             class="text-white rounded-full p-1 cursor-pointer h-[20px]">
-                                        <livewire:components.upload-green-arrow
-                                            :key="'upload-green-arrow-nomenclatures'.auth()->id()"/>
+                                        <x-icons.upload-arrow class="text-white" />
                                     </button>
                                 </div>
                                 <!-- Прогресс загрузки -->
