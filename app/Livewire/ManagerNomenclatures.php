@@ -300,10 +300,9 @@ class ManagerNomenclatures extends Component
             $nomenclature->update(['image' => $fileName]);
         }
 
-        $this->closeImageModal();
-
         $this->dispatch('showNotification', 'success', 'Nomenclature Image updated successfully!');
-        $this->dispatch('image-updated');
+        //$this->dispatch('image-updated');
+        $this->dispatch('nomenclature-image-updated', id: $nomenclature->id, image: $fileName);
 
         // Сбрасываем состояние
         $this->reset('nomenclatureImage');
@@ -332,6 +331,29 @@ class ManagerNomenclatures extends Component
 
         $this->managerUrlModalVisible = false;
         $this->refreshComponent();
+    }
+
+    public function updateNomenclatureBrands($nomenclatureId, $selectedBrands)
+    {
+        $nomenclature = Nomenclature::find($nomenclatureId);
+        $nomenclature->brands()->sync($selectedBrands);
+        $this->updateSelectedBrands($nomenclatureId);
+
+        // Обновляем данные в представлении
+        $this->dispatch('brandsUpdated', $nomenclatureId);
+    }
+
+    public function updateSelectedBrands($nomenclatureId)
+    {
+        $nomenclature = Nomenclature::where('id', $nomenclatureId)->firstOrFail();
+        $nomenclature->brands()->sync($this->selectedBrands);
+
+        $this->dispatch('brandsUpdated', $nomenclatureId);
+    }
+
+    public function getUpdatedBrands($nomenclatureId)
+    {
+        return Nomenclature::find($nomenclatureId)->brands()->pluck('brands.id')->toArray();
     }
 
     public function WriteActionLog($actionType, $target_type, $target_id, $name)

@@ -19,7 +19,6 @@
         selectedNomenclatures: [],
         selectedImage: null,
         init() {
-
             if (this.nomenclatureCount > 500) {
                 this.mode = 'livewire';
                 this.loadServerNomenclatures();
@@ -180,8 +179,8 @@
                         <div x-data="{
                                 showEditMenu: false,
                                 editingName: false,
-                                newName: 'nomenclature.name',
-                                originalName: 'nomenclature.name',
+                                newName: nomenclature.name,
+                                originalName: nomenclature.name,
                                 errorMessage: '',
                             }"
                              class="flex flex-col justify-center items-start"
@@ -199,7 +198,7 @@
                                     <!-- Отображение названия -->
                                     <div x-show="!editingName" @click="editingName = true"
                                          class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                        <span x-text="nomenclature.name"></span>
+                                        <span x-text="originalName"></span>
                                     </div>
 
                                     <!-- Редактирование названия -->
@@ -219,36 +218,62 @@
                             </div>
                         </div>
                         <!-- Category -->
-                        <div class="flex w-1/8 items-center px-2">
+                        <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Категория: </span>
                             <span x-text="nomenclature.category ? nomenclature.category.name : '---'"></span>
                         </div>
                         <!-- Supplier -->
-                        <div class="flex w-2/8 items-center px-2">
+                        <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Поставщик: </span>
                             <span x-text="nomenclature.suppliers ? nomenclature.suppliers.name : '---'"></span>
                         </div>
                         <!-- Brand -->
-                        <div class="flex w-1/8 items-center px-2">
+                        <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Брэнд: </span>
                             <div id="brand-component-nomenclature.id">
                                 <div id="brand-item-nomenclature.id"
                                      class="w-full md:w-1/12 mb-2 md:mb-0 cursor-pointer parent-container"
                                      x-data="{
                                          showPopover: false,
-                                         nomenclatureBrands: nomenclature.brands ?? [],
+                                         allBrands: @js($brands),
+                                         get nomenclatureBrands() {
+                                            return nomenclature.brands ?? [];
+                                         },
                                          selectedBrands: @entangle('selectedBrands').live || [],
+                                         nomenclatureId: nomenclature.id,
                                          search: '',
                                          popoverX: 0,
-                                         popoverY: 0
-                                     }"
-                                     @brands-updated.window="(event) => {
-                                        if (event.detail === nomenclature.id) {
-                                            $wire.getUpdatedBrands(nomenclature.id).then((updatedBrands) => {
-                                                selectedBrands = updatedBrands;
+                                         popoverY: 0,
+                                         get selectedBrands() {
+                                            return this.nomenclature.brands.map(b => b.id);
+                                         },
+                                         set selectedBrands(value) {
+                                            this.nomenclature.brands = this.allBrands.filter(b => value.includes(b.id));
+                                         },
+                                         submit() {
+                                            const ids = this.selectedBrands;
+                                            $wire.set('selectedBrands', ids).then(() => {
+                                                $wire.updateNomenclatureBrands(this.nomenclatureId, ids).then(() => {
+                                                    $wire.getUpdatedBrands(this.nomenclatureId).then((updated) => {
+                                                        this.nomenclature.brands = this.allBrands.filter(b =>
+                                                            updated.includes(b.id)
+                                                        );
+                                                        this.nomenclatureBrands = this.nomenclature.brands;
+                                                    });
+                                                    this.showPopover = false;
+                                                });
                                             });
-                                        }
+                                         },
+                                         filteredBrands() {
+                                            return this.allBrands.filter(b =>
+                                                b.name.toLowerCase().includes(this.search.toLowerCase())
+                                            );
+                                         },
+                                         init() {
+
+                                         }
                                      }"
+                                     x-init="init"
                                      @click.away="showPopover = false"
                                      @mousedown.stop
                                      @click="
@@ -259,17 +284,23 @@
                                             showPopover = true;
                                         });
                                      "
+                                     @brands-updated.window="(event) => {
+                                        if (event.detail === nomenclature.id) {
+                                            $wire.getUpdatedBrands(nomenclature.id).then((updated) => {
+                                                nomenclature.brands = allBrands.filter(b => updated.includes(b.id))
+                                            })
+                                        }
+                                     }"
                                 >
                                     <!-- Текущие бренды -->
                                     <div class="flex flex-col h-24 w-20 justify-center p-1">
                                         <span class="md:hidden font-semibold">Brand:</span>
                                         <div class="overscroll-contain overflow-y-auto">
-                                            <template x-if="selectedBrands.length === 0">
+                                            <template x-if="nomenclatureBrands.length === 0">
                                                 <div class="px-3 py-2">---</div>
                                             </template>
-                                            <template x-if="selectedBrands.length > 0">
-                                                    <span
-                                                        x-text="selectedBrands.map(id => brands.find(b => b.id == id)?.name).join(', ')"></span>
+                                            <template x-if="nomenclatureBrands.length > 0">
+                                                <span x-text="nomenclatureBrands.map(b => b.name).join(', ')"></span>
                                             </template>
                                         </div>
                                     </div>
@@ -280,7 +311,7 @@
                                          :style="`top: ${popoverY}px; left: ${popoverX}px;`"
                                          x-init="const onScroll = () => showPopover = false; window.addEventListener('scroll', onScroll)"
                                          @click.outside="showPopover = false"
-                                         x-transition>
+                                         x-transition @click.stop>
 
                                         <!-- Поле поиска -->
                                         <div class="mb-2" @click.stop>
@@ -292,27 +323,29 @@
                                         <!-- Список брендов с мульти-выбором -->
                                         <div class="flex flex-row justify-between">
                                             <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 w-2/3 max-h-28 overflow-y-auto">
-                                                <template
-                                                    x-for="brand in brands.filter(b => !search || b.name.toLowerCase().includes(search.toLowerCase()))"
-                                                    :key="brand.id">
-                                                    <li class="flex items-center px-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                                                        @click.stop>
-                                                        <input type="checkbox" :value="brand.id"
-                                                               x-model="selectedBrands"
+                                                <template x-for="brand in filteredBrands()" :key="brand.id">
+                                                    <li class="flex items-center space-x-2">
+                                                        <input type="checkbox" :value="brand.id" :checked="selectedBrands.includes(brand.id)"
                                                                :checked="selectedBrands.includes(brand.id)"
-                                                               class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                                               @click.stop>
-                                                        <label class="ml-2" x-text="brand.name"></label>
+                                                               @change="
+                                                                   if ($event.target.checked) {
+                                                                       selectedBrands.push(brand.id);
+                                                                       nomenclature.brands.push(brand);
+                                                                   } else {
+                                                                       selectedBrands = selectedBrands.filter(id => id !== brand.id);
+                                                                       nomenclature.brands = nomenclature.brands.filter(b => b.id !== brand.id);
+                                                                   }
+                                                                   nomenclature.brands = brands.filter(b => selectedBrands.includes(b.id));
+                                                               "
+                                                               class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
+                                                        <span x-text="brand.name" class="text-gray-700 dark:text-gray-200"></span>
                                                     </li>
                                                 </template>
                                             </ul>
 
                                             <!-- Кнопка подтверждения -->
                                             <div class="flex justify-center items-center w-1/3">
-                                                <button @click="$wire.set('selectedBrands', selectedBrands).then(() => {
-                                                    $wire.updateSelectedBrands(nomenclature.id);
-                                                    showPopover = false;
-                                                })"
+                                                <button @click="submit"
                                                         class="bg-green-500 text-white px-2 py-1 rounded-full hover:bg-green-600">
                                                     ✓
                                                 </button>
@@ -334,6 +367,7 @@
                                 selectedFile: null,
                                 imgError: null,
                                 baseStoragePath: '{{ asset('storage') }}',
+                                nomenclatureId: nomenclature.id,
                                 closeImageModal() {
                                     this.showImageUploading = false;
                                     this.selectedFile = null;
@@ -348,7 +382,7 @@
                                         return;
                                     }
 
-                                    $wire.uploadImage(nomenclatureId)
+                                    $wire.uploadImage(this.nomenclatureId)
                                     .then(() => {
                                             this.closeImageModal();
                                         })
@@ -364,14 +398,19 @@
                                     }, 500);
                                 },
                                 computedImagePath(img) {
-                                    return img && typeof img === 'string' && img.trim() !== '' ? 'baseStoragePath/' + img : '';
+                                    return img && typeof img === 'string' && img.trim() !== '' ? '{{ asset('storage') }}/' + img : '';
                                 },
-                                closeModal() {
-                                    this.showModal = false;
-                                    this.selectedFile = null;
-                                    this.imgError = null;
-                                },
-                            }" x-cloak class="flex gallery relative">
+                            }"
+                                 @nomenclature-image-updated.window="
+                                     if ($event.detail.id === nomenclature.id) {
+                                         nomenclature.image = $event.detail.image;
+                                     }
+                                 "
+                                 x-on:livewire-upload-start="isUploading = true"
+                                 x-on:livewire-upload-finish="isUploading = false"
+                                 x-on:livewire-upload-error="isUploading = false"
+                                 x-on:livewire-upload-progress="uploadProgress = $event.detail.progress"
+                                 x-cloak class="flex gallery relative">
                                 <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
                                     <template x-if="nomenclature && typeof nomenclature.image === 'string' && nomenclature.image.trim() !== ''">
                                         <img
@@ -382,8 +421,8 @@
                                         >
                                     </template>
 
-                                    <template x-if="!nomenclature || !nomenclature.image || nomenclature.image.trim() === ''">
-                                        <livewire:components.empty-image/>
+                                    <template x-if="!nomenclature || !nomenclature.image || (typeof nomenclature.image === 'string' && nomenclature.image.trim() === '')">
+                                        <x-empty-image class="text-white" />
                                     </template>
                                 </div>
                                 <!-- Tooltip и кнопка загрузки -->
@@ -408,7 +447,7 @@
                                     <!-- Modal Backdrop -->
                                     <div x-show="showImageUploading"
                                          class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
-                                         x-transition.opacity x-cloak></div>
+                                         x-transition.opacity.50 x-cloak></div>
 
                                     <!-- Modal Content -->
                                     <div x-show="showImageUploading" x-transition
