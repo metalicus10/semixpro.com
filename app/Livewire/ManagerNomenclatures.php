@@ -39,7 +39,6 @@ class ManagerNomenclatures extends Component
     public $newNomenclature = [
         'nn' => '',
         'name' => '',
-        'url' => '',
         'category_id' => '',
         'supplier_id' => '',
         'brand_id' => '',
@@ -104,13 +103,14 @@ class ManagerNomenclatures extends Component
 
     public function addNomenclature()
     {
+        //dd($this->newNomenclature);
         $validatedData = $this->validate([
             'newNomenclature.nn' => 'required|string|max:10|unique:nomenclatures,nn',
             'newNomenclature.name' => 'required|string|max:191|unique:nomenclatures,name',
             'newNomenclature.category_id' => 'required|exists:categories,id',
             'newNomenclature.supplier_id' => 'nullable|exists:suppliers,id',
             'newNomenclature.brand_id' => 'nullable|exists:brand,id',
-            'newNomenclature.image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|max:2048',
         ]);
 
         $nn = $validatedData['newNomenclature']['nn'];
@@ -162,6 +162,7 @@ class ManagerNomenclatures extends Component
         }
 
         // Создаём запись в БД
+        dd($validatedData['newNomenclature']);
         $nomenclature = Nomenclature::create($validatedData['newNomenclature']);
 
         // Добавляем в локальный массив для отображения

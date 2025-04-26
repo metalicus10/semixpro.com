@@ -580,7 +580,8 @@
                             <label for="category" class="block text-sm font-medium">Категория <span
                                     class="text-red-600">*</span></label>
                             <select x-model="newNomenclature.category_id"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
+                                    focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                                     required>
                                 <option value="">Выберите категорию</option>
                                 <template x-for="category in categories" :key="category.id">
@@ -595,7 +596,8 @@
                         <div>
                             <label for="supplier" class="block text-sm font-medium">Поставщик</label>
                             <select x-model="newNomenclature.supplier_id"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
+                                    focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
                                 <option value="">Выберите поставщика</option>
                                 <template x-for="supplier in suppliers" :key="supplier.id">
                                     <option :value="supplier.id" x-text="supplier.name"></option>
@@ -609,7 +611,8 @@
                         <div>
                             <label for="brand" class="block text-sm font-medium">Брэнд</label>
                             <select x-model="newNomenclature.brand_id"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
+                                    focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
                                 <option value="">Выберите брэнд</option>
                                 <template x-for="brand in brands" :key="brand.id">
                                     <option :value="brand.id" x-text="brand.name"></option>
