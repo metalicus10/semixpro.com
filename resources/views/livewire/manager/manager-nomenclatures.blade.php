@@ -12,12 +12,19 @@
         suppliers: @entangle('suppliers') || [],
         brands: @entangle('brands') || [],
         showModal: false,
+        isUploading: false,
+        selectedFile: null,
+        selectedNomenclatureId: null,
+        uploadProgress: 0,
+        showImageUploading: false,
+        imgError: null,
         editingMode: false,
         nn:'', name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '', search: '',
         imageInputKey: Date.now(),
         duplicateNameError: null, duplicateNnError: null,
         selectedNomenclatures: [],
         selectedImage: null,
+        refs: {},
         init() {
             if (this.nomenclatureCount > 500) {
                 this.mode = 'livewire';
@@ -33,14 +40,14 @@
             });
             window.addEventListener('open-image-modal', event => {
                 nomenclatureId = event.detail.id;
-                showImageUploading = true;
-                selectedFile = null;
-                imgError = null;
+                this.showImageUploading = true;
+                this.selectedFile = null;
+                this.imgError = null;
             });
         },
         filteredNomenclatures() {
             return this.nomenclatures
-                .filter(n => !n.is_archived)
+
                 .filter(n => this.search === '' || n.name.toLowerCase().includes(this.search.toLowerCase()));
         },
         async loadServerNomenclatures() {
@@ -114,6 +121,29 @@
                 reader.readAsDataURL(file);
             }
         },
+        handleFileChange(event) {
+            this.selectedFile = event.target.files[0];
+        },
+        uploadImage(nomenclatureId) {
+            if (!this.selectedFile) {
+                this.imgError = 'Пожалуйста, выберите файл для загрузки.';
+                return;
+            }
+
+            $wire.uploadImage(nomenclatureId)
+            .then(() => {
+                this.closeImageModal();
+            })
+            .catch(e => {
+                this.imgError = 'Ошибка загрузки файла.';
+                console.error(e);
+            });
+        },
+        closeImageModal() {
+            this.showImageUploading = false;
+            this.selectedFile = null;
+            this.imgError = null;
+        },
     }" x-init="init();"
 >
     <div class="flex justify-between items-center mb-6">
@@ -148,11 +178,26 @@
 
         <!-- Список номенклатур -->
         <template x-if="mode === 'alpine'">
-            <template x-if="nomenclatures && nomenclatures.length > 0">
-                <template x-for="nomenclature in filteredNomenclatures()" :key="nomenclature.id">
+            <template x-if="nomenclatures && nomenclatures.length > 0"
+                @nomenclature-updated.window="(event) => {
+                    const id = event.detail[0];
+                    const nomenclature = nomenclatures.find(n => n.id === id);
 
-                    <div
-                        class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1">
+                    if (nomenclature) {
+                        nomenclature.is_archived = 1;
+                    }
+                }"
+            >
+                <template x-for="nomenclature in filteredNomenclatures()" :key="nomenclature.id">
+                    <div x-show="!nomenclature.is_archived"
+                         x-transition:enter="transition ease-out duration-300"
+                         x-transition:enter-start="opacity-0 transform scale-90"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-300"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-90"
+                         class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1"
+                    >
                         <!-- Checkbox -->
                         <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">
                             <input type="checkbox" :value="nomenclature.id"
@@ -205,11 +250,13 @@
                                     <div x-show="editingName" class="flex items-center gap-2 z-40" x-cloak>
                                         <input type="text" x-model="newName"
                                                class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
-                                               @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName); originalName = newName; } editingName = false;"
+                                               @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName);
+                                               originalName = newName; } editingName = false;"
                                                @keydown.escape="editingName = false; newName = originalName;"
                                         />
                                         <button
-                                            @click="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName); originalName = newName; } editingName = false;"
+                                            @click="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName);
+                                            originalName = newName; } editingName = false;"
                                             class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
                                             ✓
                                         </button>
@@ -359,38 +406,10 @@
                         <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Изображение:</span>
                             <div x-data="{
-                                isUploading: false,
-                                uploadProgress: 0,
-                                showImageUploading: false,
                                 isLoading: false,
                                 showTooltip: false,
-                                selectedFile: null,
-                                imgError: null,
                                 baseStoragePath: '{{ asset('storage') }}',
                                 nomenclatureId: nomenclature.id,
-                                closeImageModal() {
-                                    this.showImageUploading = false;
-                                    this.selectedFile = null;
-                                    this.imgError = null;
-                                },
-                                handleFileChange(event) {
-                                    this.selectedFile = event.target.files[0];
-                                },
-                                uploadImage() {
-                                    if (!this.selectedFile) {
-                                        this.imgError = 'Пожалуйста, выберите файл для загрузки.';
-                                        return;
-                                    }
-
-                                    $wire.uploadImage(this.nomenclatureId)
-                                    .then(() => {
-                                            this.closeImageModal();
-                                        })
-                                        .catch(e => {
-                                            this.imgError = 'Ошибка загрузки файла.';
-                                            console.error(e);
-                                    });
-                                },
                                 refreshImage(imageUrl) {
                                     this.isLoading = true;
                                     setTimeout(() => {
@@ -431,56 +450,10 @@
                                          class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
                                         Change Image
                                     </div>
-                                    <button @click="showImageUploading = true"
+                                    <button @click="showImageUploading = true; selectedNomenclatureId = nomenclature.id"
                                             class="text-white rounded-full p-1 cursor-pointer h-[20px]">
                                         <x-icons.upload-arrow class="text-white" />
                                     </button>
-                                </div>
-                                <!-- Прогресс загрузки -->
-                                <div x-show="isUploading"
-                                     class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
-                                    <div class="text-white text-lg">Uploading... (<span x-text="uploadProgress"></span>%)
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <!-- Modal Backdrop -->
-                                    <div x-show="showImageUploading"
-                                         class="fixed inset-0 bg-gray-900 bg-opacity-50 z-40"
-                                         x-transition.opacity.50 x-cloak></div>
-
-                                    <!-- Modal Content -->
-                                    <div x-show="showImageUploading" x-transition
-                                         class="fixed inset-0 flex items-center justify-center z-50 p-4">
-                                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 max-w-md w-full">
-                                            <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
-                                                Upload Image</h3>
-
-                                            <!-- File Input -->
-                                            <div class="mb-4">
-                                                <input type="file" @change="handleFileChange"
-                                                       wire:model="nomenclatureImage"
-                                                       class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
-                                                <template x-if="imgError">
-                                                    <p class="mt-2 text-red-500 text-sm" x-text="imgError"></p>
-                                                </template>
-                                            </div>
-
-                                            <!-- Action Buttons -->
-                                            <div class="flex justify-end space-x-4">
-                                                <button type="button"
-                                                        @click="closeImageModal"
-                                                        class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
-                                                    Cancel
-                                                </button>
-                                                <button type="button"
-                                                        @click="uploadImage"
-                                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                                                    Upload
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -506,8 +479,23 @@
                             @endif
                         </div>
                     </div>
-
                 </template>
+                <div
+                    @nomenclature-updated.window="(event) => {
+                        const id = event.detail[0];
+                        const ref = refs[id];
+
+                        if (ref) {
+                            ref.__x.$data.show = false; // скрыть через анимацию
+                            setTimeout(() => {
+                                const index = nomenclatures.findIndex(n => n.id == id);
+                                if (index !== -1) {
+                                    nomenclatures[index].is_archived = 1;
+                                }
+                            }, 350);
+                        }
+                    }"
+                ></div>
             </template>
         </template>
         <template x-if="mode === 'livewire'">
@@ -521,6 +509,55 @@
                 No nomenclatures available
             </div>
         </template>
+    </div>
+
+    <!-- Форма для замены изображения номенклатуры -->
+    <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" x-show="showImageUploading" x-cloak x-transition>
+        <!-- Modal Backdrop -->
+        <div x-show="showImageUploading"
+             class="flex fixed inset-0 bg-black opacity-50 z-30"
+             @click="showImageUploading = false, closeImageModal()"
+             x-transition.opacity.50 x-cloak>
+        </div>
+
+        <!-- Modal Content -->
+        <div x-show="showImageUploading"
+             class="relative flex items-center justify-center p-4 z-50 w-1/3">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 w-full">
+                <h3 class="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-200">
+                    Upload Image</h3>
+
+                <!-- File Input -->
+                <div class="mb-4">
+                    <input type="file" @change="handleFileChange"
+                           wire:model="nomenclatureImage"
+                           class="block w-full text-gray-800 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-300">
+                    <template x-if="imgError">
+                        <p class="mt-2 text-red-500 text-sm" x-text="imgError"></p>
+                    </template>
+                </div>
+                <!-- Прогресс загрузки -->
+                <div x-show="isUploading"
+                     class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+                    <div class="text-white text-lg">Uploading... (<span x-text="uploadProgress"></span>%)
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex justify-end space-x-4">
+                    <button type="button"
+                            @click="closeImageModal"
+                            class="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400">
+                        Cancel
+                    </button>
+                    <button type="button"
+                            @click="uploadImage(selectedNomenclatureId)"
+                            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                        Upload
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Форма для добавления новой номенклатуры -->

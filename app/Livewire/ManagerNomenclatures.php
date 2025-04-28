@@ -162,7 +162,6 @@ class ManagerNomenclatures extends Component
         }
 
         // Создаём запись в БД
-        dd($validatedData['newNomenclature']);
         $nomenclature = Nomenclature::create($validatedData['newNomenclature']);
 
         // Добавляем в локальный массив для отображения
@@ -229,13 +228,12 @@ class ManagerNomenclatures extends Component
             'archived_at' => now(),
         ]);
 
-        //$this->dispatch('nomenclature-updated');
-        //$this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
         $this->nomenclatures = collect($this->nomenclatures)
             ->reject(fn ($n) => $n['id'] == $id)
             ->values()
             ->toArray();
 
+        $this->dispatch('nomenclature-updated', $id);
         $this->dispatch('showNotification', 'success', 'Номенклатура заархивирована.');
 
         $actionType = $nomenclature->is_archived ? 'archive' : 'restore';

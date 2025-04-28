@@ -45,8 +45,8 @@ class NomenclatureArchive extends Component
         }
 
         // Диспетчер события для обновления в родительском компоненте
-        $this->dispatch('nomenclature-updated');
-        $this->dispatch('nomenclature-restore');
+        //$this->dispatch('nomenclature-updated', $id);
+        $this->dispatch('nomenclature-restored', $id);
     }
 
     public function openModal()

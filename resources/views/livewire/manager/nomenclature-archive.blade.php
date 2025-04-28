@@ -1,5 +1,12 @@
 <div x-data="{ showArchiveModal: @entangle('showArchiveModal'), archivedNomenclatures: @entangle('archivedNomenclatures') ?? []  }"
-     @nomenclature-updated.window="archivedNomenclatures = $wire.archivedNomenclatures"
+     @nomenclature-restored.window="(event) => {
+        const id = event.detail[0];
+        const nomenclature = nomenclatures.find(n => n.id === id);
+        if (nomenclature) {
+            nomenclature.is_archived = 0;
+            archivedNomenclatures = $wire.archivedNomenclatures;
+        }
+     }"
      x-effect="if (archivedNomenclatures.length == 0) showArchiveModal = false"
 >
     <!-- Кнопка для открытия модального окна -->
