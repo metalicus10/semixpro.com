@@ -15,6 +15,7 @@ use Livewire\Component;
 use App\Models\Nomenclature;
 use Illuminate\Support\Facades\Auth;
 use Livewire\WithFileUploads;
+use Illuminate\Validation\ValidationException;
 
 class ManagerNomenclatures extends Component
 {
@@ -218,6 +219,33 @@ class ManagerNomenclatures extends Component
 
         $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, $newName);
         $this->dispatch('showNotification', 'success', 'Название номенклатуры обновлено.');
+    }
+
+    public function updateNomenclatureNn($id, $newNn)
+    {
+        $nomenclature = Nomenclature::find($id);
+
+        if (!$nomenclature) {
+            abort(404, 'Номенклатура не найдена.');
+        }
+
+        if (Nomenclature::where('nn', $newNn)->where('id', '!=', $id)->exists()) {
+            throw ValidationException::withMessages([
+                'nn' => 'Номер номенклатуры уже существует.',
+            ]);
+        }
+
+        $nomenclature->update(['nn' => $newNn]);
+
+        NomenclatureVersion::create([
+            'nomenclature_id' => $nomenclature->id,
+            'changes' => json_encode(['nn' => $newNn]),
+            'user_id' => auth()->id(),
+        ]);
+
+        $this->dispatch('nomenclature-updated');
+        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, $nomenclature->name);
+        $this->dispatch('showNotification', 'success', 'Номер номенклатуры обновлен.');
     }
 
     public function archiveNomenclature($id)

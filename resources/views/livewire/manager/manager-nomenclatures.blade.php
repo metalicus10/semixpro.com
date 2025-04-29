@@ -216,9 +216,88 @@
                                    class="sr-only">checkbox</label>
                         </div>
                         <!-- NN -->
-                        <div class="w-1/8 text-center flex items-center p-2">
+                        <div x-data="{
+                                editingNn: false,
+                                newNn: nomenclature.nn,
+                                originalNn: nomenclature.nn,
+                                errorNnMessage: '',
+                                checkDuplicateNn(newNn) {
+                                    // Проверяем в активных номенклатурах
+                                    const duplicateInActive = this.nomenclatures.some(n => n.nn == newNn);
+
+                                    // Проверяем в архивных номенклатурах
+                                    const duplicateInArchived = this.archived_nomenclatures.some(n => n.nn == newNn);
+
+                                    return duplicateInActive || duplicateInArchived;
+                                }
+                            }"
+                             class="flex flex-col justify-center items-start">
                             <span class="md:hidden font-semibold">NN: </span>
-                            <span x-text="nomenclature.nn"></span>
+                            <div class="flex relative">
+                                <div class="flex flex-col w-full p-2">
+                                    <!-- Оверлей -->
+                                    <div x-show="editingNn"
+                                         class="flex fixed inset-0 bg-black opacity-50 z-30"
+                                         @click="editingNn = false"
+                                         x-cloak>
+                                    </div>
+                                    <!-- Отображение номера -->
+                                    <div x-show="!editingNn" @click="editingNn = true"
+                                         class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
+                                        <span x-text="originalNn"></span>
+                                    </div>
+                                    <!-- Редактирование номера -->
+                                    <div x-show="editingNn" class="flex items-center gap-2 z-40" x-cloak>
+                                        <input type="text" x-model="newNn" @input="errorNnMessage = ''"
+                                            @keydown.enter="
+                                                if (newNn !== originalNn) {
+                                                    if (!errorNnMessage) {
+                                                        $wire.updateNomenclatureNn(nomenclature.id, newNn)
+                                                            .then(() => {
+                                                                originalNn = newNn;
+                                                                editingNn = false;
+                                                            })
+                                                            .catch(() => {
+                                                                errorNnMessage = 'Номер уже существует';
+                                                            });
+                                                    }
+                                                }
+                                           "
+                                           @keydown.escape="
+                                                editingNn = false;
+                                                newNn = originalNn;
+                                           "
+                                           class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
+                                        >
+                                        <template x-if="errorNnMessage">
+                                            <div class="absolute top-full left-0 mt-1 w-max px-3 py-1 bg-red-500 text-white text-xs rounded shadow">
+                                                <span x-text="errorNnMessage"></span>
+                                            </div>
+                                        </template>
+                                        <button
+                                            @click="
+                                                if (newNn !== originalNn) {
+                                                    if (checkDuplicateNn(newNn)) {
+                                                        errorNnMessage = 'Номер уже существует';
+                                                    } else {
+                                                        $wire.updateNomenclatureNn(nomenclature.id, newNn)
+                                                            .then(() => {
+                                                                originalNn = newNn;
+                                                                editingNn = false;
+                                                                errorNnMessage = '';
+                                                            })
+                                                            .catch(() => {
+                                                                errorNnMessage = 'Ошибка обновления номера';
+                                                            });
+                                                    }
+                                                }
+                                            "
+                                            class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
+                                            ✓
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <!-- Name -->
                         <div x-data="{
