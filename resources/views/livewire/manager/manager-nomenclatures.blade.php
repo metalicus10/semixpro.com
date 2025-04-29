@@ -99,7 +99,7 @@
         },
         toggleNomenclatureSelection(id) {
             if (this.selectedNomenclatures.includes(id)) {
-                this.selectedNomenclatures = this.selectedNomenclatures.filter(id => id !== id);
+                this.selectedNomenclatures = this.selectedNomenclatures.filter(selectedId => selectedId !== id);
             } else {
                 this.selectedNomenclatures.push(id);
             }
@@ -203,7 +203,8 @@
                             <input type="checkbox" :value="nomenclature.id"
                                    @click="toggleNomenclatureSelection(nomenclature.id)"
                                    :checked="selectedNomenclatures.includes(nomenclature.id)"
-                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500
+                                   dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                             <label for="checkbox-table-search-nomenclature.id"
                                    class="sr-only">checkbox</label>
                         </div>
@@ -211,7 +212,8 @@
                             <input type="checkbox" :value="nomenclature.id"
                                    @click="toggleNomenclatureSelection(nomenclature.id)"
                                    :checked="selectedNomenclatures.includes(nomenclature.id)"
-                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                   class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500
+                                   dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
                             <label for="checkbox-table-search-nomenclature.id"
                                    class="sr-only">checkbox</label>
                         </div>
@@ -242,13 +244,13 @@
                                          x-cloak>
                                     </div>
                                     <!-- Отображение номера -->
-                                    <div x-show="!editingNn" @click="editingNn = true"
+                                    <div x-show="!editingNn" @click="editingNn = true; $nextTick(() => $refs.nnInput.focus());"
                                          class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
                                         <span x-text="originalNn"></span>
                                     </div>
                                     <!-- Редактирование номера -->
                                     <div x-show="editingNn" class="flex items-center gap-2 z-40" x-cloak>
-                                        <input type="text" x-model="newNn" @input="errorNnMessage = ''"
+                                        <input type="text" x-model="newNn" @input="errorNnMessage = ''" x-ref="nnInput"
                                             @keydown.enter="
                                                 if (newNn !== originalNn) {
                                                     if (!errorNnMessage) {
@@ -267,7 +269,7 @@
                                                 editingNn = false;
                                                 newNn = originalNn;
                                            "
-                                           class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
+                                           class="border border-gray-300 rounded-md text-sm text-gray-600 px-2 py-1 w-3/4 mr-2"
                                         >
                                         <template x-if="errorNnMessage">
                                             <div class="absolute top-full left-0 mt-1 w-max px-3 py-1 bg-red-500 text-white text-xs rounded shadow">
@@ -320,15 +322,15 @@
                                          x-cloak>
                                     </div>
                                     <!-- Отображение названия -->
-                                    <div x-show="!editingName" @click="editingName = true"
+                                    <div x-show="!editingName" @click="editingName = true; $nextTick(() => $refs.nameInput.focus());"
                                          class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
                                         <span x-text="originalName"></span>
                                     </div>
 
                                     <!-- Редактирование названия -->
                                     <div x-show="editingName" class="flex items-center gap-2 z-40" x-cloak>
-                                        <input type="text" x-model="newName"
-                                               class="border border-gray-300 rounded-md text-sm px-2 py-1 w-3/4 mr-2"
+                                        <input type="text" x-model="newName" x-ref="nameInput"
+                                               class="border border-gray-300 rounded-md text-sm text-gray-600 px-2 py-1 w-3/4 mr-2"
                                                @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName);
                                                originalName = newName; } editingName = false;"
                                                @keydown.escape="editingName = false; newName = originalName;"
