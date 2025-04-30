@@ -248,6 +248,24 @@ class ManagerNomenclatures extends Component
         $this->dispatch('showNotification', 'success', 'Номер номенклатуры обновлен.');
     }
 
+    public function bulkUpdateNomenclatures($nomenclatures)
+    {
+        foreach ($nomenclatures as $data) {
+            $nomenclature = Nomenclature::find($data['id']);
+
+            if ($nomenclature) {
+                $nomenclature->update([
+                    'nn' => $data['nn'],
+                    'name' => $data['name'],
+                    'category_id' => $data['category'],
+                    'supplier_id' => $data['supplier'],
+                ]);
+            }
+        }
+
+        $this->dispatch('nomenclature-updated'); // Чтобы обновить таблицу на фронте
+    }
+
     public function archiveNomenclature($id)
     {
         $nomenclature = Nomenclature::findOrFail($id);

@@ -22,7 +22,7 @@
         nn:'', name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '', search: '',
         imageInputKey: Date.now(),
         duplicateNameError: null, duplicateNnError: null,
-        selectedNomenclatures: [],
+
         selectedImage: null,
         refs: {},
         init() {
@@ -144,11 +144,40 @@
             this.selectedFile = null;
             this.imgError = null;
         },
+        bulkEditItems: [],
+        showBulkEditModal: false,
+        openBulkEditModal() {
+            this.bulkEditItems = this.nomenclatures
+              .filter(n => this.selectedNomenclatures.includes(n.id))
+              .map(n => ({
+                id: n.id,
+                nn: n.nn,
+                name: n.name,
+                category_id: n.category?.id ?? null,   // безопасно из связи
+                supplier_id: n.suppliers?.id ?? null    // безопасно из связи
+              }));
+
+            console.log(this.bulkEditItems);
+            this.showBulkEditModal = true;
+        },
+        submitBulkEdit() {
+            $wire.bulkUpdateNomenclatures(this.bulkEditItems);
+            this.showBulkEditModal = false;
+            this.bulkEditItems = [];
+            this.selectedNomenclatures = [];
+        },
+        cancelBulkEdit() {
+            this.showBulkEditModal = false;
+            this.bulkEditItems = [];
+        }
     }" x-init="init();"
 >
     <div class="flex justify-between items-center mb-6">
         <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Nomenclature</h1>
         <livewire:manager.nomenclature-archive/>
+        <button x-show="selectedNomenclatures.length > 1" @click="openBulkEditModal()" class="px-4 py-2 bg-gray-600 text-white rounded cursor-pointer">
+            Массовое изменение
+        </button>
         <!-- Добавить новую номенклатуру -->
         <button @click="openNomenclatureModal('create')"
                 class="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 mb-4">Добавить
@@ -348,7 +377,7 @@
                         <!-- Category -->
                         <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Категория: </span>
-                            <span x-text="nomenclature.category ? nomenclature.category.name : '---'"></span>
+                            <span x-text="nomenclature.category ? nomenclature.category.name : '---'" :key="nomenclature.category.id" x-init="console.log(nomenclature.category.id);"></span>
                         </div>
                         <!-- Supplier -->
                         <div class="flex items-center px-2">
@@ -591,6 +620,67 @@
             </div>
         </template>
     </div>
+
+    <!-- Форма для массового редактирования номенклатур -->
+    <template x-if="showBulkEditModal">
+        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+            <!-- Оверлей -->
+            <div x-show="showBulkEditModal"
+                 class="flex fixed inset-0 bg-black opacity-50 z-30"
+                 @click="showBulkEditModal = false, cancelBulkEdit()"
+                 x-cloak>
+            </div>
+            <div class="relative bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg w-2/3 z-50">
+                <!-- Modal header -->
+                <div class="flex items-start justify-between p-4 mb-2 border-b rounded-t dark:border-gray-700">
+                    <h2 class="text-lg font-bold mb-4">Массовое изменение Номенклатур</h2>
+                    <button @click="showBulkEditModal = false" type="button"
+                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                            aria-label="Close">
+                        <svg class="w-5 h-5" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                                  clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 font-semibold mb-2 px-2 text-gray-400 text-sm">
+                    <div>Номер</div>
+                    <div>Название</div>
+                    <div>Категория</div>
+                    <div>Поставщик</div>
+                </div>
+                <template x-for="item in bulkEditItems" :key="item.id">
+                    <div class="grid grid-cols-4 gap-4 mb-2">
+                        <input type="text" x-model="item.nn" placeholder="Номер" class="input" />
+                        <input type="text" x-model="item.name" placeholder="Название" class="input" />
+                        <!-- Категория -->
+                        <select x-model.number="item.category_id" class="input">
+                            <template x-for="cat in categories" :key="cat.id">
+                                <template x-if="cat.id == item.category_id" :key="cat.id">
+                                    <option :value="cat.id" x-text="cat.name"></option>
+                                </template>
+                            </template>
+                        </select>
+                        <!-- Поставщик -->
+                        <select x-model.number="item.supplier_id" class="input">
+                            <template x-for="sup in suppliers" :key="sup.id">
+                                <template x-if="sup.id == item.supplier_id" :key="sup.id">
+                                    <option :value="sup.id" x-text="sup.name"></option>
+                                </template>
+                            </template>
+                        </select>
+                    </div>
+                </template>
+
+                <div class="flex justify-end space-x-4 mt-4">
+                    <button @click="submitBulkEdit()" class="btn-green">Применить</button>
+                    <button @click="cancelBulkEdit()" class="btn-gray">Отмена</button>
+                </div>
+            </div>
+        </div>
+    </template>
 
     <!-- Форма для замены изображения номенклатуры -->
     <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" x-show="showImageUploading" x-cloak x-transition>
