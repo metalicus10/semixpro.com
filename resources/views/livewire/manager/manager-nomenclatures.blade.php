@@ -45,10 +45,12 @@
                 this.imgError = null;
             });
         },
-        filteredNomenclatures() {
-            return this.nomenclatures
-
-                .filter(n => this.search === '' || n.name.toLowerCase().includes(this.search.toLowerCase()));
+        get filteredNomenclatures() {
+            if (!this.search) return this.nomenclatures;
+            return this.nomenclatures.filter(n =>
+                n.name.toLowerCase().includes(this.search.toLowerCase()) ||
+                n.nn.toLowerCase().includes(this.search.toLowerCase())
+            );
         },
         async loadServerNomenclatures() {
             const response = await fetch(`/api/nomenclatures?search=${this.search}&category=${this.selectedCategory}&brand=${this.selectedBrand}`);
@@ -157,7 +159,6 @@
                 supplier_id: n.suppliers?.id ?? null    // безопасно из связи
               }));
 
-            console.log(this.bulkEditItems);
             this.showBulkEditModal = true;
         },
         submitBulkEdit() {
@@ -169,6 +170,24 @@
         cancelBulkEdit() {
             this.showBulkEditModal = false;
             this.bulkEditItems = [];
+        },
+
+        handleBulkUpdate(event) {
+            const updated = event.detail[0];
+
+            updated.forEach(item => {
+                const index = this.nomenclatures.findIndex(n => n.id === item.id);
+                if (index !== -1) {
+                    this.nomenclatures[index] = {
+                        ...this.nomenclatures[index],
+                        ...item,
+                        category: this.categories.find(c => c.id === item.category_id),
+                        supplier: this.suppliers.find(s => s.id === item.supplier_id),
+                    };
+                }
+            });
+            this.nomenclatures = [...this.nomenclatures];
+            console.log(this.nomenclatures);
         }
     }" x-init="init();"
 >
@@ -216,8 +235,9 @@
                         nomenclature.is_archived = 1;
                     }
                 }"
+                @bulk-nomenclature-updated.window="handleBulkUpdate($event)"
             >
-                <template x-for="nomenclature in filteredNomenclatures()" :key="nomenclature.id">
+                <template x-for="nomenclature in filteredNomenclatures" :key="nomenclature.id">
                     <div x-show="!nomenclature.is_archived"
                          x-transition:enter="transition ease-out duration-300"
                          x-transition:enter-start="opacity-0 transform scale-90"
@@ -335,7 +355,6 @@
                                 showEditMenu: false,
                                 editingName: false,
                                 newName: nomenclature.name,
-                                originalName: nomenclature.name,
                                 errorMessage: '',
                             }"
                              class="flex flex-col justify-center items-start"
@@ -351,22 +370,22 @@
                                          x-cloak>
                                     </div>
                                     <!-- Отображение названия -->
-                                    <div x-show="!editingName" @click="editingName = true; $nextTick(() => $refs.nameInput.focus());"
+                                    <div x-show="!editingName" @click="editingName = true; newName = nomenclature.name; $nextTick(() => $refs.nameInput.focus())"
                                          class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                        <span x-text="originalName"></span>
+                                        <span x-text="nomenclature.name"></span>
                                     </div>
 
                                     <!-- Редактирование названия -->
                                     <div x-show="editingName" class="flex items-center gap-2 z-40" x-cloak>
                                         <input type="text" x-model="newName" x-ref="nameInput"
                                                class="border border-gray-300 rounded-md text-sm text-gray-600 px-2 py-1 w-3/4 mr-2"
-                                               @keydown.enter="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName);
-                                               originalName = newName; } editingName = false;"
-                                               @keydown.escape="editingName = false; newName = originalName;"
+                                               @keydown.enter="if (newName !== nomenclature.name) { $wire.updateNomenclature(nomenclature.id, newName);
+                                               nomenclature.name = newName; } editingName = false;"
+                                               @keydown.escape="editingName = false; newName = nomenclature.name;"
                                         />
                                         <button
-                                            @click="if (newName !== originalName) { $wire.updateNomenclature(nomenclature.id, newName);
-                                            originalName = newName; } editingName = false;"
+                                            @click="if (newName !== nomenclature.name) { $wire.updateNomenclature(nomenclature.id, newName);
+                                            nomenclature.name = newName; } editingName = false;"
                                             class="bg-green-500 text-white px-2 py-1 rounded-full w-1/4">
                                             ✓
                                         </button>
@@ -377,7 +396,7 @@
                         <!-- Category -->
                         <div class="flex items-center px-2">
                             <span class="md:hidden font-semibold">Категория: </span>
-                            <span x-text="nomenclature.category ? nomenclature.category.name : '---'" :key="nomenclature.category.id" x-init="console.log(nomenclature.category.id);"></span>
+                            <span x-text="nomenclature.category ? nomenclature.category.name : '---'" :key="nomenclature.category.id"></span>
                         </div>
                         <!-- Supplier -->
                         <div class="flex items-center px-2">

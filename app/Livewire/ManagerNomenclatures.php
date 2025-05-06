@@ -257,13 +257,13 @@ class ManagerNomenclatures extends Component
                 $nomenclature->update([
                     'nn' => $data['nn'],
                     'name' => $data['name'],
-                    'category_id' => $data['category'],
-                    'supplier_id' => $data['supplier'],
+                    'category_id' => $data['category_id'],
+                    'supplier_id' => $data['supplier_id'],
                 ]);
             }
         }
 
-        $this->dispatch('nomenclature-updated'); // Чтобы обновить таблицу на фронте
+        $this->dispatch('bulk-nomenclature-updated', $nomenclatures);
     }
 
     public function archiveNomenclature($id)
