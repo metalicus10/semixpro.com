@@ -40,9 +40,9 @@ class PlatformProvider extends OrchidServiceProvider
                 ->route(config('platform.index')),
 
             Menu::make('Sample Screen')
-                ->icon('bs.collection')
-                ->route('platform.example')
-                ->badge(fn () => 6),
+                    ->icon('bs.collection')
+                    ->route('platform.example')
+                    ->badge(fn () => 6),
 
             Menu::make('Form Elements')
                 ->icon('bs.card-list')
@@ -65,6 +65,11 @@ class PlatformProvider extends OrchidServiceProvider
                 ->icon('bs.card-text')
                 ->route('platform.example.cards')
                 ->divider(),
+
+            Menu::make('Массовые логи')
+                ->icon('bs.list')
+                ->route('platform.bulk.logs')
+                ->permission('platform.systems.users'),
 
             Menu::make(__('Users'))
                 ->icon('bs.people')

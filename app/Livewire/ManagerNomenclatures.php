@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\ActionLog;
 use App\Models\Brand;
+use App\Models\BulkLog;
 use App\Models\Category;
 use App\Models\NomenclatureVersion;
 use App\Models\Part;
@@ -22,7 +23,7 @@ class ManagerNomenclatures extends Component
     use WithFileUploads;
 
     public array $nomenclatures = [], $archived_nomenclatures = [], $selectedNomenclatures = [], $selectedBrands = [];
-    public $manager_id, $nn, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers;
+    public $manager_id, $nn, $name, $category_id, $supplier_id, $image, $version, $categories, $brands, $suppliers, $allNns;
     public $editingNomenclature = null, $idToDelete;
     public bool $showArchived, $managerUrlModalVisible = false;
     public $managerUrl, $selectedId, $managerSupplier, $nomenclatureImage, $nomenclature;
@@ -49,6 +50,7 @@ class ManagerNomenclatures extends Component
 
     public function mount()
     {
+        $this->allNns = Nomenclature::pluck('nn')->where('manager_id', Auth::id())->toArray();
         $this->categories = Category::where('manager_id', Auth::id())->get()->toArray();
         $this->suppliers = Supplier::where('manager_id', Auth::id())->get()->toArray();
         $this->brands = Brand::where('manager_id', Auth::id())->get()->toArray();
@@ -167,6 +169,7 @@ class ManagerNomenclatures extends Component
 
         // Добавляем в локальный массив для отображения
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
+        $this->dispatch('nomenclature-updated');
         $this->reset('newNomenclature');
         $this->dispatch('showNotification', 'success', 'New nomenclature created successfully');
         $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $nomenclature->name);
@@ -195,6 +198,7 @@ class ManagerNomenclatures extends Component
             ]);
             $this->WriteActionLog('update', 'nomenclature', $this->editingNomenclature->id, $this->editingNomenclature->name);
         }
+        $this->dispatch('nomenclature-updated');
     }
 
     public function updateNomenclature($id, $newName)
@@ -217,8 +221,31 @@ class ManagerNomenclatures extends Component
         ]);
         $this->dispatch('nomenclature-updated');
 
-        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, $newName);
+        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, is_array($newName) ? ($newName['name'] ?? '') : $newName);
         $this->dispatch('showNotification', 'success', 'Название номенклатуры обновлено.');
+    }
+
+    public function updateNomenclatureField($id, $field, $value)
+    {
+        $nomenclature = Nomenclature::find($id);
+
+        if (!$nomenclature || !in_array($field, ['name', 'nn', 'category_id', 'supplier_id'])) {
+            return;
+        }
+
+        // Обновляем поле
+        $nomenclature->update([$field => $value]);
+
+        // Логируем изменение
+        NomenclatureVersion::create([
+            'nomenclature_id' => $nomenclature->id,
+            'changes' => json_encode([$field => $value]),
+            'user_id' => auth()->id(),
+        ]);
+
+        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, "$field = $value");
+        $this->dispatch('nomenclature-updated');
+        $this->showUpdateNotification('showNotification', 'success', $field);
     }
 
     public function updateNomenclatureNn($id, $newNn)
@@ -250,10 +277,37 @@ class ManagerNomenclatures extends Component
 
     public function bulkUpdateNomenclatures($nomenclatures)
     {
+        $logChanges = [];
+        $categories = Category::pluck('name', 'id');
+        $suppliers  = Supplier::pluck('name', 'id');
         foreach ($nomenclatures as $data) {
             $nomenclature = Nomenclature::find($data['id']);
 
             if ($nomenclature) {
+                $changedFields = [];
+                if ($nomenclature->name !== $data['name']) {
+                    $changedFields['name'] = $data['name'];
+                }
+                if ($nomenclature->nn !== $data['nn']) {
+                    $changedFields['nn'] = $data['nn'];
+                }
+                if ($nomenclature->category_id != $data['category_id']) {
+                    $changedFields['category'] = $categories[$data['category_id']] ?? 'N/A';
+                }
+                if ($nomenclature->supplier_id != $data['supplier_id']) {
+                    $changedFields['supplier'] = $suppliers[$data['supplier_id']] ?? 'N/A';
+                }
+
+                if (!empty($changedFields)) {
+                    $logChanges[] = [
+                        'name' => $nomenclature->name,
+                        'changes' => $changedFields,
+                    ];
+
+                    // Применяем изменения
+                    $nomenclature->update($data);
+                }
+
                 $nomenclature->update([
                     'nn' => $data['nn'],
                     'name' => $data['name'],
@@ -263,7 +317,22 @@ class ManagerNomenclatures extends Component
             }
         }
 
+        if (count($logChanges) > 50) {
+            $summary = "[Bulk] update: " . count($logChanges) . " номенклатур";
+
+            BulkLog::create([
+                'action_type' => 'update',
+                'target_type' => 'nomenclature',
+                'user_id' => auth()->id(),
+                'items' => $logChanges,
+                'summary' => $summary,
+            ]);
+        } else {
+            $this->WriteActionLog('update', 'nomenclature', null, $logChanges);
+        }
+
         $this->dispatch('bulk-nomenclature-updated', $nomenclatures);
+        $this->showUpdateNotification('showNotification', 'success', null);
     }
 
     public function archiveNomenclature($id)
@@ -401,20 +470,61 @@ class ManagerNomenclatures extends Component
         return Nomenclature::find($nomenclatureId)->brands()->pluck('brands.id')->toArray();
     }
 
-    public function WriteActionLog($actionType, $target_type, $target_id, $name)
+    public function getAllNns()
     {
+        return Nomenclature::where('manager_id', Auth::id())->pluck('nn')->toArray();
+    }
+
+    public function WriteActionLog($actionType, $target_type, $target_id, $items)
+    {
+        if (is_array($items)) {
+            $description = "[Bulk] {$actionType}: " . count($items) . " номенклатур\n";
+            foreach ($items as $item) {
+                if (is_array($item)) {
+                    $changes = collect($item['changes'] ?? [])->map(fn($val, $key) => "$key: \"$val\"")->implode(', ');
+                    $description .= "- " . ($item['name'] ?? 'N/A') . " → {$changes}\n";
+                } else {
+                    $description .= "- " . ($item['name'] ?? 'N/A') . "\n";
+                }
+            }
+        } else {
+            // $items — это строка или просто имя
+            $description = ucfirst($target_type) . " {$actionType}: " . ($items ?? 'N/A');
+        }
+
+        /*foreach ($items as $item) {
+            $changes = collect($item['changes'])
+                ->map(fn($val, $key) => "$key: \"$val\"")
+                ->implode(', ');
+
+            $description .= "• {$item['name']} → {$changes}\n";
+        }*/
+
         ActionLog::create([
             'action_type' => $actionType,
             'target_type' => $target_type,
             'target_id' => $target_id,
-            'description' => 'Category '.$actionType.': ' . $name,
+            'description' => trim($description),
             'user_id' => auth()->id(),
         ]);
     }
 
+    public function showUpdateNotification($event, $status, $field)
+    {
+        $message = match ($field) {
+            'name' => 'Название номенклатуры обновлено.',
+            'nn' => 'Номер номенклатуры обновлён.',
+            'category_id' => 'Категория номенклатуры изменена.',
+            'supplier_id' => 'Поставщик номенклатуры изменён.',
+            default => 'Номенклатура обновлена.',
+        };
+
+        $this->dispatch($event, $status, $message);
+    }
+
     public function render()
     {
-        $nomenclatures = $this->nomenclatures;
+        //$nomenclatures = $this->nomenclatures;
         return view('livewire.manager.manager-nomenclatures')->layout('layouts.app');
     }
 }
