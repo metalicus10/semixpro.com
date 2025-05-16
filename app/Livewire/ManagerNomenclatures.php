@@ -243,7 +243,11 @@ class ManagerNomenclatures extends Component
             'user_id' => auth()->id(),
         ]);
 
-        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, "$field = $value");
+        $this->WriteActionLog('update', 'nomenclature', $nomenclature->id, [
+            [
+                $field => $value
+            ]
+        ]);
         $this->dispatch('nomenclature-updated');
         $this->showUpdateNotification('showNotification', 'success', $field);
     }
@@ -280,6 +284,7 @@ class ManagerNomenclatures extends Component
         $logChanges = [];
         $categories = Category::pluck('name', 'id');
         $suppliers  = Supplier::pluck('name', 'id');
+
         foreach ($nomenclatures as $data) {
             $nomenclature = Nomenclature::find($data['id']);
 
@@ -298,6 +303,26 @@ class ManagerNomenclatures extends Component
                     $changedFields['supplier'] = $suppliers[$data['supplier_id']] ?? 'N/A';
                 }
 
+                $existingBrandIds = $nomenclature->brands->pluck('id')->sort()->values();
+                $newBrandIds = collect($data['brands'] ?? [])->pluck('id')->sort()->values();
+
+                if ($existingBrandIds->toJson() !== $newBrandIds->toJson()) {
+                    $brandNames = collect($data['brands'])->pluck('name')->filter()->implode(', ');
+                    $changedFields['brands'] = $brandNames !== '' ? $brandNames : '(none)';
+                }
+
+                $nomenclature->update([
+                    'nn' => $data['nn'],
+                    'name' => $data['name'],
+                    'category_id' => $data['category_id'],
+                    'supplier_id' => $data['supplier_id'],
+                ]);
+
+                if (array_key_exists('brands', $data)) {
+                    $ids = collect($data['brands'])->pluck('id')->filter()->values();
+                    $nomenclature->brands()->sync($ids);
+                }
+
                 if (!empty($changedFields)) {
                     $logChanges[] = [
                         'name' => $nomenclature->name,
@@ -307,13 +332,6 @@ class ManagerNomenclatures extends Component
                     // Применяем изменения
                     $nomenclature->update($data);
                 }
-
-                $nomenclature->update([
-                    'nn' => $data['nn'],
-                    'name' => $data['name'],
-                    'category_id' => $data['category_id'],
-                    'supplier_id' => $data['supplier_id'],
-                ]);
             }
         }
 
@@ -450,19 +468,69 @@ class ManagerNomenclatures extends Component
     public function updateNomenclatureBrands($nomenclatureId, $selectedBrands)
     {
         $nomenclature = Nomenclature::find($nomenclatureId);
-        $nomenclature->brands()->sync($selectedBrands);
+
+        if (!$nomenclature) return;
+
+        $oldBrandIds = $nomenclature->brands->pluck('id')->sort()->values();
+        $newBrandIds = collect($selectedBrands)->filter()->sort()->values();
+
+        if ($oldBrandIds->toJson() !== $newBrandIds->toJson()) {
+            // Получаем имена брендов
+            $brandNames = Brand::whereIn('id', $newBrandIds)->pluck('name')->implode(', ');
+            $log = [
+                'name' => $nomenclature->name,
+                'changes' => [
+                    'brands' => $brandNames !== '' ? $brandNames : '(отсутствует)'
+                ]
+            ];
+
+            $this->WriteActionLog(
+                'update',
+                'nomenclature',
+                $nomenclatureId,
+                [$log] // универсальный формат
+            );
+        }
+
+        // Безопасный sync
+        $idsToSync = $newBrandIds->all();
+        $nomenclature->brands()->sync($idsToSync ?? []);
+
+
         $this->updateSelectedBrands($nomenclatureId);
 
-        // Обновляем данные в представлении
         $this->dispatch('brandsUpdated', $nomenclatureId);
     }
 
     public function updateSelectedBrands($nomenclatureId)
     {
         $nomenclature = Nomenclature::where('id', $nomenclatureId)->firstOrFail();
-        $nomenclature->brands()->sync($this->selectedBrands);
+
+        $oldBrandIds = $nomenclature->brands->pluck('id')->sort()->values();
+        $newBrandIds = collect($this->selectedBrands)->filter()->sort()->values();
+
+        if ($oldBrandIds->toJson() !== $newBrandIds->toJson()) {
+            $brandNames = Brand::whereIn('id', $newBrandIds)->pluck('name')->implode(', ');
+
+            $this->WriteActionLog(
+                'update',
+                'nomenclature',
+                $nomenclatureId,
+                [[
+                    'name' => $nomenclature->name,
+                    'changes' => [
+                        'brands' => $brandNames !== '' ? $brandNames : '(отсутствует)',
+                    ],
+                ]]
+            );
+        }
+
+        // безопасное обновление брендов
+        $nomenclature->brands()->sync($newBrandIds ?? []);
+
 
         $this->dispatch('brandsUpdated', $nomenclatureId);
+        $this->dispatch('showNotification', 'success', 'Brands updated successfully!');
     }
 
     public function getUpdatedBrands($nomenclatureId)
@@ -475,21 +543,25 @@ class ManagerNomenclatures extends Component
         return Nomenclature::where('manager_id', Auth::id())->pluck('nn')->toArray();
     }
 
-    public function WriteActionLog($actionType, $target_type, $target_id, $items)
+    public function WriteActionLog($actionType, $target_type, $target_id, array $items)
     {
-        if (is_array($items)) {
-            $description = "[Bulk] {$actionType}: " . count($items) . " номенклатур\n";
-            foreach ($items as $item) {
-                if (is_array($item)) {
-                    $changes = collect($item['changes'] ?? [])->map(fn($val, $key) => "$key: \"$val\"")->implode(', ');
-                    $description .= "- " . ($item['name'] ?? 'N/A') . " → {$changes}\n";
-                } else {
-                    $description .= "- " . ($item['name'] ?? 'N/A') . "\n";
-                }
+        $count = count($items);
+        $description = $count > 1
+            ? "[Bulk] {$actionType}: {$count} номенклатур\n"
+            : ucfirst($target_type) . " {$actionType}:\n";
+
+        foreach ($items as $item) {
+            $changes = collect($item['changes'] ?? [])
+                ->map(fn($val, $key) => "$key: \"$val\"")
+                ->implode(', ');
+
+            $line = "- " . ($item['name'] ?? 'N/A');
+
+            if ($changes) {
+                $line .= " → {$changes}";
             }
-        } else {
-            // $items — это строка или просто имя
-            $description = ucfirst($target_type) . " {$actionType}: " . ($items ?? 'N/A');
+
+            $description .= $line . "\n";
         }
 
         /*foreach ($items as $item) {

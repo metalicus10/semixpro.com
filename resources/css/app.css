@@ -1,5 +1,7 @@
 @import "flowbite";
-@import "tailwindcss";
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
 
 :root {
     --background: 220 30% 10%;
@@ -16,7 +18,7 @@
     --primary-foreground: 141 79% 8%;
     --secondary: 222 47% 15%;
     --secondary-foreground: 0 0% 98%;
-    --accent: 240 3.7% 15.9%;
+    --accent: 142, 71%, 45%;
     --accent-foreground: 0 0% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
@@ -28,6 +30,9 @@
 @layer base {
     button {
         @apply cursor-pointer;
+    }
+    [type="checkbox"], [type="radio"]{
+        color: hsl(var(--accent));
     }
 }
 
@@ -140,6 +145,9 @@
 }
 .border-primary {
     border-color: rgb(49 214 110 / 0.9);
+}
+.bg-accent {
+    background-color: hsl(var(--accent));
 }
 .py-16 {
     padding-top: 4rem;

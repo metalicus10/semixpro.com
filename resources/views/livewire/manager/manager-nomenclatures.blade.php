@@ -155,8 +155,9 @@
                 id: n.id,
                 nn: n.nn,
                 name: n.name,
-                category_id: n.category?.id ?? null,   // безопасно из связи
-                supplier_id: n.suppliers?.id ?? null    // безопасно из связи
+                category_id: n.category?.id ?? null,
+                supplier_id: n.suppliers?.id ?? null,
+                brands: n.brands
               }));
 
             this.showBulkEditModal = true;
@@ -191,43 +192,49 @@
         },
     }" x-init="init();"
 >
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex justify-between items-center mb-4">
         <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Nomenclature</h1>
-        <livewire:manager.nomenclature-archive/>
-        <button x-show="selectedNomenclatures.length > 1" @click="openBulkEditModal()" class="px-4 py-2 bg-gray-600 text-white rounded cursor-pointer">
-            Массовое изменение
-        </button>
-        <!-- Добавить новую номенклатуру -->
-        <button @click="openNomenclatureModal('create')"
-                class="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 mb-4">Добавить
-            Номенклатуру
-        </button>
+        <div class="flex gap-2">
+            <livewire:manager.nomenclature-archive/>
+            <button x-show="selectedNomenclatures.length > 1" @click="openBulkEditModal()"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border hover:text-accent-foreground h-10 px-4 py-2 bg-[#2a3749] border-[#3a4759] text-white hover:bg-[#3a4759] cursor-pointer">
+                Массовое изменение
+            </button>
+            <!-- Добавить новую номенклатуру -->
+            <button @click="openNomenclatureModal('create')"
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-green-500 hover:bg-green-600 text-black cursor-pointer">
+                Добавить
+                Номенклатуру
+            </button>
+        </div>
     </div>
 
     <!-- Таблица с номенклатурами -->
-    <div class="w-full overflow-x-auto">
+    <div class="bg-[#1a2433] rounded-lg shadow-lg overflow-x-auto">
         <!-- Заголовки -->
         <div
-            class="hidden md:grid grid-cols-8 w-full content-start text-left text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b dark:bg-gray-700 dark:text-gray-400">
-            <div class="w-1/8 text-center p-2">
+            class="hidden md:grid grid-cols-8 w-full content-center items-center text-left text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b
+            dark:bg-[#1a2433] dark:text-gray-400">
+            <div class="w-1/8 p-4 text-left">
                 <input type="checkbox"
                        @click="toggleCheckAll($event)"
                        :checked="selectedNomenclatures.length === nomenclatures.length"
-                       class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                       class="h-4 w-4 rounded bg-white checked:bg-bg-accent checked:border-bg-accent
+                       transition-colors duration-200 ease-in-out">
             </div>
-            <div class="w-1/8 p-2">NN</div>
-            <div class="w-2/8 p-2">Наименование</div>
-            <div class="w-1/8 p-2">Категория</div>
-            <div class="w-2/8 p-2">Поставщик</div>
-            <div class="w-1/8 p-2">Брэнд</div>
-            <div class="w-2/8 p-2">Изображение</div>
-            <div class="w-2/8 p-2">Действия</div>
+            <div class="w-1/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">NN</div>
+            <div class="w-2/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Наименование</div>
+            <div class="w-1/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Категория</div>
+            <div class="w-2/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Поставщик</div>
+            <div class="w-1/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Брэнд</div>
+            <div class="w-2/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Изображение</div>
+            <div class="w-2/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Действия</div>
         </div>
 
         <!-- Список номенклатур -->
         <template x-if="mode === 'alpine'">
             <template x-if="nomenclatures && nomenclatures.length > 0"
-                @nomenclature-updated.window="(event) => {
+                      @nomenclature-updated.window="(event) => {
                     const id = event.detail[0];
                     const nomenclature = nomenclatures.find(n => n.id === id);
 
@@ -235,7 +242,7 @@
                         nomenclature.is_archived = 1;
                     }
                 }"
-                @bulk-nomenclature-updated.window="handleBulkUpdate($event)"
+                      @bulk-nomenclature-updated.window="handleBulkUpdate($event)"
             >
                 <template x-for="nomenclature in filteredNomenclatures" :key="nomenclature.id">
                     <div x-data="{
@@ -301,10 +308,18 @@
                             $wire.call('getAllNns').then((nns) => {
                                 this.existingNns = nns.filter(n => n !== this.nomenclature.nn);
                             });
-                        }
+                        },
+                        getCategoryName(id) {
+                            const cat = this.categories.find(c => c.id === id);
+                            return cat ? cat.name : '—';
+                        },
+                        getSupplierName(id) {
+                            const sup = this.suppliers.find(s => s.id === id);
+                            return sup ? sup.name : '—';
+                        },
                     }"
-                        x-init="existingNns = @js($allNns).filter(n => n !== nomenclature.nn)"
-                        @nomenclature-updated.window="refreshExistingNns()"
+                         x-init="existingNns = @js($allNns).filter(n => n !== nomenclature.nn)"
+                         @nomenclature-updated.window="refreshExistingNns()"
                     >
                         <div x-show="!nomenclature.is_archived"
                              x-transition:enter="transition ease-out duration-300"
@@ -313,24 +328,23 @@
                              x-transition:leave="transition ease-in duration-300"
                              x-transition:leave-start="opacity-100 transform scale-100"
                              x-transition:leave-end="opacity-0 transform scale-90"
-                             class="grid grid-cols-8 w-full content-start text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1"
+                             class="grid grid-cols-8 w-full content-center items-center text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1 max-h-[105px]"
                         >
                             <!-- Checkbox -->
                             <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">
                                 <input type="checkbox" :value="nomenclature.id"
                                        @click="toggleNomenclatureSelection(nomenclature.id)"
                                        :checked="selectedNomenclatures.includes(nomenclature.id)"
-                                       class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500
-                                       dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                       class="h-4 w-4 rounded border-[#3a4759] bg-[#111827] color-accent checked:bg-green-500 checked:border-green-500 focus:ring-green-500 focus:ring-offset-0">
                                 <label for="checkbox-table-search-nomenclature.id"
                                        class="sr-only">checkbox</label>
                             </div>
-                            <div class="hidden w-1/8 md:flex items-center justify-center sm:flex p-2">
+                            <div class="hidden w-1/8 md:flex items-left justify-left sm:flex p-4">
                                 <input type="checkbox" :value="nomenclature.id"
                                        @click="toggleNomenclatureSelection(nomenclature.id)"
                                        :checked="selectedNomenclatures.includes(nomenclature.id)"
-                                       class="row-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500
-                                       dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:focus:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                                       class="h-4 w-4 rounded bg-white checked:accent-green-500
+                                       focus:ring-2 focus:ring-green-500 focus:ring-offset-0">
                                 <label for="checkbox-table-search-nomenclature.id"
                                        class="sr-only">checkbox</label>
                             </div>
@@ -339,10 +353,10 @@
                                     editingNn: false,
                                     newNn: nomenclature.nn,
                                 }"
-                                 class="flex flex-col justify-center items-start">
+                                 class="flex flex-col justify-center items-start w-[100px]">
                                 <span class="md:hidden font-semibold">NN: </span>
                                 <div class="flex relative">
-                                    <div class="flex flex-col w-full p-2">
+                                    <div class="flex flex-col w-full">
                                         <!-- Оверлей -->
                                         <div x-show="editing && editField === 'nn'"
                                              class="flex fixed inset-0 bg-black opacity-50 z-30"
@@ -355,14 +369,17 @@
                                             <span x-text="nomenclature.nn"></span>
                                         </div>
                                         <!-- Редактирование номера -->
-                                        <div x-show="editing && editField === 'nn'" class="flex items-center gap-2 z-40" x-cloak>
-                                            <input type="text" x-model="form.nn" x-ref="nnInput" @input="errorMessage = ''"
-                                               @keydown.enter="updateField('name', form.nn)"
-                                               @keydown.escape="cancelEdit('nn')"
-                                               class="border border-gray-300 rounded-md text-sm text-gray-600 px-2 py-1 w-3/4 mr-2"
+                                        <div x-show="editing && editField === 'nn'" class="flex items-center gap-2 z-40"
+                                             x-cloak>
+                                            <input type="text" x-model="form.nn" x-ref="nnInput"
+                                                   @input="errorMessage = ''"
+                                                   @keydown.enter="updateField('name', form.nn)"
+                                                   @keydown.escape="cancelEdit('nn')"
+                                                   class="border border-gray-300 rounded-md text-sm text-gray-600 px-2 py-1 w-3/4 mr-2"
                                             >
                                             <template x-if="errorMessage">
-                                                <div class="absolute top-full left-0 mt-1 w-max px-3 py-1 bg-red-500 text-white text-xs rounded shadow">
+                                                <div
+                                                    class="absolute top-full left-0 mt-1 w-max px-3 py-1 bg-red-500 text-white text-xs rounded shadow">
                                                     <span x-text="errorNnMessage"></span>
                                                 </div>
                                             </template>
@@ -387,7 +404,7 @@
                                 <span class="md:hidden font-semibold">Название: </span>
                                 <div class="flex relative">
                                     <!-- Название -->
-                                    <div class="flex flex-col w-full p-2">
+                                    <div class="flex flex-col w-full">
                                         <!-- Оверлей -->
                                         <div x-show="editing && editField === 'name'"
                                              class="flex fixed inset-0 bg-black opacity-50 z-30"
@@ -397,11 +414,14 @@
                                         <!-- Отображение названия -->
                                         <div x-show="!editing || editField !== 'name'" @click="initField('name')"
                                              class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                            <span x-text="nomenclature.name"></span>
+                                            <div class="h-[90px] flex items-center justify-center overflow-auto">
+                                                <div x-text="nomenclature.name" class="break-all max-w-full px-1 text-left leading-snug"></div>
+                                            </div>
                                         </div>
 
                                         <!-- Редактирование названия -->
-                                        <div x-show="editing && editField === 'name'" class="flex items-center gap-2 z-40" x-cloak>
+                                        <div x-show="editing && editField === 'name'"
+                                             class="flex items-center gap-2 z-40" x-cloak>
                                             <input type="text" x-model="form.name" x-ref="nameInput"
                                                    class="border border-gray-300 rounded-md text-sm text-gray-600 px-2 py-1 w-3/4 mr-2"
                                                    @keydown.enter="updateField('name', form.name)"
@@ -416,18 +436,32 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- Категория -->
+                            <div x-show="!editing || editField !== 'category_id'"
+                                 class="flex flex-col justify-center items-start">
+                                <span class="md:hidden font-semibold">Категория: </span>
+                                <span x-text="getCategoryName(nomenclature.category_id)"></span>
+                            </div>
+
+                            <!-- Поставщик -->
+                            <div x-show="!editing || editField !== 'supplier_id'"
+                                 class="flex flex-col justify-center items-start">
+                                <span class="md:hidden font-semibold">Поставщик: </span>
+                                <span x-text="getSupplierName(nomenclature.supplier_id)"></span>
+                            </div>
+
                             <!-- Category -->
-                            <div class="flex items-center px-2">
+                            <!--<div class="flex items-center px-2">
                                 <span class="md:hidden font-semibold">Категория: </span>
                                 <span x-text="nomenclature.category ? nomenclature.category.name : '---'" :key="nomenclature.category.id"></span>
-                            </div>
+                            </div>-->
                             <!-- Supplier -->
-                            <div class="flex items-center px-2">
+                            <!--<div class="flex items-center px-2">
                                 <span class="md:hidden font-semibold">Поставщик: </span>
                                 <span x-text="nomenclature.suppliers ? nomenclature.suppliers.name : '---'"></span>
-                            </div>
+                            </div>-->
                             <!-- Brand -->
-                            <div class="flex items-center px-2">
+                            <div class="flex items-center">
                                 <span class="md:hidden font-semibold">Брэнд: </span>
                                 <div id="brand-component-nomenclature.id">
                                     <div id="brand-item-nomenclature.id"
@@ -499,7 +533,8 @@
                                                     <div class="px-3 py-2">---</div>
                                                 </template>
                                                 <template x-if="nomenclatureBrands.length > 0">
-                                                    <span x-text="nomenclatureBrands.map(b => b.name).join(', ')"></span>
+                                                    <span
+                                                        x-text="nomenclatureBrands.map(b => b.name).join(', ')"></span>
                                                 </template>
                                             </div>
                                         </div>
@@ -516,7 +551,8 @@
                                             <div class="mb-2" @click.stop>
                                                 <input type="text" x-model="search"
                                                        placeholder="Search brands..."
-                                                       class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
+                                                       class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500
+                                                       text-gray-700 dark:bg-gray-700 dark:text-gray-300"/>
                                             </div>
 
                                             <!-- Список брендов с мульти-выбором -->
@@ -524,7 +560,8 @@
                                                 <ul class="py-1 text-sm text-gray-700 dark:text-gray-300 w-2/3 max-h-28 overflow-y-auto">
                                                     <template x-for="brand in filteredBrands()" :key="brand.id">
                                                         <li class="flex items-center space-x-2">
-                                                            <input type="checkbox" :value="brand.id" :checked="selectedBrands.includes(brand.id)"
+                                                            <input type="checkbox" :value="brand.id"
+                                                                   :checked="selectedBrands.includes(brand.id)"
                                                                    :checked="selectedBrands.includes(brand.id)"
                                                                    @change="
                                                                        if ($event.target.checked) {
@@ -537,7 +574,8 @@
                                                                        nomenclature.brands = brands.filter(b => selectedBrands.includes(b.id));
                                                                    "
                                                                    class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500">
-                                                            <span x-text="brand.name" class="text-gray-700 dark:text-gray-200"></span>
+                                                            <span x-text="brand.name"
+                                                                  class="text-gray-700 dark:text-gray-200"></span>
                                                         </li>
                                                     </template>
                                                 </ul>
@@ -555,7 +593,7 @@
                                 </div>
                             </div>
                             <!-- Nomenclature Image -->
-                            <div class="flex items-center px-2">
+                            <div class="flex items-center">
                                 <span class="md:hidden font-semibold">Изображение:</span>
                                 <div x-data="{
                                     isLoading: false,
@@ -583,7 +621,8 @@
                                      x-on:livewire-upload-progress="uploadProgress = $event.detail.progress"
                                      x-cloak class="flex gallery relative">
                                     <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
-                                        <template x-if="nomenclature && typeof nomenclature.image === 'string' && nomenclature.image.trim() !== ''">
+                                        <template
+                                            x-if="nomenclature && typeof nomenclature.image === 'string' && nomenclature.image.trim() !== ''">
                                             <img
                                                 :src="computedImagePath(nomenclature.image)"
                                                 :alt="nomenclature.name"
@@ -592,8 +631,9 @@
                                             >
                                         </template>
 
-                                        <template x-if="!nomenclature || !nomenclature.image || (typeof nomenclature.image === 'string' && nomenclature.image.trim() === '')">
-                                            <x-empty-image class="text-white" />
+                                        <template
+                                            x-if="!nomenclature || !nomenclature.image || (typeof nomenclature.image === 'string' && nomenclature.image.trim() === '')">
+                                            <x-empty-image class="text-white"/>
                                         </template>
                                     </div>
                                     <!-- Tooltip и кнопка загрузки -->
@@ -602,15 +642,16 @@
                                              class="absolute z-50 -top-6 left-6 w-max px-2 py-1 text-xs bg-green-500 text-white rounded shadow-lg">
                                             Change Image
                                         </div>
-                                        <button @click="showImageUploading = true; selectedNomenclatureId = nomenclature.id"
-                                                class="text-white rounded-full p-1 cursor-pointer h-[20px]">
-                                            <x-icons.upload-arrow class="text-white" />
+                                        <button
+                                            @click="showImageUploading = true; selectedNomenclatureId = nomenclature.id"
+                                            class="text-white rounded-full p-1 cursor-pointer h-[20px]">
+                                            <x-icons.upload-arrow class="text-white"/>
                                         </button>
                                     </div>
                                 </div>
                             </div>
                             <!-- Actions -->
-                            <div class="flex w-2/8 items-center px-2 gap-2">
+                            <div class="flex w-2/8 items-center gap-2">
                                 @if(Auth::user()->inRole('admin'))
                                     <button @click="openNomenclatureModal('edit', nomenclature.id)"
                                             class="cursor-pointer px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
@@ -665,68 +706,128 @@
     </div>
 
     <!-- Форма для массового редактирования номенклатур -->
-    <template x-if="showBulkEditModal">
-        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <!-- Оверлей -->
-            <div x-show="showBulkEditModal"
-                 class="flex fixed inset-0 bg-black opacity-50 z-30"
-                 @click="showBulkEditModal = false, cancelBulkEdit()"
-                 x-cloak>
+    <div x-show="showBulkEditModal" x-cloak x-transition class="fixed inset-0 flex items-center justify-center z-50">
+        <!-- Оверлей -->
+        <div class="flex fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-300 z-30"
+             @click="cancelBulkEdit()"
+             x-cloak>
+        </div>
+        <div
+            class="relative max-w-4xl w-full bg-[#1a2433] rounded-lg shadow-xl overflow-hidden transition-all duration-300 opacity-100 scale-100 z-50">
+            <!-- Modal header -->
+            <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-700">
+                <h2 class="text-xl font-medium text-white">Массовое изменение Номенклатур</h2>
+                <button @click="cancelBulkEdit()" type="button"
+                        class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                        aria-label="Close">
+                    <svg class="w-5 h-5" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                              clip-rule="evenodd"></path>
+                    </svg>
+                </button>
             </div>
-            <div class="relative bg-white dark:bg-gray-800 p-5 rounded-lg shadow-lg w-2/3 z-50">
-                <!-- Modal header -->
-                <div class="flex items-start justify-between p-4 mb-2 border-b rounded-t dark:border-gray-700">
-                    <h2 class="text-lg font-bold mb-4">Массовое изменение Номенклатур</h2>
-                    <button @click="showBulkEditModal = false" type="button"
-                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center dark:hover:bg-gray-600 dark:hover:text-white"
-                            aria-label="Close">
-                        <svg class="w-5 h-5" fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 011.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                  clip-rule="evenodd"></path>
-                        </svg>
-                    </button>
-                </div>
 
-                <div class="grid grid-cols-4 gap-4 font-semibold mb-2 px-2 text-gray-400 text-sm">
-                    <div>Номер</div>
-                    <div>Название</div>
-                    <div>Категория</div>
-                    <div>Поставщик</div>
-                </div>
+            <div class="grid grid-cols-5 gap-4 text-sm font-medium text-gray-400 px-4 pt-4">
+                <div>Номер</div>
+                <div>Название</div>
+                <div>Категория</div>
+                <div>Поставщик</div>
+                <div>Брэнд</div>
+            </div>
+            <div class="space-y-3 p-4">
                 <template x-for="item in bulkEditItems" :key="item.id">
-                    <div class="grid grid-cols-4 gap-4 mb-2">
-                        <input type="text" x-model="item.nn" placeholder="Номер" class="input" />
-                        <input type="text" x-model="item.name" placeholder="Название" class="input" />
+                    <div class="grid grid-cols-5 gap-4">
+                        <input type="text" x-model="item.nn" placeholder="Номер"
+                               class="w-full bg-[#111827] border border-[#2a3749] rounded px-3 py-2 text-white focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none"/>
+                        <input type="text" x-model="item.name" placeholder="Название"
+                               class="w-full bg-[#111827] border border-[#2a3749] rounded px-3 py-2 text-white focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none"/>
+
                         <!-- Категория -->
-                        <select x-model.number="item.category_id" class="input">
-                            <template x-for="cat in categories" :key="cat.id">
-                                <template x-if="cat.id == item.category_id" :key="cat.id">
-                                    <option :value="cat.id" x-text="cat.name"></option>
-                                </template>
+                        <select x-model.number="item.category_id"
+                                class="w-full bg-[#111827] border border-[#2a3749] rounded px-3 py-2 text-white focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                            <!-- Текущая -->
+                            <template x-if="categories.find(c => c.id === item.category_id)">
+                                <option
+                                    :value="item.category_id"
+                                    x-text="categories.find(c => c.id === item.category_id)?.name"
+                                ></option>
+                            </template>
+
+                            <!-- Остальные -->
+                            <template x-for="cat in categories.filter(c => c.id !== item.category_id)" :key="cat.id">
+                                <option :value="cat.id" x-text="cat.name"></option>
                             </template>
                         </select>
                         <!-- Поставщик -->
-                        <select x-model.number="item.supplier_id" class="input">
-                            <template x-for="sup in suppliers" :key="sup.id">
-                                <template x-if="sup.id == item.supplier_id" :key="sup.id">
-                                    <option :value="sup.id" x-text="sup.name"></option>
-                                </template>
+                        <select x-model.number="item.supplier_id"
+                                class="w-full bg-[#111827] border border-[#2a3749] rounded px-3 py-2 text-white focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                            <!-- Текущая -->
+                            <template x-if="categories.find(s => s.id === item.supplier_id)">
+                                <option
+                                    :value="item.supplier_id"
+                                    x-text="suppliers.find(s => s.id === item.supplier_id)?.name"
+                                ></option>
+                            </template>
+
+                            <!-- Остальные -->
+                            <template x-for="sup in suppliers.filter(s => s.id !== item.supplier_id)" :key="sup.id">
+                                <option :value="sup.id" x-text="sup.name"></option>
                             </template>
                         </select>
+                        <!-- Брэнд -->
+                        <div x-data="brandSelector(item, @js($brands))"
+                             class="relative flex flex-col justify-center w-full bg-[#111827] border border-[#2a3749] rounded px-3 py-2 text-white focus:border-green-500 focus:ring-1 focus:ring-green-500 focus:outline-none">
+                            <!-- Отображение выбранных брендов -->
+                            <div @click="toggle()" class="cursor-pointer">
+                                <template x-if="selected.length === 0">
+                                    <span class="text-gray-400">---</span>
+                                </template>
+                                <template x-if="selected.length > 0">
+                                    <span x-text="selected.map(b => b.name).join(', ')"></span>
+                                </template>
+                            </div>
+
+                            <!-- Выпадающий список -->
+                            <div x-show="open" @click.outside="open = false" x-transition
+                                 class="absolute z-50 mt-1 w-full bg-white border border-gray-300 shadow-lg max-h-60 overflow-y-auto
+                                 dark:bg-gray-800 dark:border-gray-600 rounded-lg p-1">
+                                <input type="text" x-model="search" placeholder="Поиск брендов..."
+                                       class="w-full p-1 border border-gray-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500
+                                                       text-gray-700 dark:bg-gray-700 dark:text-gray-300 mb-2"/>
+
+                                <template x-for="brand in filteredBrands()" :key="brand.id">
+                                    <label class="flex items-center space-x-2 cursor-pointer mb-1">
+                                        <input type="checkbox"
+                                               :value="brand.id"
+                                               :checked="selectedIds.includes(brand.id)"
+                                               @change="toggleBrand(brand)"
+                                               class="rounded border-gray-300 text-blue-600 shadow-sm focus:ring-blue-500"/>
+                                        <span x-text="brand.name" class="text-gray-700 dark:text-gray-200"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
                     </div>
                 </template>
+            </div>
 
-                <div class="flex justify-end space-x-4 mt-4">
-                    <button @click="submitBulkEdit()" class="btn-green">Применить</button>
-                    <button @click="cancelBulkEdit()" class="btn-gray">Отмена</button>
-                </div>
+            <div class="flex items-center justify-end px-6 py-4 bg-[#1a2433] border-t border-[#2a3749]">
+                <button @click="cancelBulkEdit()"
+                        class="mr-3 px-4 py-2 text-sm font-medium text-white bg-transparent border border-[#2a3749] rounded hover:bg-[#2a3749] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors duration-200">
+                    Отмена
+                </button>
+                <button @click="submitBulkEdit()"
+                        class="px-4 py-2 text-sm font-medium text-black bg-green-500 rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-green-500 transition-colors duration-200">
+                    Применить
+                </button>
             </div>
         </div>
-    </template>
+    </div>
 
     <!-- Форма для замены изображения номенклатуры -->
-    <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" x-show="showImageUploading" x-cloak x-transition>
+    <div class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto" x-show="showImageUploading" x-cloak
+         x-transition>
         <!-- Modal Backdrop -->
         <div x-show="showImageUploading"
              class="flex fixed inset-0 bg-black opacity-50 z-30"
@@ -832,7 +933,7 @@
                                     class="text-red-600">*</span></label>
                             <select x-model="newNomenclature.category_id"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                    focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                                        focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                                     required>
                                 <option value="">Выберите категорию</option>
                                 <template x-for="category in categories" :key="category.id">
@@ -848,7 +949,7 @@
                             <label for="supplier" class="block text-sm font-medium">Поставщик</label>
                             <select x-model="newNomenclature.supplier_id"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                    focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                                        focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
                                 <option value="">Выберите поставщика</option>
                                 <template x-for="supplier in suppliers" :key="supplier.id">
                                     <option :value="supplier.id" x-text="supplier.name"></option>
@@ -863,7 +964,7 @@
                             <label for="brand" class="block text-sm font-medium">Брэнд</label>
                             <select x-model="newNomenclature.brand_id"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg
-                                    focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
+                                        focus:ring-primary-500 focus:border-primary-500 w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white">
                                 <option value="">Выберите брэнд</option>
                                 <template x-for="brand in brands" :key="brand.id">
                                     <option :value="brand.id" x-text="brand.name"></option>
@@ -903,4 +1004,33 @@
             </div>
         </div>
     </div>
+    <script>
+        function brandSelector(item, brands) {
+            return {
+                open: false,
+                search: '',
+                all: brands,
+                selected: [...(item.brands ?? [])],
+
+                get selectedIds() {
+                    return this.selected.map(b => b.id);
+                },
+                toggle() {
+                    this.open = !this.open;
+                },
+                toggleBrand(brand) {
+                    const exists = this.selected.find(b => b.id === brand.id);
+                    if (exists) {
+                        this.selected = this.selected.filter(b => b.id !== brand.id);
+                    } else {
+                        this.selected.push(brand);
+                    }
+                    item.brands = [...this.selected];
+                },
+                filteredBrands() {
+                    return this.all.filter(b => b.name.toLowerCase().includes(this.search.toLowerCase()));
+                }
+            }
+        }
+    </script>
 </div>
