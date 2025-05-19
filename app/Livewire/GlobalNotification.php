@@ -6,25 +6,27 @@ use Livewire\Component;
 
 class GlobalNotification extends Component
 {
-    public $type = '';      // Тип уведомления: success, error, warning, info
-    public $message = '';   // Текст уведомления
-    public $visible = false; // Флаг видимости уведомления
+    public $notifications;
 
-    protected $listeners = ['showNotification'];
+    protected $listeners = ['notificationAdded' => 'loadNotifications'];
 
-    public function mount($message = '')
+    public function mount()
     {
-        $this->message = $message;
+        $this->loadNotifications();
     }
 
-    public function showNotification($type, $message)
+    public function loadNotifications()
     {
-        $this->type = $type;
-        $this->message = $message;
-        $this->visible = true;
+        $this->notifications = \App\Models\Notification::where('user_id', auth()->id())
+            ->latest()
+            ->take(10)
+            ->get();
+    }
 
-        // Автоматическое скрытие уведомления через 5 секунд
-        $this->dispatch('hide-notification', ['timeout' => 3500]);
+    public function markAsRead($id)
+    {
+        \App\Models\Notification::where('id', $id)->update(['read' => true]);
+        $this->loadNotifications();
     }
 
     public function render()

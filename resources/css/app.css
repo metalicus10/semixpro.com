@@ -36,9 +36,9 @@
     }
 }
 
-* {
+/* {
     border-color: hsl(var(--border));
-}
+}*/
 .hover\:bg-accent:hover {
     background-color: hsl(var(--accent));
 }

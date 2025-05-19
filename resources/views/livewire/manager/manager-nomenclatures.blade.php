@@ -202,7 +202,7 @@
             </button>
             <!-- Добавить новую номенклатуру -->
             <button @click="openNomenclatureModal('create')"
-                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-green-500 hover:bg-green-600 text-black cursor-pointer">
+                    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-10 px-4 py-2 bg-green-500 hover:bg-green-600 text-white cursor-pointer">
                 Добавить
                 Номенклатуру
             </button>
@@ -214,7 +214,7 @@
         <!-- Заголовки -->
         <div
             class="hidden md:grid grid-cols-8 w-full content-center items-center text-left text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b
-            dark:bg-[#1a2433] dark:text-gray-400">
+            dark:bg-[#1a2433] dark:text-gray-400 dark:border-gray-600">
             <div class="w-1/8 p-4 text-left">
                 <input type="checkbox"
                        @click="toggleCheckAll($event)"
@@ -328,7 +328,7 @@
                              x-transition:leave="transition ease-in duration-300"
                              x-transition:leave-start="opacity-100 transform scale-100"
                              x-transition:leave-end="opacity-0 transform scale-90"
-                             class="grid grid-cols-8 w-full content-center items-center text-sm border-b dark:border-gray-600 dark:text-gray-300 py-1 max-h-[105px]"
+                             class="grid grid-cols-8 w-full content-center items-center text-sm border-b dark:border-gray-800 dark:text-gray-300 py-1 max-h-[105px] hover:bg-[#0d1829] transition-colors duration-300 ease-in-out"
                         >
                             <!-- Checkbox -->
                             <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">
@@ -414,8 +414,8 @@
                                         <!-- Отображение названия -->
                                         <div x-show="!editing || editField !== 'name'" @click="initField('name')"
                                              class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                            <div class="h-[90px] flex items-center justify-center overflow-auto">
-                                                <div x-text="nomenclature.name" class="break-all max-w-full px-1 text-left leading-snug"></div>
+                                            <div class="max-h-[90px] flex flex-col items-center justify-start overflow-auto px-1">
+                                                <div x-text="nomenclature.name" class="break-all max-w-full text-left leading-snug"></div>
                                             </div>
                                         </div>
 

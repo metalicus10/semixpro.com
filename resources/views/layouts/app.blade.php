@@ -42,7 +42,7 @@
         }
     })" x-init="setDefaultTabForRole()">
 <section
-    class="top-0 z-50 relative w-full border-b border-gray-200 dark:bg-brand-background border-brand-border">
+    class="top-0 z-50 relative w-full border-b border-gray-200 dark:border-gray-600 dark:bg-brand-background border-brand-border">
     <div class="flex items-center justify-between py-3 px-6 lg:px-5 lg:pl-3">
 
         <!-- Левая часть: Логотип, название и название меню -->
@@ -251,6 +251,7 @@
 
         <!-- Правая часть: Меню пользователя -->
         <div x-data="{ open: false }" class="flex items-center">
+            <livewire:global-notification />
             <!-- Кнопка открытия меню -->
             <button @click="open = !open"
                     class="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600">
@@ -440,7 +441,7 @@
     </aside>
 
     <div class="flex-1 m-1 p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900">
-        <livewire:global-notification/>
+        <livewire:notification/>
         {{ $slot }}
     </div>
 

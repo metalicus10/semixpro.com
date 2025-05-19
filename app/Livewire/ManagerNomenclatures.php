@@ -370,7 +370,7 @@ class ManagerNomenclatures extends Component
         $this->dispatch('showNotification', 'success', 'Номенклатура заархивирована.');
 
         $actionType = $nomenclature->is_archived ? 'archive' : 'restore';
-        $this->WriteActionLog($actionType, 'nomenclature', $nomenclature->id, $nomenclature->name);
+        $this->WriteActionLog($actionType, 'nomenclature', $nomenclature->id, [ 'name' => $nomenclature->name ]);
     }
 
     public function confirmDeleteNomenclature($id)
