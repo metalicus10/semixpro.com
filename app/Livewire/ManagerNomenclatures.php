@@ -361,6 +361,14 @@ class ManagerNomenclatures extends Component
             'archived_at' => now(),
         ]);
 
+        \App\Models\Notification::create([
+            'user_id' => auth()->id(),
+            'type'    => 'nomenclature_archived',
+            'message' => "Номенклатура '{$nomenclature->name}' была архивирована.",
+            'payload' => ['nomenclature_id' => $nomenclature->id],
+        ]);
+        $this->dispatch('notificationAdded')->to('global-notification');
+
         $this->nomenclatures = collect($this->nomenclatures)
             ->reject(fn ($n) => $n['id'] == $id)
             ->values()

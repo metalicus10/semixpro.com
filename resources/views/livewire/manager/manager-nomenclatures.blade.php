@@ -193,7 +193,7 @@
     }" x-init="init();"
 >
     <div class="flex justify-between items-center mb-4">
-        <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Nomenclature</h1>
+        <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-[#d2d7df]">Nomenclature</h1>
         <div class="flex gap-2">
             <livewire:manager.nomenclature-archive/>
             <button x-show="selectedNomenclatures.length > 1" @click="openBulkEditModal()"

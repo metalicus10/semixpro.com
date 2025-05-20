@@ -250,7 +250,7 @@
         </nav>
 
         <!-- Правая часть: Меню пользователя -->
-        <div x-data="{ open: false }" class="flex items-center">
+        <div x-data="{ open: false }" class="flex items-center gap-3">
             <livewire:global-notification />
             <!-- Кнопка открытия меню -->
             <button @click="open = !open"

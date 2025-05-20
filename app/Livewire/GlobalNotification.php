@@ -6,7 +6,7 @@ use Livewire\Component;
 
 class GlobalNotification extends Component
 {
-    public $notifications;
+    public $notifications = [];
 
     protected $listeners = ['notificationAdded' => 'loadNotifications'];
 
@@ -19,13 +19,21 @@ class GlobalNotification extends Component
     {
         $this->notifications = \App\Models\Notification::where('user_id', auth()->id())
             ->latest()
-            ->take(10)
-            ->get();
+            ->take(20)
+            ->get()
+            ->map(fn($n) => [
+                'id' => $n->id,
+                'message' => $n->message,
+                'read' => $n->read,
+                'created_at_diff' => $n->created_at->diffForHumans(),
+            ])
+            ->toArray();
     }
 
     public function markAsRead($id)
     {
-        \App\Models\Notification::where('id', $id)->update(['read' => true]);
+        $note = \App\Models\Notification::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $note->update(['read' => true]);
         $this->loadNotifications();
     }
 
