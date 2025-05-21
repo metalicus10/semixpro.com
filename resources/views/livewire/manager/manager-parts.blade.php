@@ -362,7 +362,8 @@
                         <div x-show="transferPartsModalOpen" x-cloak
                              x-data="{
                                     open: false,
-                                    selectedTechnicians: @entangle('selectedTechnicians').defer || [],
+                                    selectedTechnician: @entangle('selectedTechnician'),
+                                    selectedTechnicians: @entangle('selectedTechnicians') || [],
                                     isSendButtonEnabled() {
                                         return this.selectedTechnicians &&
                                             this.selectedParts.every(partId =>
@@ -395,7 +396,7 @@
                                 </div>
 
                                 <!-- Содержимое модального окна -->
-                                <form wire:submit.prevent="sendParts">
+                                <div >
                                     <div class="space-y-4">
                                         <!-- Галочка "Передать все" -->
                                         <label class="flex items-center mb-4">
@@ -423,9 +424,9 @@
                                             <label for="technician"
                                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
 
-                                            <select x-model="selectedTechnicians" @change="open = false"
+                                            <select x-model="selectedTechnicians" multiple size="3" @change="open = false; console.log(selectedTechnicians);"
                                                     class="w-full py-2 px-4 text-sm text-gray-700 bg-white border-none focus:outline-none">
-                                                <option value="" selected>Выберите техника</option>
+                                                <option value="" disabled selected>Выберите техников</option>
                                                 @foreach ($technicians as $technician)
                                                     <option value="{{ $technician->id }}"
                                                             class="px-4 py-2 cursor-pointer hover:bg-gray-100">
@@ -443,12 +444,12 @@
                                                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-lg dark:text-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
                                             Отменить
                                         </button>
-                                        <button type="submit"
+                                        <button type="button" wire:click="sendParts"
                                                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-800"
                                                 :disabled="!isSendButtonEnabled()">Подтвердить
                                         </button>
                                     </div>
-                                </form>
+                                </div>
                             </div>
                         </div>
 

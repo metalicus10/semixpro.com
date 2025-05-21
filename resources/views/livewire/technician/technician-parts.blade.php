@@ -8,120 +8,158 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Parts</h1>
 
-        <!-- Фильтр по категориям -->
-        <div>
+        <div x-data="{
+                selectedBrand: '',
+                selectedCategory: '',
+                brands: @entangle('brands'),
+                categories: @entangle('categories'),
+                parts: @entangle('allParts') ?? [],
+                filteredParts: [],
+                init() {
+                    this.filterParts();
+                },
+                filterParts() {
+                    if (!Array.isArray(this.parts)) {
+                        this.filteredParts = [];
+                        return;
+                    }
+                    this.filteredParts = this.parts.filter(part => {
+                        let brandMatch = this.selectedBrand ? part.brand_id == this.selectedBrand : true;
+                        let categoryMatch = this.selectedCategory ? part.category_id == this.selectedCategory : true;
+                        return brandMatch && categoryMatch;
+                    });
+                },
+            }" x-init="init"
+        >
+            <!-- Фильтр по категориям -->
             <label for="category" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by Cat:</label>
-            <select wire:model.live="selectedCategory" id="category"
-                    class="ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <select id="category" x-model="selectedCategory" @change="filterParts"
+                    class="ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="">All cats</option>
-                @foreach ($categories as $cat)
-                    <option class="text-gray-400" value="{{ $cat->id }}">{{ $cat->name }}</option>
-                @endforeach
+                <template x-for="cat in categories" :key="cat.id">
+                    <option class="text-gray-400" :value="cat.id" x-text="cat.name"></option>
+                </template>
             </select>
 
-        </div>
-        <!-- Фильтр по брендам -->
-        <div>
+            <!-- Фильтр по брендам -->
             <label for="brand" class="text-sm font-medium text-gray-500 dark:text-gray-400">Filter by Brand:</label>
-            <select wire:model.live="selectedBrand" id="brand"
-                    class="ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <select id="brand" x-model="selectedBrand" @change="filterParts"
+                    class="ml-2 p-2 text-gray-400 border border-gray-300 rounded-md shadow-sm focus:outline-none
+                    focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <option value="">All brands</option>
-                @foreach ($brands as $brand)
-                    <option class="text-gray-400" value="{{ $brand->id }}">{{ $brand->name }}</option>
-                @endforeach
+                <template x-for="brand in brands" :key="brand.id">
+                    <option class="text-gray-400" :value="brand.id" x-text="brand.name"></option>
+                </template>
             </select>
-
         </div>
     </div>
 
-
-    <div x-data="{ activeTab: 'tab-1' }">
-        <!-- Tabs -->
-        <div class="">
-            <ul class="flex flex-wrap -mb-px text-sm font-medium text-center">
-                @foreach($this->technicianWarehouses as $key => $warehouse)
-                <li class="me-2" role="presentation">
-                    <button
-                        @click="activeTab = 'tab-{{ $key }}'"
-                        :class="activeTab === 'tab-{{ $key }}' ? 'border-blue-500 text-blue-600' : 'hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300'"
-                        class="inline-block p-4 border-b-4 rounded-t-lg"
-                    >{{ !empty($warehouse) ? $warehouse : 'Без склада' }}</button>
-                </li>
-                @endforeach
-            </ul>
-        </div>
-        <hr class="h-[1px] mb-8 bg-gray-200 border-0 dark:bg-gray-700">
-
-        <!-- Content -->
-        @foreach($allParts as $techPart)
-        <div x-show="activeTab === 'tab-{{ $techPart->warehouse_id }}'" x-cloak class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+    <!-- Content -->
+    <div
+        x-data="{
+        parts: @json($allParts ?? []), // передаёшь коллекцию запчастей сюда
+        brands: @json($brands ?? []),
+        categories: @json($categories ?? []),
+        // gallery modal, lightbox и прочее — можешь добавить сюда методы
+        lightbox(partImage){
+            $dispatch('lightbox', 'this.partImage');
+        },
+    }"
+    >
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
-            <table class="table-auto w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+            <table class="table-auto w-full text-sm text-left text-gray-500 dark:text-gray-400">
                 <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                 <tr>
-                    <th scope="col" class="px-5 py-3">SKU</th>
-                    <th scope="col" class="px-5 py-3">Name</th>
-                    <th scope="col" class="px-5 py-3">Quantity</th>
-                    <th scope="col" class="px-5 py-3">Brand</th>
-                    <th scope="col" class="px-5 py-3">Category</th>
-                    <th scope="col" class="px-5 py-3">Image</th>
-                    <th scope="col" class="px-5 py-3">Action</th>
+                    <th class="px-5 py-3">SKU</th>
+                    <th class="px-5 py-3">Name</th>
+                    <th class="px-5 py-3">Quantity</th>
+                    <th class="px-5 py-3">Brand</th>
+                    <th class="px-5 py-3">Category</th>
+                    <th class="px-5 py-3">Image</th>
+                    <th class="px-5 py-3">Action</th>
                 </tr>
                 </thead>
                 <tbody>
-
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-[#162033]">
-                        <td class="px-5 py-5">@if(!empty($techPart->part->sku)){{ $techPart->part->sku }}@else --- @endif</td>
-                        <td class="px-5 py-5">@if(!empty($techPart->part->name)){{ $techPart->part->name }}@else --- @endif</td>
-                        <td class="px-5 py-5">{{ $techPart->quantity }}</td>
-                        @if(!empty($techPart->nomenclatures->brands))
-                            <td class="px-5 py-5 truncate whitespace-nowrap overflow-hidden">
-                                @foreach($techPart->nomenclatures->brands as $brand)
-                                    <span>{{ $brand->name }}</span>
-                                @endforeach
-                            </td>
-                        @else
-                            <td class="px-5 py-5 w-32 truncate whitespace-nowrap overflow-hidden">---</td>
-                        @endif
-                        @if(!empty($techPart->part->category))
-                            <td class="px-5 py-5">@if(!empty($techPart->part->category->name)){{ $techPart->part->category->name }}@else {{ $techPart->category->name }} @endif</td>
-                        @else
-                            <td class="px-5 py-5">---</td>
-                        @endif
+                <template x-for="part in parts" :key="part.id">
+                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                        <!-- SKU -->
                         <td class="px-5 py-5">
-                            <div x-data class="gallery h-12 w-12">
-                                @if(!empty($techPart->part->image) || !empty($techPart->nomenclatures->image))
-                                    @if($techPart->part->image && $techPart->nomenclatures->image || $techPart->part->image && $techPart->nomenclatures->image=="")
-                                        <img src="{{ asset('storage') . $techPart->part->image }}" alt="{{ $techPart->part->name }}"
-                                             @click="$dispatch('lightbox', '{{ asset('storage') . $techPart->part->image }}')"
-                                             @click.stop
-                                             class="object-cover rounded cursor-zoom-in">
-                                    @elseif($techPart->nomenclatures->image && $techPart->part->image=="")
-                                        <img src="{{ asset('storage') . $techPart->nomenclatures->image }}" alt="{{ $techPart->part->name }}"
-                                             @click="$dispatch('lightbox', '{{ asset('storage') . $techPart->nomenclatures->image }}')"
-                                             @click.stop
-                                             class="object-cover rounded cursor-zoom-in">
-                                    @else
-                                        <livewire:components.empty-image/>
-                                    @endif
-                                @endif
+                            <template x-if="part.parts && part.parts.sku">
+                                <span x-text="part.parts.sku"></span>
+                            </template>
+                            <template x-if="!part.parts || !part.parts.sku">
+                                <span>---</span>
+                            </template>
+                        </td>
+                        <!-- Name -->
+                        <td class="px-5 py-5">
+                            <template x-if="part.parts && part.parts.name">
+                                <span x-text="part.parts.name"></span>
+                            </template>
+                            <template x-if="!part.parts || !part.parts.name">
+                                <span>---</span>
+                            </template>
+                        </td>
+                        <!-- Quantity -->
+                        <td class="px-5 py-5" x-text="part.quantity ?? '---'"></td>
+                        <!-- Brand -->
+                        <td class="px-5 py-5">
+                            <template x-if="part.nomenclatures && part.nomenclatures.brands && part.nomenclatures.brands.length">
+                                <div class="flex flex-wrap gap-1">
+                                    <template x-for="brand in part.nomenclatures.brands" :key="brand.id">
+                                        <span x-text="brand.name" class="truncate whitespace-nowrap"></span>
+                                    </template>
+                                </div>
+                            </template>
+                            <template x-if="!part.nomenclatures || !part.nomenclatures.brands || !part.nomenclatures.brands.length">
+                                <span>---</span>
+                            </template>
+                        </td>
+                        <!-- Category -->
+                        <td class="px-5 py-5">
+                            <template x-if="part.parts && part.parts.category && part.parts.category.name">
+                                <span x-text="part.parts.category.name"></span>
+                            </template>
+                            <template x-if="!part.parts || !part.parts.category || !part.parts.category.name">
+                                <span>---</span>
+                            </template>
+                        </td>
+                        <!-- Image -->
+                        <td class="px-5 py-5 w-12">
+                            <div x-data="{ gallery: false }" class="gallery h-12 w-12">
+                                <template x-if="(part.parts && part.parts.image) || (part.nomenclatures && part.nomenclatures.image)">
+                                    <img
+                                        :src="part.parts && part.parts.image
+                                                ? '/storage/' + part.parts.image
+                                                : (part.nomenclatures && part.nomenclatures.image ? '/storage/' + part.nomenclatures.image : '')"
+                                        :alt="part.parts && part.parts.name ? part.parts.name : 'Part image'"
+                                        @click="part.parts.image ? lightbox(part.parts.image) : (part.nomenclatures.image ? lightbox(part.nomenclatures.image))"
+                                        @click.stop
+                                        class="object-cover rounded cursor-zoom-in w-12 h-12"
+                                    />
+                                </template>
+                                <template x-if="!( (part.parts && part.parts.image) || (part.nomenclatures && part.nomenclatures.image) )">
+                                    <span class="text-gray-300">—</span>
+                                </template>
+                                <!-- Лайтбокс/модалка галереи — реализуешь по необходимости -->
                             </div>
                         </td>
+                        <!-- Action -->
                         <td class="px-5 py-5">
                             <button
-                                wire:click="usePart({{ $techPart->id }})"
+                                @click="/* вызвать функцию использования детали, например: usePart(part.id) */"
                                 class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                                @if($techPart->quantity == 0) disabled @endif
+                                :disabled="part.quantity == 0"
+                                :class="part.quantity == 0 ? 'opacity-50 cursor-not-allowed' : ''"
                             >
                                 Use
                             </button>
                         </td>
                     </tr>
-
+                </template>
                 </tbody>
             </table>
         </div>
-        </div>
-        @endforeach
     </div>
 </div>

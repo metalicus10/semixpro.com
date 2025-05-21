@@ -38,13 +38,11 @@ class ManagerParts extends Component
     public array $draggingTab = [];     // Перемещаемый склад (drag-and-drop)
     public ?int $editingWarehouseId = null;
 
-    public $brands;
+    public $brands, $categories;
     public $technicians;
-    public $selectedTechnicians;
-    public $categories;
+    public $selectedTechnician, $selectedTechnicians;
     public $suppliers, $selectedId;
     public $partQuantities = [];
-    public $selectedTechnician = null;
     public $selectedPartId = null;
     public $selectedCategory = null;
     public $selectedBrand = null;
@@ -410,6 +408,14 @@ class ManagerParts extends Component
         if ($value > $part->quantity) {
             $this->transferQuantities[$partId] = $part->quantity;
             $this->dispatch('showNotification', 'warning', 'The spare part will be depleted, replenishment is required');
+
+            \App\Models\Notification::create([
+                'user_id' => auth()->id(),
+                'type'    => 'part_moved',
+                'message' => "Запчасть '{$part->name}' была перемещена.",
+                'payload' => ['part_id' => $part->id],
+            ]);
+            $this->dispatch('notificationAdded')->to('global-notification');
         }
         $this->updateSendButtonState();
     }
@@ -437,9 +443,9 @@ class ManagerParts extends Component
 
     public function sendParts()
     {
-        $technicianId = $this->selectedTechnician;
+        $technicianIds = $this->selectedTechnicians;
 
-        if (!$technicianId) {
+        if (!$technicianIds) {
             $this->dispatch('showNotification', 'error', 'Не выбраны техники для передачи запчастей');
             return;
         }
@@ -452,6 +458,9 @@ class ManagerParts extends Component
                 $this->dispatch('showNotification', 'error', 'Техник с ID' . $technicianId . ' не найден');
                 continue; // Переходим к следующему технику
             }
+
+            $movedPartsNames = [];
+            $movedPartsIds = [];
 
             // Проверяем, есть ли выбранные запчасти с указанными количествами
             foreach ($this->partQuantities as $partId => $quantity) {
@@ -475,6 +484,8 @@ class ManagerParts extends Component
 
                 // Уменьшаем количество запчастей на складе
                 $part->update(['quantity' => $part->quantity - $quantity]);
+                $movedPartsNames[] = $part->name;
+                $movedPartsIds[] = $part->id;
 
                 // Проверяем, есть ли у техника уже эта запчасть
                 $technicianPart = TechnicianPart::where('technician_id', $technician->user_id)
@@ -495,6 +506,17 @@ class ManagerParts extends Component
                         'manager_id' => Auth::id(),
                     ]);
                 }
+            }
+            if (count($movedPartsIds)) {
+                \App\Models\Notification::create([
+                    'user_id' => auth()->id(),
+                    'type'    => 'parts_moved',
+                    'message' => "Запчасти '".implode(", ", $movedPartsNames)."' были перемещены.",
+                    'payload' => [
+                        'part_ids' => $movedPartsIds,
+                    ],
+                ]);
+                $this->dispatch('notificationAdded')->to('global-notification');
             }
         }
 

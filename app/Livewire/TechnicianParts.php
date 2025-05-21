@@ -19,7 +19,7 @@ class TechnicianParts extends Component
     public $brands = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
-    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts, $technicianWarehouses;
+    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts, $technicianWarehouses = [];
     public $selectedWarehouse = null;
     public $groupedParts = null;
 
@@ -37,8 +37,8 @@ class TechnicianParts extends Component
 
         // Получаем запчасти, назначенные технику, и приводим к модели Part
         $this->allParts = TechnicianPart::with([
-            'part.category',
-            'part.brands',
+            'parts.category',
+            'parts.brands',
             'nomenclatures',
             'warehouse'
         ])
