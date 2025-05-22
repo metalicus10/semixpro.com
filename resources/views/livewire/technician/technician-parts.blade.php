@@ -1,4 +1,13 @@
-<div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden"
+     x-data="{
+        parts: @js($allParts ?? []),
+        brands: @js($brands ?? []),
+        categories: @js($categories ?? []),
+        lightbox(partImage){
+            $dispatch('lightbox', '/storage/' + partImage);
+        },
+    }"
+>
     <!-- Индикатор загрузки -->
     <div wire:loading.flex class="absolute inset-0 flex items-center justify-center bg-gray-900 opacity-50 z-50">
         <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-orange-500"></div>
@@ -11,9 +20,6 @@
         <div x-data="{
                 selectedBrand: '',
                 selectedCategory: '',
-                brands: @entangle('brands'),
-                categories: @entangle('categories'),
-                parts: @entangle('allParts') ?? [],
                 filteredParts: [],
                 init() {
                     this.filterParts();
@@ -57,15 +63,7 @@
 
     <!-- Content -->
     <div
-        x-data="{
-        parts: @json($allParts ?? []), // передаёшь коллекцию запчастей сюда
-        brands: @json($brands ?? []),
-        categories: @json($categories ?? []),
-        // gallery modal, lightbox и прочее — можешь добавить сюда методы
-        lightbox(partImage){
-            $dispatch('lightbox', 'this.partImage');
-        },
-    }"
+
     >
         <div class="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
             <table class="table-auto w-full text-sm text-left text-gray-500 dark:text-gray-400">
@@ -134,7 +132,11 @@
                                                 ? '/storage/' + part.parts.image
                                                 : (part.nomenclatures && part.nomenclatures.image ? '/storage/' + part.nomenclatures.image : '')"
                                         :alt="part.parts && part.parts.name ? part.parts.name : 'Part image'"
-                                        @click="part.parts.image ? lightbox(part.parts.image) : (part.nomenclatures.image ? lightbox(part.nomenclatures.image))"
+                                        @click="part.parts && part.parts.image
+                                            ? lightbox(part.parts.image)
+                                            : (part.nomenclatures && part.nomenclatures.image
+                                                ? lightbox(part.nomenclatures.image)
+                                                : null)"
                                         @click.stop
                                         class="object-cover rounded cursor-zoom-in w-12 h-12"
                                     />
@@ -142,13 +144,12 @@
                                 <template x-if="!( (part.parts && part.parts.image) || (part.nomenclatures && part.nomenclatures.image) )">
                                     <span class="text-gray-300">—</span>
                                 </template>
-                                <!-- Лайтбокс/модалка галереи — реализуешь по необходимости -->
                             </div>
                         </td>
                         <!-- Action -->
                         <td class="px-5 py-5">
                             <button
-                                @click="/* вызвать функцию использования детали, например: usePart(part.id) */"
+                                @click="$wire.usePart(part.id)"
                                 class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
                                 :disabled="part.quantity == 0"
                                 :class="part.quantity == 0 ? 'opacity-50 cursor-not-allowed' : ''"

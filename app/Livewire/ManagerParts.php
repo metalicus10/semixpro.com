@@ -163,12 +163,18 @@ class ManagerParts extends Component
     /**
      * Выбирает активный склад
      */
-    public function selectWarehouse(int $warehouseId, int $partId=null)
+    public function selectWarehouse(int $warehouseId, $partIds = [])
     {
         $this->isLoading = true;
         $this->selectedWarehouseId = $warehouseId;
         $this->loadParts($warehouseId);
-        $this->dispatch('warehouse-switched', ['warehouseId' => $warehouseId, 'partId' => $partId]);
+        $ids = $partIds;
+        if (is_null($ids)) {
+            $ids = [];
+        } elseif (is_int($ids)) {
+            $ids = [$ids];
+        }
+        $this->dispatch('warehouse-switched', ['warehouseId' => $warehouseId, 'partIds' => $ids]);
         $this->isLoading = false;
     }
 
@@ -508,6 +514,15 @@ class ManagerParts extends Component
                 }
             }
             if (count($movedPartsIds)) {
+                // Записать уведомление технику
+                \App\Models\Notification::create([
+                    'user_id' => $technician->user_id,
+                    'type'    => 'parts_received',
+                    'message' => "Вам были переданы новые запчасти: '".implode(", ", $movedPartsNames)."'",
+                    'payload' => [
+                        'part_ids' => $movedPartsIds,
+                    ],
+                ]);
                 \App\Models\Notification::create([
                     'user_id' => auth()->id(),
                     'type'    => 'parts_moved',

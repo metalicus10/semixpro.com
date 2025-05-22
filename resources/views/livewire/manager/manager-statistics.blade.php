@@ -9,11 +9,9 @@
                 this.activeTab = tabId;
                 search = '';
             },
-
             updateActiveWarehouse(tabId) {
                 $wire.selectWarehouse(tabId);
             },
-
             filteredParts() {
                 // Проверка на массив
                 const partsList = Array.isArray(this.parts) ? this.parts : [this.parts];
@@ -22,7 +20,6 @@
                 return partsList.filter(part => {
                     const partName = part.parts?.name?.toLowerCase() || '';
                     const technicianName = part.technician_details?.name?.toLowerCase() || '';
-
                     return partName.includes(this.search.toLowerCase()) ||
                            technicianName.includes(this.search.toLowerCase());
                 });
@@ -45,7 +42,7 @@
                                 <div x-data>
                                     <a href="#"
                                        @click.prevent.debounce.500ms="updateActiveTab({{ $technician['id'] }})"
-                                       :class="activeTab === {{ $technician->id }} ? 'text-orange-500 bg-[#b13a00] dark:bg-[#ff8144] dark:text-orange-500' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                                       :class="activeTab === {{ $technician->id }} ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
                                        class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
                                     >{{ $technician->name }}</a>
                                 </div>

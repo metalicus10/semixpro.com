@@ -107,6 +107,7 @@
                     <span class="ml-2">Dashboard</span>
                 </button>
             </a>
+            @if(Auth::user()->inRole('manager'))
             <div class="relative inline-block">
                 <div class="flex items-center">
                     <button @click="showInventory = !showInventory" @click.away="showInventory = false;" class="justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none
@@ -175,6 +176,7 @@
                     </div>
                 </div>
             </div>
+            @endif
             <div class="relative inline-block">
                 <div class="flex items-center">
                     <button @click="setTab('parts')" x-bind:class="currentTab == 'parts' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
@@ -187,6 +189,7 @@
                     </button>
                 </div>
             </div>
+            @if(Auth::user()->inRole('manager'))
             <div class="relative inline-block">
                 <div class="flex items-center cursor-pointer">
                     <button class="justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none
@@ -247,6 +250,7 @@
                     </svg>
                     <span class="ml-2">Document</span></button>
             </a>
+            @endif
         </nav>
 
         <!-- Правая часть: Меню пользователя -->

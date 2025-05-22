@@ -14,12 +14,10 @@ use Livewire\Component;
 
 class TechnicianParts extends Component
 {
-    public $parts = [];
-    public $categories = [];
-    public $brands = [];
+    public $parts, $categories, $brands, $allParts = [];
     public $selectedCategory = null;
     public $selectedBrand = null;
-    public $partsWithWarehouse, $partsWithoutWarehouse, $allParts, $technicianWarehouses = [];
+    public $partsWithWarehouse, $partsWithoutWarehouse, $technicianWarehouses = [];
     public $selectedWarehouse = null;
     public $groupedParts = null;
 
@@ -44,7 +42,7 @@ class TechnicianParts extends Component
         ])
             ->where('technician_id', $technicianId)
             ->where('quantity', '>', 0)
-            ->get();
+            ->get()->toArray();
 
         // Получаем ID складов, доступных технику
         $warehouseIds = TechnicianPart::where('technician_id', $technicianId)

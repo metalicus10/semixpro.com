@@ -12,6 +12,23 @@
                 if (n) n.read = true;
             });
         },
+        handleNotificationClick(note) {
+            console.log(note);
+            this.open = false;
+            if (note.type === 'parts_moved') {
+                this.$dispatch('switch-tab', {
+                    tab: 'parts',
+                    partIds: Array.isArray(note.part_ids) ? note.part_ids : [note.part_id],
+                    warehouseId: note.warehouse_id
+                });
+            } else if (note.type === 'nomenclature_archived') {
+                this.$dispatch('switch-tab', {
+                    tab: 'nomenclature',
+                    nomenclatureId: note.nomenclature_id
+                });
+            }
+            // можно добавить else для других типов
+        },
         lockScroll() { document.body.classList.add('overflow-hidden'); },
         unlockScroll() { document.body.classList.remove('overflow-hidden'); }
     }" x-effect="open ? lockScroll() : unlockScroll()"
@@ -22,7 +39,8 @@
         </svg>
         <span
             x-show="notifications.filter(n => !n.read).length"
-            class="absolute top-0 right-0 w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow"
+            class="absolute top-0 right-0 w-3 h-3 bg-orange-500 rounded-full flex items-center justify-center font-bold text-white shadow"
+            :class="notifications.filter(n => !n.read).length > 9 ? 'text-[9px]' : 'text-[10px]'"
             x-text="(notifications.filter(n => !n.read).length > 9) ? '9+' : notifications.filter(n => !n.read).length">
         </span>
     </button>
@@ -61,7 +79,21 @@
                         :class="note.read ? 'bg-transparent' : 'bg-orange-500'"
                     ></div>
                     <div>
-                        <p class="text-sm font-medium break-all text-left text-gray-400 w-[305px]" x-text="note.message"></p>
+                        <p class="text-sm font-medium break-all text-left text-gray-400 w-[305px]">
+                            <template x-if="note.message.match(/'([^']+)'/)">
+                                <span>
+                                    <span
+                                        class="text-blue-400 cursor-pointer hover:underline"
+                                        @click="handleNotificationClick(note)"
+                                        x-text="note.message.match(/'([^']+)'/)[1]"
+                                    ></span>
+                                    <span x-text="note.message.replace(/'([^']+)'/, '')"></span>
+                                </span>
+                            </template>
+                            <template x-if="!note.message.match(/'([^']+)'/)">
+                                <span x-text="note.message"></span>
+                            </template>
+                        </p>
                         <p class="text-xs text-green-500 mt-1" x-text="note.created_at_diff"></p>
                     </div>
                 </div>

@@ -22,8 +22,7 @@
         nn:'', name: '', sku: '', image: '', brand_id: '', category_id: '', supplier_id: '', search: '',
         imageInputKey: Date.now(),
         duplicateNameError: null, duplicateNnError: null,
-
-        selectedImage: null,
+        selectedImage: null, highlightedPart: null,
         refs: {},
         init() {
             if (this.nomenclatureCount > 500) {
@@ -32,6 +31,10 @@
             } else {
                 this.mode = 'alpine';
             }
+            window.addEventListener('switch-tab', (event) => {
+                this.currentTab = event.detail.tab;
+                setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
+            });
             window.addEventListener('nomenclature-nn-duplicate', event => {
                 this.duplicateNnError = `Номенклатура с номером '${event.detail.nn}' уже существует`;
             });
@@ -44,6 +47,32 @@
                 this.selectedFile = null;
                 this.imgError = null;
             });
+        },
+        highlightPart(partId) {
+            if (this.highlightedPart) {
+                const prevElement = document.getElementById(`part-${this.highlightedPart}`);
+                if (prevElement) {
+                    prevElement.classList.remove('highlighted');
+                }
+            }
+
+            if (partId) {
+                const partElement = document.getElementById(`part-${partId}`);
+                if (partElement) {
+                    partElement.classList.add('highlighted');
+                    partElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center',
+                    });
+                    setTimeout(() => {
+                        partElement.classList.remove('highlighted');
+                    }, 1000);
+                }
+                this.highlightedPart = partId;
+            } else {
+                console.warn('Part element not found:', `part-${partId}`);
+                this.highlightedPart = null;
+            }
         },
         get filteredNomenclatures() {
             if (!this.search) return this.nomenclatures;
@@ -172,7 +201,6 @@
             this.showBulkEditModal = false;
             this.bulkEditItems = [];
         },
-
         handleBulkUpdate(event) {
             const updated = event.detail[0];
 

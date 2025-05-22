@@ -35,7 +35,7 @@
                 brands: @entangle('brands'),
                 partStock: {},
                 partQuantities: {},
-                highlightedPart: null,
+                highlightedParts: null,
                 highlightedWarehouse: null,
                 currentWarehouseId: null,
 
@@ -46,28 +46,41 @@
 
                     window.addEventListener('switch-tab', (event) => {
                         this.currentTab = event.detail.tab;
-                        this.selectWarehouseTab(event.detail.warehouseId, event.detail.partId);
-                        setTimeout(() => this.highlightPart(event.detail.partId), 1300);
+                        this.selectWarehouseTab(event.detail.warehouseId, event.detail.partIds);
+                        setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
                     });
                 },
 
                 selectWarehouseTab(warehouseId, partId) {
                     if (warehouseId) {
-                        $wire.selectWarehouse(warehouseId, partId);
+                        $wire.selectWarehouse(warehouseId, partIds);
                     }
                 },
 
-                highlightPart(partId) {
-                    if (partId) {
-                        const partElement = document.getElementById(`part-${partId}`);
-                        if (partElement) {
-                            partElement.classList.remove('highlighted');
-                            void partElement.offsetWidth;
-                            partElement.classList.add('highlighted');
-                        }
-                    } else {
-                        console.warn('Part element not found:', `part-${this.highlightedPart}`);
+                highlightPart(partIds, timeout) {
+                    if (Array.isArray(this.highlightedParts)) {
+                        this.highlightedParts.forEach(id => {
+                            const prev = document.getElementById(`part-${id}`);
+                            if (prev) prev.classList.remove('highlighted');
+                        });
                     }
+                    this.highlightedParts = Array.isArray(partIds) ? partIds : [partIds];
+
+                    this.highlightedParts.forEach(id => {
+                        const el = document.getElementById(`part-${id}`);
+                        if (el) {
+                            el.classList.add('highlighted');
+                            if (timeout) {
+                                setTimeout(() => el.classList.remove('highlighted'), timeout);
+                            }
+                            if (this.highlightedParts.length > 0) {
+                                const first = document.getElementById(`part-${this.highlightedParts[0]}`);
+                                if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    });
+
+
                 },
 
                 updateTabs(tabs) {
