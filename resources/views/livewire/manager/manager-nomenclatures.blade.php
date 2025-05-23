@@ -32,7 +32,6 @@
                 this.mode = 'alpine';
             }
             window.addEventListener('switch-tab', (event) => {
-                this.currentTab = event.detail.tab;
                 setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
             });
             window.addEventListener('nomenclature-nn-duplicate', event => {
@@ -216,7 +215,6 @@
                 }
             });
             this.nomenclatures = [...this.nomenclatures];
-            console.log(this.nomenclatures);
         },
     }" x-init="init();"
 >

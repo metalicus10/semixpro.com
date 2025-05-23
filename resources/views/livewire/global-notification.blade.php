@@ -13,7 +13,6 @@
             });
         },
         handleNotificationClick(note) {
-            console.log(note);
             this.open = false;
             if (note.type === 'parts_moved') {
                 this.$dispatch('switch-tab', {
@@ -23,7 +22,7 @@
                 });
             } else if (note.type === 'nomenclature_archived') {
                 this.$dispatch('switch-tab', {
-                    tab: 'nomenclature',
+                    tab: 'nomenclatures',
                     nomenclatureId: note.nomenclature_id
                 });
             }

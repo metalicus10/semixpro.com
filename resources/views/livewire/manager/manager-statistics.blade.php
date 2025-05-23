@@ -75,7 +75,7 @@
                                                     <span
                                                         class="cursor-pointer text-blue-500 hover:text-blue-700"
                                                         @click="
-                                                            $dispatch('switch-tab', { tab: 'parts', partId: part.id, warehouseId: part.warehouse_id });
+                                                            $dispatch('switch-tab', { tab: 'parts', partIds: part.id, warehouseId: part.warehouse_id });
                                                         ">
                                                         <span x-text="part.parts.name"></span>
                                                     </span>

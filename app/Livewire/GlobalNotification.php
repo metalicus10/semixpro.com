@@ -24,9 +24,9 @@ class GlobalNotification extends Component
             ->map(function ($n) {
                 $payload = is_string($n->payload) ? json_decode($n->payload, true) : $n->payload;
                 $payload = is_array($payload) ? $payload : [];
-                $part_id = null;
+                $part_ids = [];
                 if (!empty($payload['part_ids']) && is_array($payload['part_ids'])) {
-                    $part_id = $payload['part_ids'][0]; // или перебери если несколько
+                    $part_ids = $payload['part_ids'];
                 }
                 return [
                     'id' => $n->id,
@@ -35,7 +35,8 @@ class GlobalNotification extends Component
                     'read' => $n->read,
                     'created_at_diff' => $n->created_at->diffForHumans(),
                     'nomenclature_id' => $payload['nomenclature_id'] ?? null,
-                    'part_id' => $payload['part_id'] ?? null,
+                    'part_id' => $payload['part_id'] ?? ($part_ids[0] ?? null),
+                    'part_ids' => $part_ids,
                     'warehouse_id' => $payload['warehouse_id'] ?? null,
                 ];
             })

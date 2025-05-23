@@ -50,13 +50,11 @@
                         setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
                     });
                 },
-
-                selectWarehouseTab(warehouseId, partId) {
+                selectWarehouseTab(warehouseId, partIds) {
                     if (warehouseId) {
                         $wire.selectWarehouse(warehouseId, partIds);
                     }
                 },
-
                 highlightPart(partIds, timeout) {
                     if (Array.isArray(this.highlightedParts)) {
                         this.highlightedParts.forEach(id => {
@@ -65,7 +63,6 @@
                         });
                     }
                     this.highlightedParts = Array.isArray(partIds) ? partIds : [partIds];
-
                     this.highlightedParts.forEach(id => {
                         const el = document.getElementById(`part-${id}`);
                         if (el) {
@@ -73,44 +70,37 @@
                             if (timeout) {
                                 setTimeout(() => el.classList.remove('highlighted'), timeout);
                             }
-                            if (this.highlightedParts.length > 0) {
-                                const first = document.getElementById(`part-${this.highlightedParts[0]}`);
-                                if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
                         }
                     });
-
-
+                    if (this.highlightedParts.length > 0) {
+                        const first = document.getElementById(`part-${this.highlightedParts[0]}`);
+                        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 },
 
                 updateTabs(tabs) {
                     this.tabs = tabs;
                 },
-
                 scrollBy(amount) {
                     const scrollable = this.$refs.tabContainer;
                     scrollable.scrollBy({ left: amount, behavior: 'smooth' });
                     this.checkScroll();
                 },
-
                 scrollToEnd() {
                     const scrollable = this.$refs.tabContainer;
                     scrollable.scrollLeft = scrollable.scrollWidth - scrollable.clientWidth;
                     this.checkScroll();
                 },
-
                 scrollToStart() {
                     const scrollable = this.$refs.tabContainer;
                     scrollable.scrollLeft = 0;
                     this.checkScroll();
                 },
-
                 checkScroll() {
                     const scrollable = this.$refs.tabContainer;
                     this.canScrollLeft = scrollable.scrollLeft > 0;
                     this.canScrollRight = scrollable.scrollLeft + scrollable.clientWidth < scrollable.scrollWidth;
                 },
-
                 startEdit(tabId, tabName) {
                     this.editingTabId = tabId;
                     this.newTabName = tabName;
@@ -121,33 +111,27 @@
                     this.editingTabId = null;
                     $wire.updateWarehouseName(tabId, this.newTabName);
                 },
-
                 cancelEdit() {
                     this.editingTabId = null;
                     this.newTabName = '';
                 },
-
                 openSendModal() {
                     if (this.selectedParts.length > 0) {
                         this.transferPartsModalOpen = true;
                     }
                 },
-
                 closeModal() {
                     this.transferPartsModalOpen = false;
                 },
-
                 openDeleteModal() {
                     if (this.selectedParts.length > 0) {
                         this.fetchSelectedNames();
                         this.deletePartsModalOpen = true;
                     }
                 },
-
                 closeDeleteModal() {
                             this.deletePartsModalOpen = false;
                 },
-
                 async fetchSelectedNames() {
                     if (this.selectedParts.length) {
                         this.selectedPartNames = await $wire.call('getSelectedPartNames');
@@ -155,16 +139,13 @@
                         this.selectedPartNames = [];
                     }
                 },
-
                 updateActiveTab(tabId){
                     this.activeTab = tabId;
                     search = '';
                 },
-
                 updateActiveWarehouse(tabId) {
                     $wire.selectWarehouse(tabId);
                 },
-
                 <!-- Метод выбора всех запчастей -->
                 toggleCheckAll(event) {
                 if (event.target.checked) {
@@ -197,7 +178,6 @@
 
                     $dispatch('update-part-quantities', { quantities: this.partQuantities });
                 },
-
                 setMaxQuantities() {
                     if (this.transferAll) {
                         this.selectedParts.forEach(partId => {
@@ -205,14 +185,12 @@
                         });
                     }
                 },
-
                 limitQuantity(partId) {
                     if (this.partQuantities[partId] > this.partStock[partId]) {
                         this.partQuantities[partId] = this.partStock[partId];
                     }
                     $dispatch('update-part-quantities', { quantities: this.partQuantities });
                 },
-
                 filteredParts() {
                     return $wire.parts.filter(part =>
                         (this.selectedCategory === '' || (part.category_id == this.selectedCategory)) &&
@@ -437,7 +415,7 @@
                                             <label for="technician"
                                                    class="block text-sm font-medium text-gray-700 dark:text-gray-300">Техник</label>
 
-                                            <select x-model="selectedTechnicians" multiple size="3" @change="open = false; console.log(selectedTechnicians);"
+                                            <select x-model="selectedTechnicians" multiple size="3" @change="open = false;"
                                                     class="w-full py-2 px-4 text-sm text-gray-700 bg-white border-none focus:outline-none">
                                                 <option value="" disabled selected>Выберите техников</option>
                                                 @foreach ($technicians as $technician)

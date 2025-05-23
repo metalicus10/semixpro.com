@@ -474,7 +474,7 @@ class ManagerParts extends Component
 
                 if (!$part) {
                     $this->dispatch('showNotification', 'error', 'Запчасть с ID' . $partId . ' не найдена');
-                    continue; // Переходим к следующей запчасти
+                    continue;
                 }
 
                 $quantity = $this->partQuantities[$partId] ?? 1;
@@ -521,6 +521,7 @@ class ManagerParts extends Component
                     'message' => "Вам были переданы новые запчасти: '".implode(", ", $movedPartsNames)."'",
                     'payload' => [
                         'part_ids' => $movedPartsIds,
+                        'warehouse_id' => $this->selectedWarehouseId,
                     ],
                 ]);
                 \App\Models\Notification::create([
@@ -529,6 +530,7 @@ class ManagerParts extends Component
                     'message' => "Запчасти '".implode(", ", $movedPartsNames)."' были перемещены.",
                     'payload' => [
                         'part_ids' => $movedPartsIds,
+                        'warehouse_id' => $this->selectedWarehouseId,
                     ],
                 ]);
                 $this->dispatch('notificationAdded')->to('global-notification');
