@@ -510,6 +510,7 @@ class ManagerParts extends Component
                         'quantity' => $quantity,
                         'total_transferred' => $quantity,
                         'manager_id' => Auth::id(),
+                        'nomenclature_id' => $part->nomenclature_id,
                     ]);
                 }
             }

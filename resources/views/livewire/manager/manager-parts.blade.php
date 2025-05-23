@@ -268,6 +268,7 @@
                         @foreach ($warehouses as $warehouse)
                             <li class="shrink-0 cursor-pointer"
                                 :class="{'bg-gray-900 text-gray-100': activeTab === {{ $warehouse['id'] }}, 'bg-gray-900': activeTab !== {{ $warehouse['id'] }}}"
+                                :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
                                 wire:click="selectWarehouse({{ $warehouse['id'] }})" @click="selectedParts = []"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('warehouseId', '{{ $warehouse['id'] }}')"
@@ -299,7 +300,7 @@
                                        @click.prevent.debounce.500ms="if (!isEditing) { activeTab = {{ $warehouse['id'] }}, updateActiveTab({{ $warehouse['id'] }}) }"
                                        x-show="editingTabId !== {{ $warehouse['id'] }}"
                                        @dblclick="isEditing = true; startEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
-                                       :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-[#ff8144] dark:text-orange-500' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                                       :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
                                        class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
                                     >{{ $warehouse['name'] }}</a>
                                 </div>

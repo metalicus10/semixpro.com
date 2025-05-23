@@ -21,6 +21,7 @@
                     warehouseId: note.warehouse_id
                 });
             } else if (note.type === 'nomenclature_archived') {
+                console.log(note);
                 this.$dispatch('switch-tab', {
                     tab: 'nomenclatures',
                     nomenclatureId: note.nomenclature_id

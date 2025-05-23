@@ -32,7 +32,12 @@
                 this.mode = 'alpine';
             }
             window.addEventListener('switch-tab', (event) => {
-                setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
+                this.currentTab = event.detail.tab;
+                if (event.detail.tab === 'nomenclatures') {
+                    setTimeout(() => this.highlightPart(event.detail.nomenclatureId, 1000, 'nomenclature'), 1000);
+                } else {
+                    setTimeout(() => this.highlightPart(event.detail.partIds, 1000, 'part'), 1000);
+                }
             });
             window.addEventListener('nomenclature-nn-duplicate', event => {
                 this.duplicateNnError = `Номенклатура с номером '${event.detail.nn}' уже существует`;
@@ -47,32 +52,27 @@
                 this.imgError = null;
             });
         },
-        highlightPart(partId) {
-            if (this.highlightedPart) {
-                const prevElement = document.getElementById(`part-${this.highlightedPart}`);
-                if (prevElement) {
-                    prevElement.classList.remove('highlighted');
-                }
-            }
-
-            if (partId) {
-                const partElement = document.getElementById(`part-${partId}`);
-                if (partElement) {
-                    partElement.classList.add('highlighted');
-                    partElement.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
+        highlightPart(ids, timeout, type = 'part') {
+            const prefix = type === 'nomenclature' ? 'nomenclature' : 'part';
+                if (Array.isArray(this.highlightedParts)) {
+                    this.highlightedParts.forEach(id => {
+                        const prev = document.getElementById(`part-${id}`);
+                        if (prev) prev.classList.remove('highlighted');
                     });
-                    setTimeout(() => {
-                        partElement.classList.remove('highlighted');
-                    }, 1000);
                 }
-                this.highlightedPart = partId;
-            } else {
-                console.warn('Part element not found:', `part-${partId}`);
-                this.highlightedPart = null;
+            this.highlightedParts = Array.isArray(ids) ? ids : [ids];
+            this.highlightedParts.forEach(id => {
+                const el = document.getElementById(`${prefix}-${id}`);
+                if (el) {
+                    el.classList.add('highlighted');
+                    if (timeout) setTimeout(() => el.classList.remove('highlighted'), timeout);
+                }
+            });
+            if (this.highlightedParts.length > 0) {
+                const first = document.getElementById(`${prefix}-${this.highlightedParts[0]}`);
+                if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        },
+                },
         get filteredNomenclatures() {
             if (!this.search) return this.nomenclatures;
             return this.nomenclatures.filter(n =>
@@ -347,7 +347,7 @@
                          x-init="existingNns = @js($allNns).filter(n => n !== nomenclature.nn)"
                          @nomenclature-updated.window="refreshExistingNns()"
                     >
-                        <div x-show="!nomenclature.is_archived"
+                        <div x-show="!nomenclature.is_archived" :id="`nomenclature-${nomenclature.id}`"
                              x-transition:enter="transition ease-out duration-300"
                              x-transition:enter-start="opacity-0 transform scale-90"
                              x-transition:enter-end="opacity-100 transform scale-100"
