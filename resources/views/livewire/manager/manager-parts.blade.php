@@ -1,7 +1,7 @@
 @php
     $isEditing = fn($id) => $editingWarehouseId === $id;
 @endphp
-<div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div class="p-2 md:p-4 bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
     <!-- Индикатор загрузки -->
     <div wire:loading.flex wire:target="switchTab"
          class="absolute inset-0 flex items-center justify-center bg-gray-900 opacity-50 z-50">

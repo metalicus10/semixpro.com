@@ -23,4 +23,7 @@
     <div x-cloak x-show="currentTab == 'technicians'" class="w-full">
         <livewire:manager-technicians :key="'manager-technicians-' . auth()->id()" />
     </div>
+    <div x-cloak x-show="currentTab == 'profile'" class="w-full">
+        <livewire:profile :key="'profile-' . auth()->id()" />
+    </div>
 </div>

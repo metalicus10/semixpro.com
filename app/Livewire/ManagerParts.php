@@ -477,7 +477,7 @@ class ManagerParts extends Component
                     continue;
                 }
 
-                $quantity = $this->partQuantities[$partId] ?? 1;
+                $quantity = $this->partQuantities[$partId] ?? 0;
 
                 // Убедимся, что запрашиваемое количество не превышает количество на складе
                 if ($quantity > $part->quantity) {
@@ -511,6 +511,18 @@ class ManagerParts extends Component
                         'total_transferred' => $quantity,
                         'manager_id' => Auth::id(),
                         'nomenclature_id' => $part->nomenclature_id,
+                    ]);
+                }
+                $minQuantity = Auth::user()->default_min_quantity;
+                if ($part->quantity <= $minQuantity) {
+                    \App\Models\Notification::create([
+                        'user_id' => auth()->id(),
+                        'type' => 'low_stock',
+                        'message' => "Осталось мало запчастей '{$part->name}' на складе!",
+                        'payload' => [
+                            'part_id' => $part->id,
+                            'warehouse_id' => $part->warehouse_id,
+                        ],
                     ]);
                 }
             }

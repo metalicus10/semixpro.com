@@ -273,7 +273,7 @@
                 <!-- Список ссылок -->
                 <ul class="py-1">
                     <li>
-                        <a x-on:click="currentTab = 'profile', showSidebar = false"
+                        <a @click="setTab('profile'); open = false"
                            class="block px-4 cursor-pointer py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-600 dark:hover:text-white">
                             {{ __('Profile') }}
                         </a>
