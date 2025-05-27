@@ -21,8 +21,12 @@
                 selectedBrand: '',
                 selectedCategory: '',
                 filteredParts: [],
+                highlightedParts: null,
                 init() {
                     this.filterParts();
+                    window.addEventListener('switch-tab', (event) => {
+                        setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
+                    });
                 },
                 filterParts() {
                     if (!Array.isArray(this.parts)) {
@@ -34,6 +38,28 @@
                         let categoryMatch = this.selectedCategory ? part.category_id == this.selectedCategory : true;
                         return brandMatch && categoryMatch;
                     });
+                },
+                highlightPart(partIds, timeout) {
+                    if (Array.isArray(this.highlightedParts)) {
+                        this.highlightedParts.forEach(id => {
+                            const prev = document.getElementById(`part-${id}`);
+                            if (prev) prev.classList.remove('highlighted');
+                        });
+                    }
+                    this.highlightedParts = Array.isArray(partIds) ? partIds : [partIds];
+                    this.highlightedParts.forEach(id => {
+                        const el = document.getElementById(`part-${id}`);
+                        if (el) {
+                            el.classList.add('highlighted');
+                            if (timeout) {
+                                setTimeout(() => el.classList.remove('highlighted'), timeout);
+                            }
+                        }
+                    });
+                    if (this.highlightedParts.length > 0) {
+                        const first = document.getElementById(`part-${this.highlightedParts[0]}`);
+                        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
                 },
             }" x-init="init"
         >
@@ -80,7 +106,7 @@
                 </thead>
                 <tbody>
                 <template x-for="part in parts" :key="part.id">
-                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                    <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600" :id="`part-${part.id}`">
                         <!-- SKU -->
                         <td class="px-5 py-5">
                             <template x-if="part.parts && part.parts.sku">

@@ -485,7 +485,7 @@ class ManagerParts extends Component
                 }
 
                 if ($quantity <= 0) {
-                    continue; // Пропускаем, если количество равно 0 или отрицательное
+                    continue;
                 }
 
                 // Уменьшаем количество запчастей на складе

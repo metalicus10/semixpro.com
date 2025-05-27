@@ -21,10 +21,13 @@
                     warehouseId: note.warehouse_id
                 });
             } else if (note.type === 'nomenclature_archived') {
-                console.log(note);
                 this.$dispatch('switch-tab', {
                     tab: 'nomenclatures',
                     nomenclatureId: note.nomenclature_id
+                });
+            } else if (note.type === 'parts_received') {
+                this.$dispatch('switch-tab', {
+                    partIds: Array.isArray(note.part_ids) ? note.part_ids : [note.part_id],
                 });
             }
             // можно добавить else для других типов
