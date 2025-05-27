@@ -21,7 +21,7 @@
                 selectedBrand: '',
                 selectedCategory: '',
                 filteredParts: [],
-                highlightedParts: null,
+                highlightedParts: [],
                 init() {
                     this.filterParts();
                     window.addEventListener('switch-tab', (event) => {
@@ -40,26 +40,31 @@
                     });
                 },
                 highlightPart(partIds, timeout) {
-                    if (Array.isArray(this.highlightedParts)) {
-                        this.highlightedParts.forEach(id => {
-                            const prev = document.getElementById(`part-${id}`);
-                            if (prev) prev.classList.remove('highlighted');
-                        });
-                    }
-                    this.highlightedParts = Array.isArray(partIds) ? partIds : [partIds];
-                    this.highlightedParts.forEach(id => {
-                        const el = document.getElementById(`part-${id}`);
-                        if (el) {
-                            el.classList.add('highlighted');
-                            if (timeout) {
-                                setTimeout(() => el.classList.remove('highlighted'), timeout);
-                            }
+                        if (Array.isArray(this.highlightedParts)) {
+                            this.highlightedParts.forEach(id => {
+                                const prev = document.getElementById(`part-${id}`);
+                                if (prev) prev.classList.remove('highlighted');
+                            });
                         }
-                    });
-                    if (this.highlightedParts.length > 0) {
-                        const first = document.getElementById(`part-${this.highlightedParts[0]}`);
-                        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
+                        document.querySelectorAll('.highlighted').forEach(el => el.classList.remove('highlighted'));
+
+                        this.highlightedParts = Array.isArray(partIds) ? partIds : [partIds];
+                        this.highlightedParts.forEach(id => {
+                            const el = document.getElementById(`part-${id}`);
+                            if (el) {
+                                el.classList.remove('highlighted');
+                                void el.offsetWidth;
+                                el.classList.add('highlighted');
+                                if (timeout) {
+                                    setTimeout(() => el.classList.remove('highlighted'), timeout);
+                                }
+                            }
+                        });
+                        if (this.highlightedParts.length > 0) {
+                            const first = document.getElementById(`part-${this.highlightedParts[0]}`);
+                            if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+
                 },
             }" x-init="init"
         >

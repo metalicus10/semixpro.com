@@ -23,11 +23,17 @@
             } else if (note.type === 'nomenclature_archived') {
                 this.$dispatch('switch-tab', {
                     tab: 'nomenclatures',
-                    nomenclatureId: note.nomenclature_id
+                    partIds: note.nomenclature_id
                 });
             } else if (note.type === 'parts_received') {
                 this.$dispatch('switch-tab', {
                     partIds: Array.isArray(note.part_ids) ? note.part_ids : [note.part_id],
+                });
+            } else if (note.type === 'low_stock') {
+                this.$dispatch('switch-tab', {
+                    tab: 'parts',
+                    partIds: Array.isArray(note.part_ids) ? note.part_ids : [note.part_id],
+                    warehouseId: note.warehouse_id
                 });
             }
             // можно добавить else для других типов

@@ -24,6 +24,7 @@
         duplicateNameError: null, duplicateNnError: null,
         selectedImage: null, highlightedPart: null,
         refs: {},
+        highlightedNomenclatures: [],
         init() {
             if (this.nomenclatureCount > 500) {
                 this.mode = 'livewire';
@@ -32,11 +33,8 @@
                 this.mode = 'alpine';
             }
             window.addEventListener('switch-tab', (event) => {
-                this.currentTab = event.detail.tab;
-                if (event.detail.tab === 'nomenclatures') {
-                    setTimeout(() => this.highlightPart(event.detail.nomenclatureId, 1000, 'nomenclature'), 1000);
-                } else {
-                    setTimeout(() => this.highlightPart(event.detail.partIds, 1000, 'part'), 1000);
+                if (event.detail.tab === 'nomenclatures' && event.detail.partIds) {
+                    this.highlightNomenclatures(event.detail.partIds, 1000);
                 }
             });
             window.addEventListener('nomenclature-nn-duplicate', event => {
@@ -52,27 +50,18 @@
                 this.imgError = null;
             });
         },
-        highlightPart(ids, timeout, type = 'part') {
-            const prefix = type === 'nomenclature' ? 'nomenclature' : 'part';
-                if (Array.isArray(this.highlightedParts)) {
-                    this.highlightedParts.forEach(id => {
-                        const prev = document.getElementById(`part-${id}`);
-                        if (prev) prev.classList.remove('highlighted');
-                    });
-                }
-            this.highlightedParts = Array.isArray(ids) ? ids : [ids];
-            this.highlightedParts.forEach(id => {
-                const el = document.getElementById(`${prefix}-${id}`);
-                if (el) {
-                    el.classList.add('highlighted');
-                    if (timeout) setTimeout(() => el.classList.remove('highlighted'), timeout);
-                }
-            });
-            if (this.highlightedParts.length > 0) {
-                const first = document.getElementById(`${prefix}-${this.highlightedParts[0]}`);
+        highlightNomenclatures(nomenclatureIds, timeout = 1000) {
+            const ids = Array.isArray(nomenclatureIds) ? nomenclatureIds : [nomenclatureIds];
+            this.highlightedNomenclatures = ids;
+            setTimeout(() => {
+                this.highlightedNomenclatures = [];
+            }, timeout);
+
+            if (ids.length > 0) {
+                const first = document.getElementById(`nomenclature-${ids[0]}`);
                 if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-                },
+        },
         get filteredNomenclatures() {
             if (!this.search) return this.nomenclatures;
             return this.nomenclatures.filter(n =>
@@ -344,7 +333,7 @@
                             return sup ? sup.name : '—';
                         },
                     }"
-                         x-init="existingNns = @js($allNns).filter(n => n !== nomenclature.nn)"
+                         x-init="init();existingNns = @js($allNns).filter(n => n !== nomenclature.nn)"
                          @nomenclature-updated.window="refreshExistingNns()"
                     >
                         <div x-show="!nomenclature.is_archived" :id="`nomenclature-${nomenclature.id}`"
@@ -355,6 +344,7 @@
                              x-transition:leave-start="opacity-100 transform scale-100"
                              x-transition:leave-end="opacity-0 transform scale-90"
                              class="grid grid-cols-8 w-full content-center items-center text-sm border-b dark:border-gray-800 dark:text-gray-300 py-1 max-h-[105px] hover:bg-[#0d1829] transition-colors duration-300 ease-in-out"
+                             :class="highlightedNomenclatures.includes(nomenclature.id) ? 'highlighted' : ''"
                         >
                             <!-- Checkbox -->
                             <div class="w-1/8 block sm:hidden absolute top-5 right-5 mb-2">

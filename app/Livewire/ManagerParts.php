@@ -520,7 +520,7 @@ class ManagerParts extends Component
                         'type' => 'low_stock',
                         'message' => "Осталось мало запчастей '{$part->name}' на складе!",
                         'payload' => [
-                            'part_id' => $part->id,
+                            'part_ids' => $movedPartsIds,
                             'warehouse_id' => $part->warehouse_id,
                         ],
                     ]);

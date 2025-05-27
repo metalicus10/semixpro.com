@@ -8,6 +8,8 @@
                 <livewire:profile.update-profile-information-form/>
             </div>
 
+            <!-- Manager Area -->
+            @if(Auth::user()->inRole('manager'))
             <div class="flex p-4 sm:p-8 bg-white shadow sm:rounded-lg max-w-1/3">
                 <livewire:profile.update-password-form/>
             </div>
@@ -19,6 +21,7 @@
             <div class="flex p-4 sm:p-8 bg-white shadow sm:rounded-lg w-full">
                 <livewire:profile.delete-user-form/>
             </div>
+            @endif
         </div>
     </div>
 </div>

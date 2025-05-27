@@ -62,10 +62,13 @@
                             if (prev) prev.classList.remove('highlighted');
                         });
                     }
+                    document.querySelectorAll('.highlighted').forEach(el => el.classList.remove('highlighted'));
                     this.highlightedParts = Array.isArray(partIds) ? partIds : [partIds];
                     this.highlightedParts.forEach(id => {
                         const el = document.getElementById(`part-${id}`);
                         if (el) {
+                            el.classList.remove('highlighted');
+                            void el.offsetWidth;
                             el.classList.add('highlighted');
                             if (timeout) {
                                 setTimeout(() => el.classList.remove('highlighted'), timeout);
