@@ -272,7 +272,7 @@
                             <li class="shrink-0 cursor-pointer"
                                 :class="{'bg-gray-900 text-gray-100': activeTab === {{ $warehouse['id'] }}, 'bg-gray-900': activeTab !== {{ $warehouse['id'] }}}"
                                 :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
-                                wire:click="selectWarehouse({{ $warehouse['id'] }})" @click="selectedParts = []"
+                                wire:click="selectWarehouse({{ $warehouse['id'] }})" @click="selectedParts = []; setWarehouse({{ $warehouse['id'] }})"
                                 draggable="true"
                                 @dragstart="event.dataTransfer.setData('warehouseId', '{{ $warehouse['id'] }}')"
                                 @drop="reorderWarehouses($event.dataTransfer.getData('warehouseId'), '{{ $warehouse['id'] }}')"

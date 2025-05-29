@@ -2,27 +2,34 @@
 
 namespace App\Livewire;
 
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
 class ProfileMinQuantity extends Component
 {
-    public $default_min_quantity;
+    public $min_quantity;
+    public $errorMessage = '';
 
     public function mount()
     {
-        $this->default_min_quantity = Auth::user()->default_min_quantity;
+        $this->min_quantity = Auth::user()->min_quantity;
     }
 
     public function save()
     {
-        $this->validate([
-            'default_min_quantity' => 'required|integer|min:1|max:100000',
-        ]);
-        Auth::user()->update([
-            'default_min_quantity' => $this->default_min_quantity,
-        ]);
-        session()->flash('success', 'Минимальный остаток сохранён!');
+        try {
+            $this->validate([
+                'min_quantity' => 'required|integer|min:0|max:100000',
+            ]);
+            $user = Auth::user();
+            $user->min_quantity = $this->min_quantity;
+            $user->save();
+            $this->errorMessage = '';
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->errorMessage = $e->validator->errors()->first('min_quantity');
+            throw $e;
+        }
     }
 
     public function render()

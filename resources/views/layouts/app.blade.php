@@ -19,25 +19,33 @@
 <body class="min-h-screen bg-background font-sans antialiased">
 <div x-data="() => ({
         currentTab: localStorage.getItem('activeSideTab') || 'nomenclatures',
+        currentWarehouseId: localStorage.getItem('activeWarehouseId') || 1,
         role: 'manager',
         showSidebar: false,
         showInventory: false,
         setTab(tabName) {
-            console.log('Setting tab:', tabName);
             this.currentTab = tabName;
             localStorage.setItem('activeSideTab', tabName);
         },
+        setWarehouse(warehouseId) {
+            console.log(warehouseId);
+            this.currentWarehouseId = warehouseId;
+            localStorage.setItem('activeWarehouseId', warehouseId);
+        },
         setDefaultTabForRole() {
-            console.log('init role:', this.role);
             if (!localStorage.getItem('activeSideTab')) {
-                console.log('Setting default tab for', this.role);
                 const tabs = {
                     manager: 'nomenclatures',
                     technician: 'parts',
                     admin: 'dashboard'
                 };
+                const warehouses = {
+                    manager: 1,
+                };
                 this.currentTab = tabs[this.role] || 'nomenclatures';
                 localStorage.setItem('activeSideTab', this.currentTab);
+                this.currentWarehouseId = warehouses[this.role] || 1;
+                localStorage.setItem('activeSideTab', this.currentWarehouseId);
             }
         }
     })" x-init="setDefaultTabForRole()">
