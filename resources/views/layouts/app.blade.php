@@ -19,18 +19,12 @@
 <body class="min-h-screen bg-background font-sans antialiased">
 <div x-data="() => ({
         currentTab: localStorage.getItem('activeSideTab') || 'nomenclatures',
-        currentWarehouseId: localStorage.getItem('activeWarehouseId') || 1,
         role: 'manager',
         showSidebar: false,
         showInventory: false,
         setTab(tabName) {
             this.currentTab = tabName;
             localStorage.setItem('activeSideTab', tabName);
-        },
-        setWarehouse(warehouseId) {
-            console.log(warehouseId);
-            this.currentWarehouseId = warehouseId;
-            localStorage.setItem('activeWarehouseId', warehouseId);
         },
         setDefaultTabForRole() {
             if (!localStorage.getItem('activeSideTab')) {
@@ -39,15 +33,10 @@
                     technician: 'parts',
                     admin: 'dashboard'
                 };
-                const warehouses = {
-                    manager: 1,
-                };
                 this.currentTab = tabs[this.role] || 'nomenclatures';
                 localStorage.setItem('activeSideTab', this.currentTab);
-                this.currentWarehouseId = warehouses[this.role] || 1;
-                localStorage.setItem('activeSideTab', this.currentWarehouseId);
             }
-        }
+        },
     })" x-init="setDefaultTabForRole()">
 <section
     class="top-0 z-50 relative w-full border-b border-gray-200 dark:border-gray-600 dark:bg-brand-background border-brand-border">

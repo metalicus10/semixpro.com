@@ -25,12 +25,13 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Illuminate\Support\Facades\Storage;
 use Livewire\WithFileUploads;
+use Ramsey\Uuid\Type\Integer;
 
 class ManagerParts extends Component
 {
     use WithFileUploads;
 
-    public $warehouses;      // Список складов (id, name, order)
+    public $warehouses = [];
     public ?int $selectedWarehouseId = null; // ID активного склада
     public ?int $selectedWarehouse = null;
     public $parts;           // Запчасти по складам
@@ -129,7 +130,7 @@ class ManagerParts extends Component
     public function loadWarehouses()
     {
         $this->warehouses = Warehouse::where('manager_id', Auth::id())->orderBy('position')
-            ->get();
+            ->get()->toArray();
 
         // Устанавливаем активный склад по умолчанию (первый в списке)
         if (empty($this->selectedWarehouseId) && !empty($this->warehouses)) {
@@ -163,27 +164,26 @@ class ManagerParts extends Component
     /**
      * Выбирает активный склад
      */
-    public function selectWarehouse(int $warehouseId, $partIds = [])
+    public function selectWarehouse($warehouseId)
     {
         $this->isLoading = true;
         $this->selectedWarehouseId = $warehouseId;
-        $this->loadParts($warehouseId);
-        $ids = $partIds;
-        if (is_null($ids)) {
-            $ids = [];
-        } elseif (is_int($ids)) {
-            $ids = [$ids];
+        $partIds = $this->loadParts($warehouseId);
+        if (is_null($partIds)) {
+            $partIds = [];
+        } elseif (is_int($partIds)) {
+            $partIds = [$partIds];
         }
-        $this->dispatch('warehouse-switched', ['warehouseId' => $warehouseId, 'partIds' => $ids]);
+        $this->dispatch('warehouse-switched', ['warehouseId' => $warehouseId, 'partIds' => $partIds]);
         $this->isLoading = false;
     }
 
     /**
      * Загружает запчасти для указанного склада
      */
-    public function loadParts(int $warehouseId)
+    public function loadParts($warehouseId)
     {
-        $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)->with('nomenclatures', 'warehouse')
+        return $this->parts = Part::where('manager_id', Auth::id())->where('warehouse_id', $warehouseId)->with('nomenclatures', 'warehouse')
             ->get()->toArray();
     }
 

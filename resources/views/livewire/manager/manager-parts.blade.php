@@ -30,6 +30,7 @@
                 activeTab: @entangle('selectedWarehouseId'),
                 selectedParts: @entangle('selectedParts'),
                 selectedPartNames: @entangle('selectedPartNames'),
+                warehouses: @entangle('warehouses'),
                 parts: @entangle('parts'),
                 categories: @entangle('categories'),
                 brands: @entangle('brands'),
@@ -38,6 +39,7 @@
                 highlightedParts: null,
                 highlightedWarehouse: null,
                 currentWarehouseId: null,
+                isPartsLoading: false,
 
                 init() {
                     this.scrollContainer = this.$refs.tabContainer;
@@ -49,10 +51,21 @@
                         this.selectWarehouseTab(event.detail.warehouseId, event.detail.partIds);
                         setTimeout(() => this.highlightPart(event.detail.partIds), 1000);
                     });
+                    window.addEventListener('warehouse-switched', (event) => {
+                        console.log(event.detail);
+                        const { warehouseId, partIds } = event.detail;
+                        this.selectWarehouseTab(event.detail.warehouseId, event.detail.partIds);
+                    });
+                    this.restoreWarehouse();
                 },
-                selectWarehouseTab(warehouseId, partIds) {
-                    if (warehouseId) {
-                        $wire.selectWarehouse(warehouseId, partIds);
+                selectWarehouseTab(warehouseId) {
+                    if(warehouseId){
+                        this.isPartsLoading = true;
+                        $wire.selectWarehouse(warehouseId).then(() => {
+                            this.isPartsLoading = false;
+                        });
+                        this.currentWarehouseId = warehouseId;
+                        localStorage.setItem('activeWarehouseId', warehouseId);
                     }
                 },
                 highlightPart(partIds, timeout) {
@@ -217,9 +230,24 @@
                         )
                     );
                 },
-
+                currentWarehouseId: localStorage.getItem('activeWarehouseId') || '1',
+                restoreWarehouse() {
+                    let savedId = localStorage.getItem('activeWarehouseId');
+                    console.log('restoreWarehouse called', this.warehouses, localStorage.getItem('activeWarehouseId'));
+                    if (!this.warehouses || !this.warehouses.length) return;
+                    let found = this.warehouses.find(w => w.id == savedId);
+                    if (savedId && found) {
+                        this.currentWarehouseId = Number(savedId);
+                        console.log('Restored savedId:', savedId);
+                        this.selectWarehouseTab(savedId)
+                    } else {
+                        this.currentWarehouseId = this.warehouses[0].id;
+                        localStorage.setItem('activeWarehouseId', this.currentWarehouseId);
+                        console.log('Set to first warehouse:', this.currentWarehouseId);
+                    }
+                },
             }"
-            x-init="init(); checkScroll(); tabs = '{{ $warehouses->values() }}';
+            x-init="init(); checkScroll(); tabs = warehouses;
                 partStock = {{ collect($parts)->pluck('quantity', 'id')->toJson() }};
                 $watch('selectedParts', () => fetchSelectedNames());
             "
@@ -258,7 +286,6 @@
             </div>
 
             <livewire:manager-part-form/>
-
             <div class="overflow-x-auto whitespace-nowrap">
                 <div class="flex overflow-hidden">
                     <!-- Кнопка для прокрутки влево -->
@@ -268,30 +295,30 @@
                         x-ref="tabContainer"
                         @scroll="checkScroll"
                         style="scroll-behavior: smooth; overflow-x: hidden;">
-                        @foreach ($warehouses as $warehouse)
-                            <li class="shrink-0 cursor-pointer"
-                                :class="{'bg-gray-900 text-gray-100': activeTab === {{ $warehouse['id'] }}, 'bg-gray-900': activeTab !== {{ $warehouse['id'] }}}"
-                                :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
-                                wire:click="selectWarehouse({{ $warehouse['id'] }})" @click="selectedParts = []; setWarehouse({{ $warehouse['id'] }})"
+                        <template x-for="warehouse in warehouses" :key="warehouse.id">
+                            <li class="shrink-0 cursor-pointer" :id="warehouse.id"
+                                :class="activeTab === warehouse.id ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                                @click="selectedParts = []; selectWarehouseTab(warehouse.id)"
                                 draggable="true"
-                                @dragstart="event.dataTransfer.setData('warehouseId', '{{ $warehouse['id'] }}')"
-                                @drop="reorderWarehouses($event.dataTransfer.getData('warehouseId'), '{{ $warehouse['id'] }}')"
+                                @dragstart="event.dataTransfer.setData('warehouseId', 'warehouse.id')"
+                                @drop="reorderWarehouses($event.dataTransfer.getData('warehouseId'), 'warehouse.id')"
                                 @dragover.prevent>
 
                                 <div x-data="{ isEditing: false }">
                                     <!-- Режим редактирования -->
-                                    <div x-show="editingTabId === {{ $warehouse['id'] }}" class="relative">
+                                    <div x-show="editingTabId === warehouse.id" class="relative">
                                         <input type="text"
                                                x-model="newTabName"
-                                               @keydown.enter.prevent="isEditing = false; saveEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
+                                               @keydown.enter.prevent="isEditing = false; saveEdit(warehouse.id, 'warehouse.id')"
                                                @keydown.escape="isEditing = false; cancelEdit();"
                                                @focus="isEditing = true"
                                                @blur="isEditing = false"
-                                               class="block w-full text-start p-2 border rounded text-sm text-gray-700 dark:bg-gray-700 dark:text-gray-300 focus:outline-none focus:ring focus:ring-blue-500"
+                                               class="block w-full text-start p-2 border rounded text-sm text-gray-700 dark:bg-gray-700
+                                               dark:text-gray-300 focus:outline-none focus:ring focus:ring-blue-500"
                                         />
                                         <div class="absolute top-2 right-2">
                                             <button
-                                                @click="isEditing = false; saveEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
+                                                @click="isEditing = false; saveEdit(warehouse.id, 'warehouse.name')"
                                                 class="bg-green-500 text-white p-1 rounded hover:bg-green-600">✓
                                             </button>
                                             <button @click="isEditing = false; cancelEdit()"
@@ -300,15 +327,15 @@
                                         </div>
                                     </div>
                                     <a href="#"
-                                       @click.prevent.debounce.500ms="if (!isEditing) { activeTab = {{ $warehouse['id'] }}, updateActiveTab({{ $warehouse['id'] }}) }"
-                                       x-show="editingTabId !== {{ $warehouse['id'] }}"
-                                       @dblclick="isEditing = true; startEdit({{ $warehouse['id'] }}, '{{ $warehouse['name'] }}')"
-                                       :class="activeTab === {{ $warehouse['id'] }} ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
+                                       @click.prevent.debounce.500ms="if (!isEditing) { activeTab = warehouse.id, updateActiveTab(warehouse.id) }"
+                                       x-show="editingTabId !== warehouse.id"
+                                       @dblclick="isEditing = true; startEdit(warehouse.id, 'warehouse.name')"
+                                       :class="activeTab === warehouse.id ? 'text-orange-500 bg-[#b13a00] dark:bg-green-500 dark:text-white' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
                                        class="bg-gray-800 inline-block p-2 rounded-t-lg border-t border-x border-gray-700 hover:border-gray-600 border-dashed text-clip"
-                                    >{{ $warehouse['name'] }}</a>
+                                    ><span x-text="warehouse.name"></span></a>
                                 </div>
                             </li>
-                        @endforeach
+                        </template>
                     </ul>
                     <!-- Кнопка для прокрутки вправо -->
                     <livewire:tabs-scroll-right/>
@@ -502,8 +529,11 @@
                             </div>
                         </div>
                     </div>
+                    @php
+                        $currentWarehouse = collect($warehouses)->firstWhere('id', $selectedWarehouseId);
+                    @endphp
                     <h2 class="text-gray-700 dark:text-gray-400 uppercase text-lg font-semibold p-3">Запчасти
-                        склада <span class="dark:text-orange-500">{{ $warehouses->where('id', $selectedWarehouseId)->first()?->name }}</span></h2>
+                        склада <span class="dark:text-orange-500">{{ $currentWarehouse['name'] ?? '' }}</span></h2>
                     <div id="parts-table"
                          class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400 relative">
                         <!-- Заголовок таблицы -->
@@ -556,7 +586,7 @@
 
                             <div class="w-[150px] px-4 py-2">Брэнд</div>
                         </div>
-                        <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900">
+                        <div class="flex flex-col space-y-2 md:space-y-0 dark:bg-gray-900" :class="{ 'opacity-50 pointer-events-none': isPartsLoading }">
                             <template x-for="part in filteredParts()" :key="part.id">
                                 <template x-if="part.nomenclatures?.is_archived == false">
                                     <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
