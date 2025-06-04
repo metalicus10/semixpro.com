@@ -106,6 +106,9 @@ class ManagerParts extends Component
 
     public function mount()
     {
+        if (empty($this->selectedWarehouseId) && !empty($this->warehouses)) {
+            $this->selectedWarehouseId = $this->warehouses[0]['id'];
+        }
         $this->loadWarehouses();
         $this->loadCategories();
         $this->loadBrands();
@@ -164,18 +167,12 @@ class ManagerParts extends Component
     /**
      * Выбирает активный склад
      */
+    #[\Livewire\Attributes\Locked]
     public function selectWarehouse($warehouseId)
     {
-        $this->isLoading = true;
         $this->selectedWarehouseId = $warehouseId;
-        $partIds = $this->loadParts($warehouseId);
-        if (is_null($partIds)) {
-            $partIds = [];
-        } elseif (is_int($partIds)) {
-            $partIds = [$partIds];
-        }
-        $this->dispatch('warehouse-switched', ['warehouseId' => $warehouseId, 'partIds' => $partIds]);
-        $this->isLoading = false;
+        $this->parts = $this->loadParts($warehouseId);
+        return ['parts' => $this->parts];
     }
 
     /**
