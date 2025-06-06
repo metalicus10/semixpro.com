@@ -1,4 +1,4 @@
-<div class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
     <div class="flex justify-evenly md:justify-between items-center mb-2 mt-1">
         <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400">Remaining stock</h1>
 

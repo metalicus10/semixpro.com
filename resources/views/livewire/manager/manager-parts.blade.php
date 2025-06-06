@@ -328,9 +328,9 @@
                         @scroll="checkScroll"
                         style="scroll-behavior: smooth; overflow-x: hidden;">
                         <template x-for="warehouse in warehouses" :key="warehouse.id">
-                            <li class="shrink-0 cursor-pointer rounded-lg font-semibold" :id="warehouse.id"
+                            <li class="shrink-0 cursor-pointer rounded-lg font-semibold hover:scale-105 transition-all duration-200" :id="warehouse.id"
                                 :class="['tab-class', isPartsLoading ? 'opacity-50 pointer-events-none' : '']"
-                                :class="selectedWarehouseId == warehouse.id ? 'text-orange-500 scale-105 bg-[#b13a00] dark:bg-green-500 dark:text-white shadow-xl transition-all duration-200' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300 hover:scale-105 transition-all duration-200'"
+                                :class="selectedWarehouseId == warehouse.id ? 'text-orange-500 scale-105 bg-[#b13a00] dark:bg-green-500 dark:text-white shadow-xl transition-all duration-200' : 'hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 dark:hover:text-gray-300'"
                                 :disabled="isPartsLoading"
                                 @click="selectedParts = []; selectWarehouseTab(warehouse.id)"
                                 draggable="true"
@@ -641,7 +641,7 @@
                             <!-- table rows -->
                             <template x-if="!isPartsLoading">
                                 <template x-for="part in filteredParts()" :key="part.id">
-                                    <template x-if="part.nomenclatures?.is_archived == false" x-init="console.log(part);">
+                                    <template x-if="part.nomenclatures?.is_archived == false">
                                         <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
                                         dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative" :id="`part-${part.id}`">
                                             <!-- Checkbox -->
@@ -1225,12 +1225,12 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div class="w-[150px] px-4 py-2" x-init="console.log(categories);">
+                                            <div class="w-[150px] px-4 py-2">
                                                 <span x-text="categories.find(cat => cat.id == part.category_id)?.name || '—'"></span>
                                             </div>
                                             <div class="w-[150px] px-4 py-2">
                                                 <template x-if="part.nomenclatures.brands && part.nomenclatures.brands.length">
-                                                    <span x-text="part.nomenclature.brands?.map(b => b.name).join(', ') || '—'"></span>
+                                                    <span x-text="part.nomenclatures.brands?.map(b => b.name).join(', ') || '—'"></span>
                                                 </template>
                                                 <template x-if="!part.nomenclatures.brands || !part.nomenclatures.brands.length">
                                                     <span>—</span>

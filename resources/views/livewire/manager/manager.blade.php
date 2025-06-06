@@ -1,4 +1,7 @@
 <div>
+    <div x-cloak x-show="currentTab == 'dashboard'" class="w-full">
+        <livewire:manager-dashboard :key="'manager-dashboard-' . auth()->id()" />
+    </div>
     <div x-cloak x-show="currentTab == 'nomenclatures'" class="w-full">
         <livewire:manager-nomenclatures :key="'manager-nomenclatures-' . auth()->id()" />
     </div>

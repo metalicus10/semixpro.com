@@ -1,4 +1,4 @@
-<div class="p-1 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
+<div class="bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden">
     <h1 class="md:text-3xl text-md font-bold text-gray-500 dark:text-gray-400 mb-2 mt-1">Статистика отгрузок</h1>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
