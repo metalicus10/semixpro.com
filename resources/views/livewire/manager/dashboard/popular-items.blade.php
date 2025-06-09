@@ -1,4 +1,4 @@
-<div class="bg-[#101623] rounded-xl border border-[#242B3D] p-6 flex flex-col gap-4 w-1/2">
+<div class="bg-[#101623] rounded-xl border border-slate-700 p-6 flex flex-col gap-4 w-full">
     <div class="flex items-center justify-between mb-2">
         <h2 class="text-white text-xl font-bold">Популярные товары</h2>
         <a href="#" class="text-green-400 text-sm font-semibold flex items-center gap-1 hover:underline">ПОКАЗАТЬ ЕЩЁ <span>&rarr;</span></a>

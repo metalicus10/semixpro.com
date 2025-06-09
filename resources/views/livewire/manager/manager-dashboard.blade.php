@@ -6,7 +6,7 @@
         </p>
     </div>
 
-    <div class="flex gap-6 w-full mb-6">
+    <div class="flex gap-5 w-full mb-6 columns-auto">
         {{-- Уровень запасов --}}
         <livewire:stock-level/>
         {{-- Популярные товары --}}
@@ -16,7 +16,7 @@
     {{-- Общие показатели --}}
     @include('livewire.manager.dashboard.stats')
 
-    <div class="flex gap-6 w-full mb-6">
+    <div class="flex gap-5 w-full mb-6 columns-auto" style="height: 500px;">
         <livewire:active-work-order />
         <livewire:sales-order-summary />
     </div>

@@ -26,7 +26,7 @@
             return num.toLocaleString('ru-RU');
         }
     }"
-    class="bg-[#1A232F] rounded-2xl p-8 flex gap-10 max-w-3xl w-full"
+    class="bg-[#1A232F] rounded-xl border border-slate-700 p-6 flex gap-10 w-full"
 >
     <!-- Левая часть: Кольцевая диаграмма -->
     <div class="flex flex-col items-center justify-center min-w-[240px]">

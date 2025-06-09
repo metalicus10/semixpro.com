@@ -1,4 +1,4 @@
-<div class="bg-[#18242D] rounded-2xl p-6 w-full flex flex-col gap-4">
+<div class="flex flex-col bg-[#18242D] rounded-xl p-6 w-full gap-4">
     <div class="flex items-center justify-between mb-2">
         <h2 class="text-white text-lg font-bold">Active work order</h2>
         <a href="#" class="text-[#00DD7F] text-sm font-semibold hover:underline flex items-center gap-1">VIEW MORE <span>&rarr;</span></a>
