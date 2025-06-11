@@ -508,8 +508,11 @@ class ManagerParts extends Component
                         'total_transferred' => $quantity,
                         'manager_id' => Auth::id(),
                         'nomenclature_id' => $part->nomenclature_id,
+                        'warehouse_id' => $part->warehouse_id,
                     ]);
                 }
+                $this->dispatch('transfer', params: ['technicianId'=>$technician->user_id, 'partId'=>$part->id, 'quantity'=>$quantity, 'transfer', 'date'=>now()]);
+
                 $minQuantity = Auth::user()->default_min_quantity;
                 if ($part->quantity <= $minQuantity) {
                     \App\Models\Notification::create([

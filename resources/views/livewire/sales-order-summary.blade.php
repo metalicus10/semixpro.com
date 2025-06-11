@@ -5,50 +5,55 @@
         month: (new Date()).getMonth(),
         year: (new Date()).getFullYear(),
         get firstDay() {
-            return new Date(this.year, this.month, 1)
+            return new Date(this.year, this.month, 1);
         },
         get lastDay() {
-            return new Date(this.year, this.month + 1, 0)
+            return new Date(this.year, this.month + 1, 0);
         },
         get weeks() {
-            let weeks = []
-            let weekStart = new Date(this.firstDay)
+            let weeks = [];
+            let weekStart = new Date(this.firstDay);
+            let day = weekStart.getDay();
+            if (day !== 1) {
+                weekStart.setDate(weekStart.getDate() - (day === 0 ? 6 : day - 1));
+            }
             let weekNum = 1
             while (weekStart <= this.lastDay) {
-                let weekEnd = new Date(weekStart)
-                weekEnd.setDate(weekEnd.getDate() + 6)
-                if (weekEnd > this.lastDay) weekEnd = new Date(this.lastDay)
+                let weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekEnd.getDate() + 6);
+                if (weekEnd > this.lastDay) weekEnd = new Date(this.lastDay);
                 weeks.push({
                     number: weekNum,
                     start: new Date(weekStart),
                     end: new Date(weekEnd),
-                })
-                weekNum++
-                weekStart.setDate(weekStart.getDate() + 7)
+                });
+                weekNum++;
+                weekStart.setDate(weekStart.getDate() + 7);
             }
-            return weeks
+            return weeks;
         },
-        get availableWeeks() {
-            return this.weeks.filter(w => w.end <= this.today)
-        },
+        get steps() { return [100000, 75000, 50000, 25000, 0]; },
+        max: 100000,
         selectedWeekIndex: -1,
         selectedWeek: null,
         weekLabel(week) {
             const ruMonths = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
             return `Неделя ${week.number}: ${week.start.getDate()} ${ruMonths[week.start.getMonth()]} - ${week.end.getDate()} ${ruMonths[week.end.getMonth()]}`
         },
-        salesFromServer: @entangle('sales').defer,
-        returnsFromServer: @entangle('returns').defer,
-        sales: [],
+        days: ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'],
+        transfersFromServer: @entangle('transfers'),
+        returnsFromServer: @entangle('returns'),
+        weekKeysFromServer: @js(array_values($weekKeys ?? [])),
+        transfers: [],
         returns: [],
-        animatedSales: [],
+        animatedTransfers: [],
         animatedReturns: [],
         animateBars() {
-            this.animatedSales = this.sales.map(() => 0)
+            this.animatedTransfers = this.transfers.map(() => 0)
             this.animatedReturns = this.returns.map(() => 0)
             setTimeout(() => {
-                const max = Math.max(...this.sales, 1)
-                this.animatedSales = this.sales.map(s => Math.round(s / max * 100))
+                const max = Math.max(...this.transfers, 1)
+                this.animatedTransfers = this.transfers.map(s => Math.round(s / max * 100))
                 this.animatedReturns = this.returns.map(r => Math.round(r / max * 100))
             }, 50)
         },
@@ -63,26 +68,48 @@
             )
         },
         init() {
-            this.selectedWeekIndex = this.availableWeeks.length - 1
-            this.selectedWeek = this.availableWeeks[this.selectedWeekIndex] ?? null
-            // Инициируем первый fetch данных
+            let idx = this.availableWeeks.findIndex(w =>
+                this.today >= w.start && this.today <= w.end
+            );
+            this.selectedWeekIndex = idx !== -1 ? idx : this.availableWeeks.length - 1;
+            this.selectedWeek = this.availableWeeks[this.selectedWeekIndex] ?? null;
+
             if (this.selectedWeek) {
                 $wire.changeWeek(
                     this.selectedWeek.start.toISOString().slice(0, 10),
                     this.selectedWeek.end.toISOString().slice(0, 10)
                 )
             }
-        }
-    }" x-init="init()"
+        },
+        get availableWeeks() {
+            let weekKeys = Array.isArray(this.weekKeysFromServer)
+                ? this.weekKeysFromServer
+                : Object.values(this.weekKeysFromServer);
+
+            /*console.log('weeks:', this.weeks);
+            console.log('weekKeys:', weekKeys);*/
+
+            return this.weeks.filter(w => {
+                let key = w.start.toISOString().slice(0, 10) + '_' + w.end.toISOString().slice(0, 10);
+                /*console.log('front key:', key, 'in server:', weekKeys.includes(key));*/
+                return weekKeys.includes(key);
+            });
+        },
+    }" x-init="
+        init(),
+        console.log('FRONT weeks:', weeks.map(w => w.start.toISOString().slice(0,10)+'_'+w.end.toISOString().slice(0,10)));
+        console.log('SERVER weekKeys:', weekKeysFromServer);
+        console.log('AVAILABLE:', availableWeeks);
+       "
     x-effect="
-        sales = salesFromServer;
+        transfers = transfersFromServer;
         returns = returnsFromServer;
         animateBars();
     "
     class="bg-[#18242D] rounded-xl p-6 w-full h-full flex flex-col"
 >
     <div class="flex items-center justify-between mb-4">
-        <h2 class="text-white text-lg font-bold">Sales order summary</h2>
+        <h2 class="text-white text-lg font-bold">Parts transfers summary</h2>
         <div class="relative">
             <!-- Селект -->
             <button
@@ -102,7 +129,7 @@
                 class="absolute left-0 mt-2 w-60 rounded-lg bg-[#202C3A] shadow-lg border border-[#3A4553] z-50"
                 style="display: none;"
             >
-                <template x-for="(week, idx) in availableWeeks" :key="week.start">
+                <template x-for="(week, idx) in availableWeeks" :key="idx">
                     <div
                         @click="selectWeek(idx)"
                         class="flex items-start text-sm px-4 py-2 cursor-pointer hover:bg-[#29374B] transition text-[#D3DAE6]"
@@ -148,10 +175,10 @@
                             <div class="w-6 h-full bg-[#354153] bg-opacity-30 rounded-t-xl absolute left-7 z-0"></div>
                             <!-- Бары -->
                             <div class="w-6 rounded-t-xl bg-[#A259FF] absolute left-0 bottom-0 z-10 "
-                                 :style="'height: ' + animatedSales[idx] + '%; transition: height 2.0s cubic-bezier(0.22,1,0.36,1);'"
+                                 :style="'height: ' + animatedTransfers[idx] + '%; transition: height 2.0s cubic-bezier(0.22,1,0.36,1);'"
                             ></div>
                             <div class="w-6 rounded-t-xl bg-[#2CD9FF] absolute left-7 bottom-0 z-10 "
-                                 :style="'height: ' + animatedSales[idx] + '%; transition: height 2.0s cubic-bezier(0.22,1,0.36,1);'"
+                                 :style="'height: ' + animatedTransfers[idx] + '%; transition: height 2.0s cubic-bezier(0.22,1,0.36,1);'"
                             ></div>
                         </div>
                     </div>
@@ -168,10 +195,10 @@
     <!-- Легенда -->
     <div class="flex items-center gap-4 mt-5 text-gray-400 justify-center text-xs">
         <span class="flex items-center gap-2">
-            <span class="block w-4 h-3 rounded bg-[#A259FF]"></span> Sales order
+            <span class="block w-4 h-3 rounded bg-[#A259FF]"></span> Parts transfers
         </span>
         <span class="flex items-center gap-2">
-            <span class="block w-4 h-3 rounded bg-[#2CD9FF]"></span> Sales returned
+            <span class="block w-4 h-3 rounded bg-[#2CD9FF]"></span> Parts returned
         </span>
     </div>
 </div>
