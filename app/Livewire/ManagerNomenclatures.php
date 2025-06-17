@@ -41,9 +41,9 @@ class ManagerNomenclatures extends Component
     public $newNomenclature = [
         'nn' => '',
         'name' => '',
-        'category_id' => '',
-        'supplier_id' => '',
-        'brand_id' => '',
+        'category_id' => null,
+        'supplier_id' => null,
+        'brand_id' => null,
         'manager_id' => '',
         'image' => '',
     ];
@@ -107,13 +107,14 @@ class ManagerNomenclatures extends Component
     public function addNomenclature()
     {
         //dd($this->newNomenclature);
+        logger('Вызван метод addNomenclature');
         $validatedData = $this->validate([
             'newNomenclature.nn' => 'required|string|max:10|unique:nomenclatures,nn',
             'newNomenclature.name' => 'required|string|max:191|unique:nomenclatures,name',
-            'newNomenclature.category_id' => 'required|exists:categories,id',
             'newNomenclature.supplier_id' => 'nullable|exists:suppliers,id',
-            'newNomenclature.brand_id' => 'nullable|exists:brand,id',
-            'image' => 'nullable|image|max:2048',
+            'newNomenclature.brand_id' => 'nullable|exists:brands,id',
+            'newNomenclature.category_id' => 'required|exists:categories,id',
+
         ]);
 
         $nn = $validatedData['newNomenclature']['nn'];
@@ -148,7 +149,7 @@ class ManagerNomenclatures extends Component
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($this->image)
-                ->resize(1024, 'auto')
+                ->resize(1024, null)
                 ->toWebp(quality: 60);
 
             $imagePath = '/images/nomenclatures/' . Auth::id();
@@ -172,7 +173,7 @@ class ManagerNomenclatures extends Component
         $this->dispatch('nomenclature-updated');
         $this->reset('newNomenclature');
         $this->dispatch('showNotification', 'success', 'New nomenclature created successfully');
-        $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $nomenclature->name);
+        $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $validatedData['newNomenclature']);
     }
 
     public function clearValidationErrors()

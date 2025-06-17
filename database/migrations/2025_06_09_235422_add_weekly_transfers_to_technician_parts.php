@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::table('technician_parts', function (Blueprint $table) {
             $table->json('daily_transfers')->nullable()->after('total_transferred');
-            $table->json('daily_returns')->nullable()->after('weekly_transfers');
+            $table->json('daily_returns')->nullable()->after('daily_transfers');
         });
     }
 

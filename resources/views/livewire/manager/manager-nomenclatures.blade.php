@@ -925,8 +925,8 @@
                         <div>
                             <label for="nn" class="block text-sm font-medium">Номер номенклатуры <span
                                     class="text-red-600">*</span></label>
-                            <input type="text" id="nn" x-model="newNomenclature.nn" required
-                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200">
+                            <input type="text" id="nn" x-model="newNomenclature.nn" required placeholder="Введите номер"
+                                   class="text-black dark:text-gray-300 mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200 placeholder:text-gray-300">
                             <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.nn"></p>
                             <p class="mt-1 text-sm text-red-600" x-text="duplicateNnError"
                                x-show="duplicateNnError"></p>
@@ -934,10 +934,10 @@
 
                         <!-- Name -->
                         <div>
-                            <label for="name" class="block text-sm font-medium">Название <span
+                            <label for="name" class="block text-sm font-medium">Наименование <span
                                     class="text-red-600">*</span></label>
-                            <input type="text" id="name" x-model="newNomenclature.name" required
-                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm">
+                            <input type="text" id="name" x-model="newNomenclature.name" required placeholder="Введите наименование"
+                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-black dark:text-gray-300 placeholder:text-gray-300">
                             <p class="mt-1 text-sm text-red-600" x-text="$wire.errors?.newNomenclature?.name"></p>
                             <p class="mt-1 text-sm text-red-600" x-text="duplicateNameError"
                                x-show="duplicateNameError"></p>
@@ -994,7 +994,7 @@
                             <label for="image" class="block text-sm font-medium">Изображение</label>
                             <input type="file" id="image" wire:model="image" @change="previewImage"
                                    :key="imageInputKey"
-                                   class="mt-1 p-2 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-sm"/>
+                                   class="px-0 py-0 w-full rounded-md bg-gray-600 border-gray-300 shadow-sm text-sm"/>
                             <div class="mt-4">
                                 <template x-if="selectedImage">
                                     <img :src="selectedImage" alt="Превью изображения"
