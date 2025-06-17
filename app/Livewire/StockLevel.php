@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Part;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use PhpParser\Node\Expr\Cast\Object_;
 
 class StockLevel extends Component
 {
@@ -54,8 +55,14 @@ class StockLevel extends Component
     public function render()
     {
         $total = collect($this->items)->sum('value');
+        $items = $this->items;
+        $labels = collect($items)->pluck('label');
+        $data = collect($items)->pluck('value');
+        $colors = collect($items)->pluck('color');
         return view('livewire.stock-level', [
-            'items' => $this->items,
+            'labels' => $labels,
+            'data' => $data,
+            'colors' => $colors,
             'total' => $total,
         ]);
     }
