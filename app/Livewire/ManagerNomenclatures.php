@@ -12,6 +12,7 @@ use App\Models\Supplier;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use App\Models\Nomenclature;
 use Illuminate\Support\Facades\Auth;
@@ -41,11 +42,10 @@ class ManagerNomenclatures extends Component
     public $newNomenclature = [
         'nn' => '',
         'name' => '',
-        'category_id' => null,
-        'supplier_id' => null,
-        'brand_id' => null,
+        'category_id' => '',
+        'supplier_id' => '',
+        'brand_id' => '',
         'manager_id' => '',
-        'image' => '',
     ];
 
     public function mount()
@@ -80,6 +80,7 @@ class ManagerNomenclatures extends Component
         }
     }
 
+    #[On('nomenclature-updated')]
     public function updateNomenclatures()
     {
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())
@@ -104,17 +105,19 @@ class ManagerNomenclatures extends Component
         $this->dispatch('refreshBrandSelect');
     }
 
+    /**
+     * @throws \Exception
+     */
     public function addNomenclature()
     {
         //dd($this->newNomenclature);
         logger('Вызван метод addNomenclature');
         $validatedData = $this->validate([
-            'newNomenclature.nn' => 'required|string|max:10|unique:nomenclatures,nn',
-            'newNomenclature.name' => 'required|string|max:191|unique:nomenclatures,name',
-            'newNomenclature.supplier_id' => 'nullable|exists:suppliers,id',
-            'newNomenclature.brand_id' => 'nullable|exists:brands,id',
-            'newNomenclature.category_id' => 'required|exists:categories,id',
-
+            'newNomenclature.nn'         => 'required|string|max:10|unique:nomenclatures,nn',
+            'newNomenclature.name'       => 'required|string|max:191',
+            'newNomenclature.supplier_id'=> 'nullable|exists:suppliers,id',
+            'newNomenclature.brand_id'   => 'nullable|exists:brands,id',
+            'newNomenclature.category_id'=> 'required|exists:categories,id',
         ]);
 
         $nn = $validatedData['newNomenclature']['nn'];
@@ -122,19 +125,14 @@ class ManagerNomenclatures extends Component
 
         // Проверка дубликата nn
         if (Nomenclature::where('nn', $nn)->exists()) {
-            $this->dispatch('nomenclature-nn-duplicate', [
-                'nn' => $nn
-            ]);
+            $this->dispatch('nomenclature-nn-duplicate', ['nn' => $nn]);
             return;
         }
 
         // Проверка дубликата name
-        if (Nomenclature::where('name', $name)->exists()) {
-            $this->dispatch('nomenclature-name-duplicate', [
-                'name' => $name
-            ]);
-            return;
-        }
+        /*if (Nomenclature::where('name', $name)->exists()) {
+            $this->dispatch('nomenclature-name-duplicate', ['name' => $name]);
+        }*/
 
         $validatedData['newNomenclature']['manager_id'] = Auth::id();
 
@@ -149,7 +147,7 @@ class ManagerNomenclatures extends Component
             $manager = new ImageManager(Driver::class);
 
             $processedImage = $manager->read($this->image)
-                ->resize(1024, null)
+                ->resize(1024)
                 ->toWebp(quality: 60);
 
             $imagePath = '/images/nomenclatures/' . Auth::id();
@@ -170,7 +168,7 @@ class ManagerNomenclatures extends Component
 
         // Добавляем в локальный массив для отображения
         $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
-        $this->dispatch('nomenclature-updated');
+        $this->dispatch('nomenclature-updated')->self();
         $this->reset('newNomenclature');
         $this->dispatch('showNotification', 'success', 'New nomenclature created successfully');
         $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $validatedData['newNomenclature']);

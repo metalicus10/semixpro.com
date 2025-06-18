@@ -76,10 +76,17 @@
         submitNomenclature() {
             $wire.call('addNomenclature', this.newNomenclature)
                 .then(() => {
+                    console.log($wire.errors);
                     this.resetForm();
                     this.showModal = false;
                     this.duplicateNameError = null;
                     this.duplicateNnError = null;
+                })
+                .catch(error => {
+                    // Если сервер бросил Exception (выше)
+                    if (error.message === 'nomenclature-name-duplicate') {
+                        // Тут ничего не сбрасываем — покажется сообщение из эвента
+                    }
                 });
         },
         openNomenclatureModal(mode, nomenclature = null) {
@@ -106,7 +113,9 @@
         resetForm() {
             this.editingNomenclature = null;
             this.nn = '';
+            this.newNomenclature.nn = '';
             this.name = '';
+            this.newNomenclature.name = '';
             this.category_id = '';
             this.supplier_id = '';
             this.image = null;
@@ -249,7 +258,7 @@
         <!-- Список номенклатур -->
         <template x-if="mode === 'alpine'">
             <template x-if="nomenclatures && nomenclatures.length > 0"
-                      @nomenclature-updated.window="(event) => {
+                @nomenclature-updated.window="(event) => {
                     const id = event.detail[0];
                     const nomenclature = nomenclatures.find(n => n.id === id);
 
@@ -257,7 +266,7 @@
                         nomenclature.is_archived = 1;
                     }
                 }"
-                      @bulk-nomenclature-updated.window="handleBulkUpdate($event)"
+                @bulk-nomenclature-updated.window="handleBulkUpdate($event)"
             >
                 <template x-for="nomenclature in filteredNomenclatures" :key="nomenclature.id">
                     <div x-data="{
@@ -343,7 +352,7 @@
                              x-transition:leave="transition ease-in duration-300"
                              x-transition:leave-start="opacity-100 transform scale-100"
                              x-transition:leave-end="opacity-0 transform scale-90"
-                             class="grid grid-cols-8 w-full content-center items-center text-sm border-b dark:border-gray-800 dark:text-gray-300 py-1 max-h-[105px] hover:bg-[#0d1829] transition-colors duration-300 ease-in-out"
+                             class="grid grid-cols-8 w-full content-center items-center text-sm border-b dark:border-gray-800 dark:text-gray-300 py-1 max-h-[70px] hover:bg-[#0d1829] transition-colors duration-300 ease-in-out"
                              :class="highlightedNomenclatures.includes(nomenclature.id) ? 'highlighted' : ''"
                         >
                             <!-- Checkbox -->
@@ -430,7 +439,7 @@
                                         <!-- Отображение названия -->
                                         <div x-show="!editing || editField !== 'name'" @click="initField('name')"
                                              class="cursor-pointer hover:underline text-gray-800 dark:text-gray-200">
-                                            <div class="max-h-[90px] flex flex-col items-center justify-start overflow-auto px-1">
+                                            <div class="max-h-[70px] flex flex-col items-center justify-start overflow-auto px-1">
                                                 <div x-text="nomenclature.name" class="break-all max-w-full text-left leading-snug"></div>
                                             </div>
                                         </div>
@@ -636,7 +645,7 @@
                                      x-on:livewire-upload-error="isUploading = false"
                                      x-on:livewire-upload-progress="uploadProgress = $event.detail.progress"
                                      x-cloak class="flex gallery relative">
-                                    <div class="flex flex-row w-auto max-w-[120px] max-h-[80px]">
+                                    <div class="flex flex-row w-auto justify-center max-w-[120px] max-h-[65px]">
                                         <template
                                             x-if="nomenclature && typeof nomenclature.image === 'string' && nomenclature.image.trim() !== ''">
                                             <img
