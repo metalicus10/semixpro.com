@@ -1,4 +1,4 @@
-<div class="p-2 md:p-4 bg-white dark:bg-gray-900 shadow-md rounded-lg overflow-hidden"
+<div class="p-2 md:p-4 bg-white dark:bg-gray-900 rounded-lg overflow-hidden"
      x-data="{
         nomenclatures: @js($nomenclatures) || [],
         localNomenclatures: [],
@@ -76,7 +76,7 @@
         submitNomenclature() {
             $wire.call('addNomenclature', this.newNomenclature)
                 .then(() => {
-                    console.log($wire.errors);
+                    this.nomenclatures = $wire.nomenclatures;
                     this.resetForm();
                     this.showModal = false;
                     this.duplicateNameError = null;

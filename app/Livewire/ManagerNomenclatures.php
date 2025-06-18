@@ -105,13 +105,9 @@ class ManagerNomenclatures extends Component
         $this->dispatch('refreshBrandSelect');
     }
 
-    /**
-     * @throws \Exception
-     */
     public function addNomenclature()
     {
         //dd($this->newNomenclature);
-        logger('Вызван метод addNomenclature');
         $validatedData = $this->validate([
             'newNomenclature.nn'         => 'required|string|max:10|unique:nomenclatures,nn',
             'newNomenclature.name'       => 'required|string|max:191',
@@ -167,11 +163,12 @@ class ManagerNomenclatures extends Component
         $nomenclature = Nomenclature::create($validatedData['newNomenclature']);
 
         // Добавляем в локальный массив для отображения
-        $this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
-        $this->dispatch('nomenclature-updated')->self();
+        //$this->nomenclatures = Nomenclature::where('manager_id', Auth::id())->get()->toArray();
+        $this->updateNomenclatures();
         $this->reset('newNomenclature');
         $this->dispatch('showNotification', 'success', 'New nomenclature created successfully');
         $this->WriteActionLog('add', 'nomenclature', $nomenclature->id, $validatedData['newNomenclature']);
+        //dd($this->nomenclatures);
     }
 
     public function clearValidationErrors()
@@ -190,7 +187,7 @@ class ManagerNomenclatures extends Component
         unset($changes['updated_at']); // Убираем техническое поле
 
         if (!empty($changes)) {
-            $nomenclature = NomenclatureVersion::create([
+            NomenclatureVersion::create([
                 'nomenclature_id' => $this->editingNomenclature->id,
                 'changes' => json_encode($changes),
                 'user_id' => auth()->id(),
