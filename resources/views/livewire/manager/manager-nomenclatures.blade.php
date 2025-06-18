@@ -1,4 +1,4 @@
-<div class="p-2 md:p-4 bg-white dark:bg-gray-900 rounded-lg overflow-hidden"
+<div class="p-2 md:p-4 bg-white dark:bg-gray-900 rounded-lg"
      x-data="{
         nomenclatures: @js($nomenclatures) || [],
         localNomenclatures: [],
@@ -234,11 +234,11 @@
     </div>
 
     <!-- Таблица с номенклатурами -->
-    <div class="bg-[#1a2433] rounded-lg shadow-lg overflow-x-auto">
+    <div class="bg-[#1a2433] rounded-lg shadow-lg">
         <!-- Заголовки -->
         <div
             class="hidden md:grid grid-cols-8 w-full content-center items-center text-left text-sm font-semibold text-gray-700 uppercase bg-gray-50 border-b
-            dark:bg-[#1a2433] dark:text-gray-400 dark:border-gray-600">
+            dark:bg-[#1a2433] dark:text-gray-400 dark:border-gray-600 sticky top-0 z-10">
             <div class="w-1/8 p-4 text-left">
                 <input type="checkbox"
                        @click="toggleCheckAll($event)"
@@ -255,6 +255,7 @@
             <div class="w-2/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Действия</div>
         </div>
 
+        <div class=" overflow-y-auto">
         <!-- Список номенклатур -->
         <template x-if="mode === 'alpine'">
             <template x-if="nomenclatures && nomenclatures.length > 0"
@@ -717,6 +718,7 @@
                 ></div>
             </template>
         </template>
+        </div>
         <template x-if="mode === 'livewire'">
             <template x-for="nomenclature in serverNomenclatures" :key="nomenclature.id">
                 <div x-text="nomenclature.name"></div>

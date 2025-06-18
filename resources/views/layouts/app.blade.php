@@ -16,7 +16,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-screen bg-background font-sans antialiased">
+<body class="bg-background font-sans antialiased">
 <div x-data="() => ({
         currentTab: localStorage.getItem('activeSideTab') || 'nomenclatures',
         role: 'manager',
@@ -37,7 +37,7 @@
                 localStorage.setItem('activeSideTab', this.currentTab);
             }
         },
-    })" x-init="setDefaultTabForRole()">
+    })" x-init="setDefaultTabForRole()" class="h-5/6 overflow-hidden">
     <section
         class="top-0 z-50 relative w-full border-b border-gray-200 dark:border-gray-600 dark:bg-brand-background border-brand-border">
         <div class="flex items-center justify-between py-3 px-6 lg:px-5 lg:pl-3">
@@ -284,7 +284,7 @@
             </div>
         </div>
     </section>
-    <div class="flex flex-row w-full min-h-screen">
+    <div class="flex flex-row w-full ">
 
         <aside id="logo-sidebar" :class="{'translate-x-0': showSidebar, '-translate-x-full': !showSidebar}"
                class="left-0 pt-5 z-40 w-48 h-screen transition-transform -translate-x-full border-r border-gray-200 sm:translate-x-0 dark:bg-brand-background dark:border-gray-700"
@@ -438,7 +438,7 @@
             </div>
         </aside>
 
-        <div class="flex-1 m-1 p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900">
+        <div class="overflow-hidden flex-1 m-1 p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900">
             <livewire:notification/>
             {{ $slot }}
         </div>
