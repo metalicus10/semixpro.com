@@ -34,6 +34,10 @@
     [type="checkbox"], [type="radio"]{
         color: hsl(var(--accent));
     }
+    .no-scroll {
+        height: 100vh;
+        overflow: hidden;
+    }
 }
 
 /* {

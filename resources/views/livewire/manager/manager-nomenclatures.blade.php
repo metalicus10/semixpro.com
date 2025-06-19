@@ -255,7 +255,6 @@
             <div class="w-2/8 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Действия</div>
         </div>
 
-        <div class=" overflow-y-auto">
         <!-- Список номенклатур -->
         <template x-if="mode === 'alpine'">
             <template x-if="nomenclatures && nomenclatures.length > 0"
@@ -718,7 +717,6 @@
                 ></div>
             </template>
         </template>
-        </div>
         <template x-if="mode === 'livewire'">
             <template x-for="nomenclature in serverNomenclatures" :key="nomenclature.id">
                 <div x-text="nomenclature.name"></div>
