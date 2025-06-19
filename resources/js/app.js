@@ -2,6 +2,8 @@ import './bootstrap';
 import 'flowbite';
 import * as simpleDatatables from "simple-datatables";
 import Chart from 'chart.js/auto';
+import interact from 'interactjs';
+window.interact = interact;
 
 if (document.getElementById("search-table") && typeof simpleDatatables.DataTable !== 'undefined') {
     const dataTable = new simpleDatatables.DataTable("#search-table", {

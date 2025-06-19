@@ -266,6 +266,28 @@
                             </button>
                         </div>
                     </div>
+                    <div class="relative inline-block">
+                        <div class="flex items-center cursor-pointer">
+                            <button @click="setTab('manager-schedule')"
+                                    x-bind:class="currentTab === 'manager-schedule' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : ''"
+                                    class="justify-center text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none
+                                    focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50
+                                    hover:bg-accent hover:text-accent-foreground h-9 rounded-md flex items-center px-3 py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor"
+                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                     class="lucide lucide-file-text h-5 w-5"
+                                >
+                                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path>
+                                    <path d="M14 2v4a2 2 0 0 0 2 2h4"></path>
+                                    <path d="M10 9H8"></path>
+                                    <path d="M16 13H8"></path>
+                                    <path d="M16 17H8"></path>
+                                </svg>
+                                <span class="ml-2">Schedule</span>
+                            </button>
+                        </div>
+                    </div>
                 @endif
             </nav>
 

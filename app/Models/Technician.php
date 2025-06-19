@@ -22,4 +22,10 @@ class Technician extends Authenticatable
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function tasks()
+    {
+        return $this->hasMany(Tasks::class);
+    }
+
 }
