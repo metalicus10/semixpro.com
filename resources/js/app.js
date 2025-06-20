@@ -2,6 +2,8 @@ import './bootstrap';
 import 'flowbite';
 import * as simpleDatatables from "simple-datatables";
 import Chart from 'chart.js/auto';
+import dayjs from "dayjs";
+window.dayjs = dayjs;
 import interact from 'interactjs';
 window.interact = interact;
 
