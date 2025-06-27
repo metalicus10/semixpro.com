@@ -10,7 +10,7 @@
         {{-- Уровень запасов --}}
         <livewire:stock-level/>
         {{-- Популярные товары --}}
-        @include('livewire.manager.dashboard.popular-items')
+        <livewire:popular-items/>
     </div>
 
     {{-- Общие показатели --}}

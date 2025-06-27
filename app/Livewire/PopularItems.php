@@ -24,24 +24,27 @@ class PopularItems extends Component
     {
         // Топ-5 запчастей по количеству в order_items
         $this->popularParts = Part::select('parts.*')
-            ->withCount(['orderItems as orders' => function ($q) {
-                $q->select(DB::raw('count(*)'));
-            }])
+            ->withCount([
+                'orderItems as orders' => function ($q) {
+                    $q->select(DB::raw('count(*)'))->where('item_type', 'part');
+                }
+            ])
             ->orderByDesc('orders')
             ->take(5)
             ->get()
-            ->map(function($part) {
+            ->map(function ($part) {
                 return [
-                    'id'        => $part->id,
-                    'name'      => $part->name,
-                    'image'     => $part->image,
-                    'category'  => optional($part->category)->name,
-                    'stock'     => $part->quantity,
-                    'available' => $part->total,
-                    'variants'  => 6, // Тут динамика, если надо
-                    'orders'    => $part->orders,
+                    'id'       => $part->id,
+                    'name'     => $part->name,
+                    'image'    => $part->image,
+                    'category' => optional($part->category)->name,
+                    'stock'    => $part->quantity,
+                    'available'=> $part->total,
+                    'variants' => 6, // динамика если надо
+                    'orders'   => $part->orders,
                 ];
-            })->toArray();
+            })
+            ->toArray();
     }
 
     public function loadPopularServices()
@@ -49,7 +52,7 @@ class PopularItems extends Component
         // Топ-5 услуг по количеству в order_items
         $this->popularServices = Service::select('services.*')
             ->withCount(['orderItems as orders' => function ($q) {
-                $q->select(DB::raw('count(*)'));
+                $q->select(DB::raw('count(*)'))->where('item_type', 'service');
             }])
             ->orderByDesc('orders')
             ->take(5)

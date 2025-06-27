@@ -95,4 +95,10 @@ class Part extends Model
     {
         return $this->belongsTo(Nomenclature::class, 'nomenclature_id');
     }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'item_id')->where('item_type', 'part');
+    }
+
 }

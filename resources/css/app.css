@@ -38,6 +38,24 @@
         height: 100vh;
         overflow: hidden;
     }
+    .day-left-border::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background-color: theme('colors.gray.700');
+        z-index: 10;
+    }
+    .day-right-border::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background-color: theme('colors.gray.700');
+        z-index: 10;
+    }
 }
 
 /* {
