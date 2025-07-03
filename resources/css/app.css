@@ -56,6 +56,28 @@
         background-color: theme('colors.gray.700');
         z-index: 10;
     }
+    ::-webkit-scrollbar {
+        height: 12px; /* высота горизонтального */
+        width: 12px;  /* для вертикального */
+        background: #f4f5f7; /* фон полосы */
+        border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #a0aec0; /* цвет ползунка */
+        border-radius: 8px;
+        border: 2px solid #f4f5f7; /* чтобы ползунок не "прилипал" к краям */
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #718096;
+    }
+    ::-webkit-scrollbar-track {
+        background: #f4f5f7; /* фон трека */
+        border-radius: 8px;
+    }
+    * {
+        scrollbar-color: #a0aec0 #f4f5f7;
+        scrollbar-width: thin; /* "auto" | "thin" | "none" */
+    }
 }
 
 /* {

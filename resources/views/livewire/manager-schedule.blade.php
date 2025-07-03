@@ -60,6 +60,7 @@
             goToday() {
                 this.setWeek(dayjs());
                 this.viewDate = dayjs().startOf('day');
+                this.scrollToToday();
             },
             isToday(d) {
                 return d.isSame(dayjs(), 'day');
@@ -289,6 +290,7 @@
             },
             addItem(type) {
                 this.jobModalForm.items.push({
+                    id: Date.now() + Math.random(),
                     name: '', qty: 1, unit_price: 0, unit_cost: 0, tax: false, description: '', type
                 });
             },
@@ -306,15 +308,22 @@
             formatMoney(val) {
                 return '$' + Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             },
-            removeItem(index) {
-                this.jobModalForm.items.splice(index, 1);
+            removeItem(id) {
+                this.jobModalForm.items = this.jobModalForm.items.filter(item => item.id !== id);
             },
-
-}" x-init="init(@js($employees))">
-    <div x-ref="mainGrid"
-         class="select-none bg-white text-sm text-gray-900 relative overflow-x-auto">
-
-        <div class="flex items-center gap-2 bg-white px-4 py-2 sticky top-0 z-20">
+            scrollToToday() {
+                this.$nextTick(() => {
+                    const todayCol = document.getElementById('today-column');
+                    const grid = this.$refs.mainGrid;
+                    if (todayCol && grid) {
+                        // todayCol.offsetLeft - положение столбца
+                        grid.scrollLeft = todayCol.offsetLeft - 0;
+                    }
+                });
+            }
+}" x-init="init(@js($employees)); scrollToToday();">
+    <div class="select-none bg-white text-sm text-gray-900">
+        <div class="flex items-center gap-2 bg-white px-4 py-2 sticky top-0 z-30">
             <button @click="prevWeek" class="px-2 py-1 rounded hover:bg-gray-100 text-xl">&larr;</button>
             <button @click="goToday" class="border px-3 py-1 rounded bg-white hover:bg-gray-50 font-medium">Today
             </button>
@@ -325,474 +334,500 @@
                 <span x-text="weekStart.add(6, 'day').format('MMMM DD, YYYY')"></span>
             </div>
         </div>
-
-        <!-- Временная шкала -->
-        <div class="sticky top-0 z-10 bg-white">
-            <div class="flex">
-                <div class="w-[60px] h-[85px] flex-shrink-0 flex flex-col">
-                    <!-- Первая строка: для выравнивания по высоте с датой -->
-                    <div class="w-[60px] h-[37px] bg-gray-50"></div>
-                    <!-- Вторая строка: временной пояс, прижат вниз -->
-                    <div class="w-[60px] h-[48px] bg-gray-50 flex items-end justify-center text-[11px] font-thin">
-                        GMT-04
-                    </div>
+        <!-- Sticky колонка -->
+        <div
+            class="absolute left-[10px] z-30 bg-white w-[60px] h-[206px] flex-shrink-0 flex flex-col border-y border-gray-400">
+            <!-- GMT и техники -->
+            <div class="w-[60px] h-[85px] flex-shrink-0 flex items-end justify-center bg-gray-50 text-[11px] font-thin">
+                GMT-04
+            </div>
+            <template x-for="employee in employees" :key="employee.id">
+                <div
+                    class="w-[60px] h-[64px] sticky left-0 z-10 flex-shrink-0 flex flex-col justify-center items-center gap-1 px-2 border-t border-gray-400 bg-white"
+                    x-ref="techRow">
+                    <span x-text="employee.name" class="text-gray-800 text-[11px]"></span>
+                    <template x-if="employee.avatar">
+                        <img :src="employee.avatar" class="w-8 h-8 rounded-full" alt=""/>
+                    </template>
+                    <template x-if="!employee.avatar">
+                        <div
+                            class="w-8 h-8 rounded-full bg-gray-300 text-xs font-semibold flex items-center justify-center">
+                            <span x-text="initials(employee.name)"></span>
+                        </div>
+                    </template>
                 </div>
-                <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
-                    <div class="text-start border-y border-gray-400 day-right-border w-[640px]"
-                         :class="{
+            </template>
+        </div>
+        <div class="select-none bg-white text-sm text-gray-900 relative overflow-x-auto pl-15 pb-2" x-ref="mainGrid">
+            <!-- Временная шкала -->
+            <div class="sticky top-0 z-10 bg-white">
+                <div class="flex">
+                    <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
+                        <div :id="d.isSame(dayjs(), 'day') ? 'today-column' : null"
+                             class="text-start border-y border-gray-400 day-right-border w-[640px] day-column"
+                             :class="{
                             'day-left-border': dayIdx !== 0,
                             'border-r border-gray-200': dayIdx % 1 !== 0,
                          }"
-                    >
-                        <div class="w-[640px] flex gap-1 items-baseline px-3 py-1 border-b border-gray-400">
-                            <div class="text-xl font-medium" x-text="d.format('D')"></div>
-                            <div class="text-xs font-thin" x-text="d.format('ddd')"></div>
-                        </div>
-                        <div class="flex w-[640px]">
-                            <div class="grid grid-cols-16 w-[640px] divide-x divide-gray-200">
-                                <template x-for="i in 16" :key="i">
-                                    <div class="h-12 w-[40px] text-[11px] font-thin flex items-center justify-center">
-                                        <span x-text="formatHour(i + 5)"></span>
-                                    </div>
-                                </template>
+                        >
+                            <div class="w-[640px] flex gap-1 items-baseline px-3 py-1 border-b border-gray-400">
+                                <div class="text-xl font-medium" x-text="d.format('D')"></div>
+                                <div class="text-xs font-thin" x-text="d.format('ddd')"></div>
+                            </div>
+                            <div class="flex w-[640px]">
+                                <div class="grid grid-cols-16 w-[640px] divide-x divide-gray-200">
+                                    <template x-for="i in 16" :key="i">
+                                        <div
+                                            class="h-12 w-[40px] text-[11px] font-thin flex items-center justify-center">
+                                            <span x-text="formatHour(i + 5)"></span>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
-        </div>
 
-        <!-- Основная сетка -->
-        <div x-data="{
+            <!-- Основная сетка -->
+            <div x-data="{
                 slotHeight: 0,
                 setSlotHeight() {
                     this.$nextTick(() => {
                         this.slotHeight = this.$refs.techRow?.offsetHeight || 24;
                     });
                 }
-            }" x-init="setSlotHeight()" @resize.window="setSlotHeight" class="flex w-[4540px]">
-            <!-- Сетка и задачи -->
-            <div class="flex flex-col relative w-[4540px]">
-                <template x-for="employee in employees" :key="employee.id">
-                    <div class="flex flex-row relative min-h-[68px] border-gray-100">
-                        <!-- Техники -->
-                        <!-- Левый столбец — имя/аватар -->
-                        <div
-                            class="w-[60px] flex-shrink-0 flex flex-col justify-center items-center gap-1 px-2 border-r border-gray-100 bg-white"
-                            x-ref="techRow">
-                            <span x-text="employee.name" class="text-gray-800 text-[11px]"></span>
-                            <template x-if="employee.avatar">
-                                <img :src="employee.avatar" class="w-8 h-8 rounded-full" alt=""/>
-                            </template>
-                            <template x-if="!employee.avatar">
-                                <div
-                                    class="w-8 h-8 rounded-full bg-gray-300 text-xs font-semibold flex items-center justify-center">
-                                    <span x-text="initials(employee.name)"></span>
-                                </div>
-                            </template>
-                        </div>
-                        <!-- Правая часть — сетка и задачи -->
-                        <div id="mainGrid" class="relative">
-                            <template x-if="selection && selection.technician_id === employee.id">
-                                <div
-                                    class="absolute bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
-                                    :style="selectionHighlightStyle(employee)"
-                                >
-                                    <!-- Время с - по -->
+            }" x-init="setSlotHeight()" @resize.window="setSlotHeight" class="flex w-[4480px]">
+                <!-- Сетка и задачи -->
+                <div class="flex flex-col relative w-[4480px]">
+                    <template x-for="employee in employees" :key="employee.id">
+                        <div class="flex flex-row relative min-h-[64px] border-gray-100">
+                            <!-- Правая часть — сетка и задачи -->
+                            <div id="mainGrid" class="relative">
+                                <template x-if="selection && selection.technician_id === employee.id">
                                     <div
-                                        class="absolute left-1 top-1 text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
-                                        x-text="selectionTimeRange"></div>
-                                </div>
-                            </template>
-                            <!-- Сетка 30-минутных слотов -->
-                            <div :style="`width: 640px; height: 100%; position: relative;`">
-                                <template x-for="(col, index) in 224" :key="index">
-                                    <div class="absolute top-0 bottom-0 border-r border-gray-100 w-[20px]"
-                                         :class="{
+                                        class="absolute bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
+                                        :style="selectionHighlightStyle(employee)"
+                                    >
+                                        <!-- Время с - по -->
+                                        <div
+                                            class="absolute left-1 top-1 text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
+                                            x-text="selectionTimeRange"></div>
+                                    </div>
+                                </template>
+                                <!-- Сетка 30-минутных слотов -->
+                                <div :style="`width: 640px; height: 100%; position: relative;`">
+                                    <template x-for="(col, index) in 224" :key="index">
+                                        <div class="absolute top-0 bottom-0 border-r border-gray-100 w-[20px]"
+                                             :class="{
                                             [slotClass(index, employee)]: true,
                                             'border-l-2 border-gray-100': index % 32 === 0,
                                             'border-l-2 border-gray-700': index % 32 === 0,
                                             'border-r border-gray-100': index % 32 !== 0,
                                          }"
-                                         :style="`left: ${index * 20}px; width: 20px; height: ${slotHeight}px;`, selectionHighlightStyle(employee)"
-                                         @click="
+                                             :style="`left: ${index * 20}px; width: 20px; height: ${slotHeight}px;`, selectionHighlightStyle(employee)"
+                                             @click="
                                             if (!selection || selection.technician_id !== employee.id || !selectionSlots.includes(index)) {
                                                 clearSelection();
                                                 selectSlot(index, employee.id);
                                             }"
-                                         @mousedown.prevent="
+                                             @mousedown.prevent="
                                             if ($event.button === 0) {
                                                 clearSelection();
                                                 selectSlot(index, employee.id);
                                             }"
-                                         @mouseover="if ($event.buttons === 1) selectSlot(index, employee.id)"
-                                         @contextmenu.prevent="showContextMenu($event, index, employee.id)"
-                                         @touchstart.passive="startLongpress($event, index, employee.id)"
-                                         @touchend="cancelLongpress()"
+                                             @mouseover="if ($event.buttons === 1) selectSlot(index, employee.id)"
+                                             @contextmenu.prevent="showContextMenu($event, index, employee.id)"
+                                             @touchstart.passive="startLongpress($event, index, employee.id)"
+                                             @touchend="cancelLongpress()"
+                                        >
+                                        </div>
+                                    </template>
+                                </div>
+                                <!-- Задачи -->
+                                <template x-for="task in employee.tasks" :key="task.id">
+                                    <div
+                                        class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
+                                        :style="taskPosition(task)"
+                                        x-init="$nextTick(() => registerDraggable($el, task))"
                                     >
+                                        <div class="font-semibold truncate" x-text="task.title"></div>
+                                        <div class="text-[11px] opacity-80"
+                                             x-text="formatRange(task.start_time, task.end_time)"></div>
                                     </div>
                                 </template>
                             </div>
-                            <!-- Задачи -->
-                            <template x-for="task in employee.tasks" :key="task.id">
-                                <div
-                                    class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
-                                    :style="taskPosition(task)"
-                                    x-init="$nextTick(() => registerDraggable($el, task))"
-                                >
-                                    <div class="font-semibold truncate" x-text="task.title"></div>
-                                    <div class="text-[11px] opacity-80"
-                                         x-text="formatRange(task.start_time, task.end_time)"></div>
-                                </div>
-                            </template>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
         </div>
-    </div>
-    <!-- Контекстное меню -->
-    <div
-        x-show="menuVisible"
-        @click.away="closeMenu()"
-        class="absolute z-[9999] bg-white shadow border rounded w-40"
-        :style="`top: ${menuY}px; left: ${menuX}px;`"
-    >
-        <button
-            @click="openJobModal('job'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+        <!-- Контекстное меню -->
+        <div
+            x-show="menuVisible"
+            @click.away="closeMenu()"
+            class="absolute z-[9999] bg-white shadow border rounded w-40"
+            :style="`top: ${menuY}px; left: ${menuX}px;`"
         >
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
-                <path d="M10 17v-3m4 3v-3m2-4h-8m4-6v2m0 0V3m0 2.5l.91 2.27m0 0a5.75 5.75 0 1 1-5.82 0"/>
-            </svg>
-            <span class="font-medium">+Job</span>
-        </button>
-        <button
-            @click="openJobModal('estimate'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
-                <path d="M8 9h8M8 13h6" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            <span class="font-medium">+Estimate</span>
-        </button>
-        <button
-            @click="openJobModal('event'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <rect x="3" y="4" width="18" height="18" rx="3" stroke-width="1.5" stroke="currentColor"/>
-                <path d="M7 8h10M12 13v5" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            <span class="font-medium">+Event</span>
-        </button>
-    </div>
+            <button
+                @click="openJobModal('job'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" stroke-width="1.5"
+                     viewBox="0 0 24 24">
+                    <path d="M10 17v-3m4 3v-3m2-4h-8m4-6v2m0 0V3m0 2.5l.91 2.27m0 0a5.75 5.75 0 1 1-5.82 0"/>
+                </svg>
+                <span class="font-medium">+Job</span>
+            </button>
+            <button
+                @click="openJobModal('estimate'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="4" y="5" width="16" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M8 9h8M8 13h6" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                <span class="font-medium">+Estimate</span>
+            </button>
+            <button
+                @click="openJobModal('event'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="3" y="4" width="18" height="18" rx="3" stroke-width="1.5" stroke="currentColor"/>
+                    <path d="M7 8h10M12 13v5" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+                <span class="font-medium">+Event</span>
+            </button>
+        </div>
 
-    <div>
-        <div x-show="jobModalOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-            <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
-                <div class="flex justify-between items-center border-b pb-4 mb-6">
-                    <h2 class="text-xl font-semibold">New job</h2>
-                    <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
-                    </button>
-                </div>
-
-                <div class="flex flex-col lg:flex-row gap-6">
-                    <!-- Left Column -->
-                    <div class="w-full lg:w-1/3 space-y-6">
-                        <div class="bg-gray-50 rounded-lg border p-4">
-                            <div class="font-medium text-sm mb-1 flex items-center gap-1">
-                                <svg class="w-4 h-4"/>
-                                Customer
-                            </div>
-                            <input type="text" x-model="jobModalForm.customer_query"
-                                   class="w-full rounded px-2 py-1 text-sm border"
-                                   placeholder="Name, email, phone, or address"/>
-                            <button type="button" class="text-blue-600 text-xs mt-2"
-                                    @click="showAddCustomerModal = true">+
-                                New customer
-                            </button>
-                        </div>
-
-                        <!-- Schedule -->
-                        <div class="border p-4 rounded space-y-4">
-                            <label class="block text-sm font-medium">Schedule</label>
-                            <div class="flex flex-col gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-500">From</label>
-                                    <input type="datetime-local" x-model="jobModalForm.schedule_from"
-                                           class="w-full border rounded px-3 py-2 text-sm">
-                                </div>
-                                <div>
-                                    <label class="text-xs text-gray-500">To</label>
-                                    <input type="datetime-local" x-model="jobModalForm.schedule_to"
-                                           class="w-full border rounded px-3 py-2 text-sm">
-                                </div>
-                                <div class="text-xs text-gray-500">Timezone: EDT</div>
-                            </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Dispatch</label>
-                                <input type="text" x-model="jobModalForm.dispatch" placeholder="Dispatch by name or tag"
-                                       class="w-full border rounded px-3 py-2 text-sm">
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
-                                <label class="text-sm">Notify customer</label>
-                            </div>
-                        </div>
+        <div>
+            <div x-show="jobModalOpen"
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
+                    <div class="flex justify-between items-center border-b pb-4 mb-6">
+                        <h2 class="text-xl font-semibold">New job</h2>
+                        <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
+                        </button>
                     </div>
 
-                    <!-- Center Column -->
-                    <div class="w-full lg:w-2/3 space-y-6">
-                        <div class="border p-4 rounded">
-                            <label class="block text-sm font-medium mb-2">Job items</label>
-                            <!-- Services -->
-                            <button
-                                @click="addItem('service')"
-                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                                type="button"
-                            >
-                                + Add service
-                            </button>
-                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
-                                      :key="index">
-                                <div class="mb-4 space-y-2 border-b pb-2">
-                                    <div class="flex flex-row justify-between w-full">
-                                        <div class="flex w-4/5">
-                                            <!-- Drag-handle, если нужен -->
-                                            <div class="flex items-start text-gray-400 cursor-move">
-                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                     viewBox="0 0 24 24">
-                                                    <circle cx="5" cy="7" r="1.5"/>
-                                                    <circle cx="5" cy="12" r="1.5"/>
-                                                    <circle cx="5" cy="17" r="1.5"/>
-                                                    <circle cx="12" cy="7" r="1.5"/>
-                                                    <circle cx="12" cy="12" r="1.5"/>
-                                                    <circle cx="12" cy="17" r="1.5"/>
-                                                </svg>
-                                            </div>
+                    <div class="flex flex-col lg:flex-row gap-6">
+                        <!-- Left Column -->
+                        <div class="w-full lg:w-1/3 space-y-6">
+                            <div class="bg-gray-50 rounded-lg border p-4">
+                                <div class="font-medium text-sm mb-1 flex items-center gap-1">
+                                    <svg class="w-4 h-4"/>
+                                    Customer
+                                </div>
+                                <input type="text" x-model="jobModalForm.customer_query"
+                                       class="w-full rounded px-2 py-1 text-sm border"
+                                       placeholder="Name, email, phone, or address"/>
+                                <button type="button" class="text-blue-600 text-xs mt-2"
+                                        @click="showAddCustomerModal = true">+
+                                    New customer
+                                </button>
+                            </div>
 
-                                            <!-- Service fields (имя, qty, price и т.д.) -->
-                                            <div class="flex flex-col bg-white rounded w-full ">
-                                                <div class="flex gap-2 mb-2 w-full">
+                            <!-- Schedule -->
+                            <div class="border p-4 rounded space-y-4">
+                                <label class="block text-sm font-medium">Schedule</label>
+                                <div class="flex flex-col gap-2">
+                                    <div>
+                                        <label class="text-xs text-gray-500">From</label>
+                                        <input type="datetime-local" x-model="jobModalForm.schedule_from"
+                                               class="w-full border rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500">To</label>
+                                        <input type="datetime-local" x-model="jobModalForm.schedule_to"
+                                               class="w-full border rounded px-3 py-2 text-sm">
+                                    </div>
+                                    <div class="text-xs text-gray-500">Timezone: EDT</div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500">Dispatch</label>
+                                    <input type="text" x-model="jobModalForm.dispatch"
+                                           placeholder="Dispatch by name or tag"
+                                           class="w-full border rounded px-3 py-2 text-sm">
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
+                                    <label class="text-sm">Notify customer</label>
+                                </div>
+                            </div>
+                        </div>
 
-                                                    <!-- Service Name + Tax -->
-                                                    <div class="flex-1 flex flex-col w-3/5">
-                                                        <label class="sr-only">Service name</label>
-                                                        <div class="relative flex items-center">
-                                                            <input x-model="item.name" type="text"
-                                                                   placeholder="Item name"
-                                                                   class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
-                                                            <label
-                                                                class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
-                                                                Tax
-                                                                <input type="checkbox" x-model="item.tax"
-                                                                       class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
-                                                            </label>
+                        <!-- Center Column -->
+                        <div class="w-full lg:w-2/3 space-y-6">
+                            <div class="border p-4 rounded">
+                                <label class="block text-sm font-medium mb-2">Job items</label>
+                                <!-- Services -->
+                                <button
+                                    @click="addItem('service')"
+                                    class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                    type="button"
+                                >
+                                    + Add service
+                                </button>
+                                <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
+                                          :key="item.id">
+                                    <div class="mb-4 space-y-2 border-b pb-2">
+                                        <div class="flex flex-row justify-between w-full">
+                                            <div class="flex w-4/5">
+                                                <!-- Drag-handle, если нужен -->
+                                                <div class="flex items-start text-gray-400 cursor-move">
+                                                    <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                         viewBox="0 0 24 24">
+                                                        <circle cx="5" cy="7" r="1.5"/>
+                                                        <circle cx="5" cy="12" r="1.5"/>
+                                                        <circle cx="5" cy="17" r="1.5"/>
+                                                        <circle cx="12" cy="7" r="1.5"/>
+                                                        <circle cx="12" cy="12" r="1.5"/>
+                                                        <circle cx="12" cy="17" r="1.5"/>
+                                                    </svg>
+                                                </div>
+
+                                                <!-- Service fields (имя, qty, price и т.д.) -->
+                                                <div class="flex flex-col bg-white rounded w-full ">
+                                                    <div class="flex gap-2 mb-2 w-full">
+
+                                                        <!-- Service Name + Tax -->
+                                                        <div class="flex-1 flex flex-col w-3/5">
+                                                            <label class="sr-only">Service name</label>
+                                                            <div class="relative flex items-center">
+                                                                <input x-model="item.name" type="text"
+                                                                       placeholder="Item name"
+                                                                       class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
+                                                                <label
+                                                                    class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
+                                                                    Tax
+                                                                    <input type="checkbox" x-model="item.tax"
+                                                                           class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="flex w-2/5 gap-1">
+                                                            <!-- Qty -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                       x-model="item.qty" type="number" step="1" min="0"
+                                                                       placeholder=" "
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`qty-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                    Qty
+                                                                </label>
+                                                            </div>
+
+                                                            <!-- Unit price -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                       x-model="item.unit_price" type="number"
+                                                                       step="0.01"
+                                                                       min="0"
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`uprice-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                    Unit price
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     </div>
-
-                                                    <div class="flex w-2/5 gap-1">
-                                                        <!-- Qty -->
-                                                        <div class="relative flex flex-col w-full">
-                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                                   x-model="item.qty" type="number" step="1" min="0"
-                                                                   placeholder=" "
-                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                            <label :for="`qty-${index}`"
-                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                                Qty
-                                                            </label>
+                                                    <!-- Вторая строка: Описание и Unit Cost -->
+                                                    <div class="flex gap-2 w-full">
+                                                        <div class="flex-1 w-3/5">
+                                                        <textarea x-model="item.description"
+                                                                  placeholder="Description (optional)" rows="1"
+                                                                  class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
                                                         </div>
-
-                                                        <!-- Unit price -->
-                                                        <div class="relative flex flex-col w-full">
-                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                                   x-model="item.unit_price" type="number" step="0.01"
+                                                        <div class="relative flex flex-col w-2/5">
+                                                            <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                                   type="number" step="0.1"
                                                                    min="0"
                                                                    class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                            <label :for="`uprice-${index}`"
+                                                            <label :for="`ucost-${index}`"
                                                                    class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                                Unit price
+                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Unit cost
                                                             </label>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <!-- Вторая строка: Описание и Unit Cost -->
-                                                <div class="flex gap-2 w-full">
-                                                    <div class="flex-1 w-3/5">
-                                                        <textarea x-model="item.description" placeholder="Description (optional)" rows="1"
-                                                                  class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
-                                                    </div>
-                                                    <div class="relative flex flex-col w-2/5">
-                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost" type="number" step="0.1"
-                                                               min="0"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`ucost-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit cost
-                                                        </label>
-                                                    </div>
-                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="flex flex-row items-start w-1/5">
-                                            <!-- Итоговая цена -->
-                                            <div class="p-2 text-right text-sm min-w-[70px]">
+                                            <div class="flex flex-row items-start w-1/5">
+                                                <!-- Итоговая цена -->
+                                                <div class="p-2 text-right text-sm min-w-[70px]">
                                                         <span
                                                             x-text="formatMoney(item.qty * item.unit_price || 0)"></span>
-                                            </div>
+                                                </div>
 
-                                            <!-- Удалить -->
-                                            <button @click="removeItem(index)"
-                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                    tabindex="-1">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                    <path d="M6 6l12 12M6 18L18 6"/>
-                                                </svg>
-                                            </button>
+                                                <!-- Удалить -->
+                                                <button @click="removeItem(item.id)"
+                                                        class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                        tabindex="-1">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                        <path d="M6 6l12 12M6 18L18 6"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </template>
+                                </template>
 
-                            <!-- Materials -->
-                            <button
-                                @click="addItem('material')"
-                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                                type="button"
-                            >
-                                + Add material
-                            </button>
-                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
-                                      :key="index">
-                                <div class="mb-4 space-y-2 border-b pb-2">
-                                    <!-- Material fields (имя, qty, price и т.д.) -->
-                                    <div class="bg-white border rounded mb-4 p-4">
-                                        <div class="flex gap-2 mb-2">
-                                            <!-- Drag-handle, если нужен -->
-                                            <div class="flex-shrink-0 flex items-center text-gray-400 cursor-move">
-                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                     viewBox="0 0 24 24">
-                                                    <circle cx="5" cy="7" r="1.5"/>
-                                                    <circle cx="5" cy="12" r="1.5"/>
-                                                    <circle cx="5" cy="17" r="1.5"/>
-                                                    <circle cx="12" cy="7" r="1.5"/>
-                                                    <circle cx="12" cy="12" r="1.5"/>
-                                                    <circle cx="12" cy="17" r="1.5"/>
-                                                </svg>
-                                            </div>
+                                <!-- Materials -->
+                                <button
+                                    @click="addItem('material')"
+                                    class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                    type="button"
+                                >
+                                    + Add material
+                                </button>
+                                <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
+                                          :key="item.id">
+                                    <div class="mb-4 space-y-2 border-b pb-2">
+                                        <!-- Material fields (имя, qty, price и т.д.) -->
+                                        <div class="flex flex-row justify-between w-full">
+                                            <div class="flex w-4/5">
+                                                <!-- Drag-handle, если нужен -->
+                                                <div class="flex items-start text-gray-400 cursor-move">
+                                                    <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                         viewBox="0 0 24 24">
+                                                        <circle cx="5" cy="7" r="1.5"/>
+                                                        <circle cx="5" cy="12" r="1.5"/>
+                                                        <circle cx="5" cy="17" r="1.5"/>
+                                                        <circle cx="12" cy="7" r="1.5"/>
+                                                        <circle cx="12" cy="12" r="1.5"/>
+                                                        <circle cx="12" cy="17" r="1.5"/>
+                                                    </svg>
+                                                </div>
 
-                                            <!-- Service Name + Tax -->
-                                            <div class="flex-1 flex flex-col">
-                                                <label class="sr-only">Service name</label>
-                                                <div class="relative flex items-center">
-                                                    <input x-model="item.name" type="text" placeholder="Item name"
-                                                           class="w-full border rounded px-3 py-2 text-sm pr-16"/>
-                                                    <label
-                                                        class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-gray-600 select-none cursor-pointer">
-                                                        Tax
-                                                        <input type="checkbox" x-model="item.tax"
-                                                               class="form-checkbox accent-blue-600 ml-1"/>
-                                                    </label>
+                                                <div class="flex flex-col bg-white rounded w-full ">
+                                                    <div class="flex gap-2 mb-2 w-full">
+
+                                                        <!-- Service Name + Tax -->
+                                                        <div class="flex-1 flex flex-col w-3/5">
+                                                            <label class="sr-only">Material name</label>
+                                                            <div class="relative flex items-center">
+                                                                <input x-model="item.name" type="text"
+                                                                       placeholder="Material name"
+                                                                       class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
+                                                                <label
+                                                                    class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
+                                                                    Tax
+                                                                    <input type="checkbox" x-model="item.tax"
+                                                                           class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
+                                                                </label>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="flex w-2/5 gap-1">
+                                                            <!-- Qty -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                       x-model="item.qty" type="number" step="1" min="0"
+                                                                       placeholder=" "
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`qty-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                    Qty
+                                                                </label>
+                                                            </div>
+
+                                                            <!-- Unit price -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                       x-model="item.unit_price" type="number"
+                                                                       step="0.01"
+                                                                       min="0"
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`uprice-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                    Unit price
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Вторая строка: Описание и Unit Cost -->
+                                                    <div class="flex gap-2 w-full">
+                                                        <div class="flex-1 w-3/5">
+                                                        <textarea x-model="item.description"
+                                                                  placeholder="Description (optional)" rows="1"
+                                                                  class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
+                                                        </div>
+                                                        <div class="relative flex flex-col w-2/5">
+                                                            <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                                   type="number" step="0.1"
+                                                                   min="0"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`ucost-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Unit cost
+                                                            </label>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <!-- Qty -->
-                                            <div class="relative flex flex-col w-20 ml-2">
-                                                <input :id="`qty-${index}`" :name="`name-${index}`" x-model="item.qty"
-                                                       type="number" step="1" min="0" placeholder=" "
-                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                <label :for="`qty-${index}`"
-                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                    Qty
-                                                </label>
-                                            </div>
-
-                                            <!-- Unit price -->
-                                            <div class="relative flex flex-col w-28 ml-2">
-                                                <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                       x-model="item.unit_price" type="number" step="0.01" min="0"
-                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                <label :for="`uprice-${index}`"
-                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                    Unit price
-                                                </label>
-                                            </div>
-
-                                            <!-- Итоговая цена -->
-                                            <div class="flex flex-col w-24 ml-2 items-center">
+                                            <div class="flex flex-row items-start w-1/5">
+                                                <!-- Итоговая цена -->
                                                 <div class="p-2 text-right text-sm min-w-[70px]">
-                                                    <span x-text="formatMoney(item.qty * item.unit_price || 0)"></span>
+                                                        <span
+                                                            x-text="formatMoney(item.qty * item.unit_price || 0)"></span>
                                                 </div>
-                                            </div>
 
-                                            <!-- Удалить -->
-                                            <button @click="removeItem(index)"
-                                                    class="flex ml-2 text-gray-400 items-start hover:text-red-500"
-                                                    tabindex="-1">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                    <path d="M6 6l12 12M6 18L18 6"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        <!-- Вторая строка: Описание и Unit Cost -->
-                                        <div class="flex gap-2">
-                                            <div class="flex-1">
-                                            <textarea x-model="item.description" placeholder="Description (optional)"
-                                                      class="w-full border rounded px-3 py-2 text-sm resize-none"></textarea>
-                                            </div>
-                                            <div class="flex flex-col w-32">
-                                                <label class="text-[11px] text-gray-500 font-semibold mb-0.5">Unit
-                                                    cost</label>
-                                                <input x-model="item.unit_cost" type="number" step="0.01" min="0"
-                                                       class="border rounded px-2 py-1 text-sm text-right"/>
+                                                <!-- Удалить -->
+                                                <button @click="removeItem(item.id)"
+                                                        class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                        tabindex="-1">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                        <path d="M6 6l12 12M6 18L18 6"/>
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
+                                </template>
+                            </div>
+
+                            <div class="border p-4 rounded space-y-4">
+                                <div class="flex justify-between text-sm">
+                                    <span>Subtotal</span>
+                                    <span x-text="subtotal()"></span>
                                 </div>
-                            </template>
-                        </div>
+                                <div class="flex justify-between text-sm">
+                                    <span>Tax</span>
+                                    <span x-text="taxTotal()"></span>
+                                </div>
+                                <div class="flex justify-between font-semibold text-base">
+                                    <span>Total</span>
+                                    <span x-text="total()"></span>
+                                </div>
+                            </div>
 
-                        <div class="border p-4 rounded space-y-4">
-                            <div class="flex justify-between text-sm">
-                                <span>Subtotal</span>
-                                <span x-text="subtotal()"></span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span>Tax</span>
-                                <span x-text="taxTotal()"></span>
-                            </div>
-                            <div class="flex justify-between font-semibold text-base">
-                                <span>Total</span>
-                                <span x-text="total()"></span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message</button>
-                            <template x-if="jobModalForm.message !== null">
+                            <div>
+                                <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
+                                </button>
+                                <template x-if="jobModalForm.message !== null">
                             <textarea x-model="jobModalForm.message"
                                       class="w-full border rounded mt-2 px-3 py-2 text-sm"
                                       placeholder="Add a message..."></textarea>
-                            </template>
+                                </template>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="flex justify-end mt-6">
-                    <button @click="$wire.call('saveJob', jobModalForm); jobModalOpen = false"
-                            class="bg-blue-600 text-white px-6 py-2 rounded">Save job
-                    </button>
+                    <div class="flex justify-end mt-6">
+                        <button @click="$wire.call('saveJob', jobModalForm); jobModalOpen = false"
+                                class="bg-blue-600 text-white px-6 py-2 rounded">Save job
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
