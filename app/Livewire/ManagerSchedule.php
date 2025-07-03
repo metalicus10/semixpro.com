@@ -6,6 +6,7 @@ use App\Models\Customer;
 use Illuminate\Console\View\Components\Task;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\On;
 use Livewire\Component;
 use App\Models\Technician;
 
@@ -38,21 +39,32 @@ class ManagerSchedule extends Component
         });
     }
 
+    #[On('createCustomer')]
     public function createCustomer($data)
     {
         try {
             $validated = Validator::make($data, [
-                'name' => 'required|string|max:255',
-                'email' => 'nullable|email|max:255|unique:customers,email',
-                'phone' => 'nullable|string|max:25|unique:customers,phone',
-                'address' => 'nullable|string|max:255',
-            ])->validate();
+                'name' => 'required|string|max:191',
+                'email' => 'nullable|email|max:191|unique:customers,email',
+                'phone' => 'required|string|max:25|unique:customers,phone',
+                'address' => 'nullable|string|max:191',
+            ])->after(function ($validator) use ($data) {
+                if (empty($data['phone'])) {
+                    $validator->errors()->add('contact', 'Phone is required.');
+                }
+            })->validate();
 
             $customer = Customer::create($validated);
 
-            $this->dispatchBrowserEvent('customer-created', ['name' => $customer->name]);
+            $this->dispatch('customer-created', [
+                'id'      => $customer->id,
+                'name'    => $customer->name,
+                'email'   => $customer->email,
+                'phone'   => $customer->phone,
+                'address' => $customer->address,
+            ]);
         } catch (ValidationException $e) {
-            $this->dispatchBrowserEvent('customer-validation-error', [
+            $this->dispatch('customer-validation-error', [
                 'errors' => $e->errors(),
             ]);
         }
