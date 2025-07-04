@@ -46,6 +46,10 @@
             this.showCustomerModal = false;
             this.customerError = '';
         });
+
+        window.addEventListener('search-customers-result', (results) => {
+            this.results = results;
+        });
     },
         setWeek(date) {
             this.weekStart = dayjs(date).startOf('week').add(1, 'day'); // Monday as start
@@ -280,7 +284,7 @@
                     return;
                 }
 
-                Livewire.dispatch('createCustomer', customer);
+                $wire.createCustomer(customer);
                 this.showAddCustomerModal = false;
                 this.jobModalForm.new_customer = { name: '', email: '', phone: '', address: '' };
             },
@@ -322,6 +326,27 @@
                         grid.scrollLeft = todayCol.offsetLeft - 0;
                     }
                 });
+            },
+            autocompleteCustomer() {
+                return {
+                    results: [],
+                    selectedCustomer: null,
+
+                    searchCustomers() {
+                        if (this.jobModalForm.customer_query.length < 2) {
+                            this.results = [];
+                            return;
+                        }
+                        $dispatch('searchCustomers', this.jobModalForm.customer_query);
+                        this.selectCustomer(this.jobModalForm.customer_query);
+                    },
+                    selectCustomer(customer) {
+                        this.jobModalForm.customer_query = customer.name + (customer.email ? ' ('+customer.email+')' : '');
+                        this.selectedCustomer = customer;
+                        this.showCustomerModal = false;
+                        $dispatch('customer-selected', customer);
+                    },
+                }
             }
 }" x-init="init(@js($employees)); scrollToToday();">
     <div class="select-none bg-white text-sm text-gray-900">
@@ -515,18 +540,33 @@
                 <div class="flex flex-col lg:flex-row gap-6">
                     <!-- Left Column -->
                     <div class="w-full lg:w-1/3 space-y-6">
-                        <div class="bg-gray-50 rounded-lg border p-4">
+                        <div x-data="autocompleteCustomer()" @customer-selected.window="jobModalForm.customer_id = $event.detail.id"
+                            class="bg-gray-50 rounded-lg border p-4 relative">
                             <div class="font-medium text-sm mb-1 flex items-center gap-1">
                                 <svg class="w-4 h-4"/>
                                 Customer
                             </div>
                             <input type="text" x-model="jobModalForm.customer_query"
+                                   @input="searchCustomers"
+                                   @focus="showCustomerModal = true"
+                                   @blur="setTimeout(() => showCustomerModal = false, 200)"
                                    class="w-full rounded px-2 py-1 text-sm border"
                                    placeholder="Name, email, phone, or address"/>
                             <button type="button" class="text-blue-600 text-xs mt-2"
                                     @click="showAddCustomerModal = true">+
                                 New customer
                             </button>
+
+                            <!-- Список найденных клиентов -->
+                            <div x-show="showCustomerModal && results.length" class="absolute bg-white z-30 w-full border rounded shadow mt-1">
+                                <template x-for="customer in results" :key="customer.id">
+                                    <div
+                                        @click="selectCustomer(customer)"
+                                        class="px-2 py-1 hover:bg-gray-100 cursor-pointer"
+                                        x-text="customer.name + ' ' + (customer.email || '')"
+                                    ></div>
+                                </template>
+                            </div>
                         </div>
 
                         <!-- Schedule -->

@@ -15,6 +15,7 @@ class ManagerSchedule extends Component
     public $employees = [];
     public $customerSearch = '';
     public $customerResults = [];
+    public $jobModalForm = [];
 
     public function mount()
     {
@@ -70,20 +71,31 @@ class ManagerSchedule extends Component
         }
     }
 
-    public function updatedCustomerSearch()
+    #[On('searchCustomers')]
+    public function searchCustomers($query)
     {
-        $term = $this->customerSearch;
-        $this->customerResults = Customer::query()
-            ->where('name', 'like', "%$term%")
-            ->orWhere('email', 'like', "%$term%")
-            ->orWhere('phone', 'like', "%$term%")
+        $this->dispatch('search-customers-result', Customer::query()
+            ->where('name', 'like', "%$query%")
+            ->orWhere('email', 'like', "%$query%")
+            ->orWhere('phone', 'like', "%$query%")
             ->limit(10)
-            ->get();
+            ->get(['id', 'name', 'email', 'phone', 'address'])
+            ->toArray()
+        );
+    }
+
+    #[On('customer-selected')]
+    public function selectCustomer($customer)
+    {
+        $this->jobModalForm['customer_id'] = $customer['id'];
+        $this->jobModalForm['customer_name'] = $customer['name'];
+        $this->jobModalForm['customer_email'] = $customer['email'] ?? null;
+        $this->jobModalForm['customer_phone'] = $customer['phone'] ?? null;
     }
 
     public function saveJob($form)
     {
-        Task::create([
+        \App\Models\Task::create([
             'title' => $form['items'][0]['name'] ?? 'Job',
             'technician_id' => Technician::where('name', $form['dispatch'])->first()?->id,
             'start_time' => $form['schedule_from'],
