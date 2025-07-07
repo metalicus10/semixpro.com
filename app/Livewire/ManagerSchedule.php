@@ -71,26 +71,15 @@ class ManagerSchedule extends Component
         }
     }
 
-    #[On('searchCustomers')]
     public function searchCustomers($query)
     {
-        $this->dispatch('search-customers-result', Customer::query()
-            ->where('name', 'like', "%$query%")
+        $results = Customer::where('name', 'like', "%$query%")
             ->orWhere('email', 'like', "%$query%")
             ->orWhere('phone', 'like', "%$query%")
             ->limit(10)
-            ->get(['id', 'name', 'email', 'phone', 'address'])
-            ->toArray()
-        );
-    }
-
-    #[On('customer-selected')]
-    public function selectCustomer($customer)
-    {
-        $this->jobModalForm['customer_id'] = $customer['id'];
-        $this->jobModalForm['customer_name'] = $customer['name'];
-        $this->jobModalForm['customer_email'] = $customer['email'] ?? null;
-        $this->jobModalForm['customer_phone'] = $customer['phone'] ?? null;
+            ->get(['id', 'name', 'email', 'phone', 'address']);
+        //dd(array_values($results));
+        $this->dispatch('search-customers-result', $results);
     }
 
     public function saveJob($form)

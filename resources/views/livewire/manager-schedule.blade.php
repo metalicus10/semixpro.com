@@ -4,10 +4,13 @@
     jobModalOpen: false,
     showAddCustomerModal: false,
     jobModalForm: {
+        customer_id: null,
         customer_query: '',
+        results: [],
+        employee: [],
+        selectedCustomer: null,
         schedule_from: '',
         schedule_to: '',
-        dispatch: '',
         notify_customer: false,
         items: [],
         private_notes: '',
@@ -42,13 +45,23 @@
         });
 
         window.addEventListener('customer-created', event => {
-            this.jobModalForm.customer_query = event.detail.name;
+            const data = event.detail[0];
+            this.jobModalForm.customer_query = data.name + (data.email ? ' (' + data.email + ')' : '');
+            this.jobModalForm.customer_id = data.id;
+            this.jobModalForm.selectedCustomer = data;
             this.showCustomerModal = false;
             this.customerError = '';
         });
 
-        window.addEventListener('search-customers-result', (results) => {
-            this.results = results;
+        window.addEventListener('search-customers-result', e => {
+            this.jobModalForm.results = Array.isArray(e.detail[0]) ? e.detail.flat() : e.detail;
+        });
+
+        window.addEventListener('customer-selected', (event) => {
+            this.jobModalForm.selectedCustomer = event.detail;
+            this.jobModalForm.customer_query = event.detail.name + (event.detail.email ? ' (' + event.detail.email + ')' : '');
+            this.jobModalForm.customer_id = event.detail.id;
+            this.showCustomerModal = false;
         });
     },
         setWeek(date) {
@@ -327,27 +340,28 @@
                     }
                 });
             },
-            autocompleteCustomer() {
-                return {
-                    results: [],
-                    selectedCustomer: null,
-
-                    searchCustomers() {
-                        if (this.jobModalForm.customer_query.length < 2) {
-                            this.results = [];
-                            return;
-                        }
-                        $dispatch('searchCustomers', this.jobModalForm.customer_query);
-                        this.selectCustomer(this.jobModalForm.customer_query);
-                    },
-                    selectCustomer(customer) {
-                        this.jobModalForm.customer_query = customer.name + (customer.email ? ' ('+customer.email+')' : '');
-                        this.selectedCustomer = customer;
-                        this.showCustomerModal = false;
-                        $dispatch('customer-selected', customer);
-                    },
+            searchCustomers() {
+                if (this.jobModalForm.customer_query.length < 2) {
+                    this.jobModalForm.results = [];
+                    return;
                 }
-            }
+                $wire.call('searchCustomers', this.jobModalForm.customer_query);
+            },
+            selectCustomer(customer) {
+                if (!customer || !customer.id) {
+                    this.selectedCustomer = null;
+                    this.jobModalForm.customer_id = null;
+                    this.jobModalForm.customer_query = '';
+                    this.showCustomerModal = false;
+                    return;
+                }
+                this.jobModalForm.customer_query = customer.name + (customer.email ? ' ('+customer.email+')' : '');
+                this.jobModalForm.customer_id = customer.id;
+                this.selectedCustomer = customer;
+                this.showCustomerModal = false;
+                $dispatch('customer-selected', customer);
+            },
+
 }" x-init="init(@js($employees)); scrollToToday();">
     <div class="select-none bg-white text-sm text-gray-900">
         <div class="flex items-center gap-2 bg-white px-4 py-2 sticky top-0 z-30">
@@ -540,33 +554,36 @@
                 <div class="flex flex-col lg:flex-row gap-6">
                     <!-- Left Column -->
                     <div class="w-full lg:w-1/3 space-y-6">
-                        <div x-data="autocompleteCustomer()" @customer-selected.window="jobModalForm.customer_id = $event.detail.id"
-                            class="bg-gray-50 rounded-lg border p-4 relative">
+                        <div class="bg-gray-50 rounded-lg border p-4 w-full max-w-[400px]">
                             <div class="font-medium text-sm mb-1 flex items-center gap-1">
                                 <svg class="w-4 h-4"/>
                                 Customer
                             </div>
-                            <input type="text" x-model="jobModalForm.customer_query"
-                                   @input="searchCustomers"
-                                   @focus="showCustomerModal = true"
-                                   @blur="setTimeout(() => showCustomerModal = false, 200)"
-                                   class="w-full rounded px-2 py-1 text-sm border"
-                                   placeholder="Name, email, phone, or address"/>
-                            <button type="button" class="text-blue-600 text-xs mt-2"
-                                    @click="showAddCustomerModal = true">+
+                            <div class="relative">
+                                <input type="text" x-model="jobModalForm.customer_query"
+                                       @input.live.debounce.500ms="searchCustomers"
+                                       @focus="showCustomerModal = true"
+                                       @blur="setTimeout(() => showCustomerModal = false, 500)"
+                                       class="w-full rounded px-2 py-1 text-sm border"
+                                       placeholder="Name, email, phone, or address"/>
+                                <!-- Список найденных клиентов -->
+                                <div x-show="showCustomerModal && jobModalForm.results.length" class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
+                                    <template x-for="customer in jobModalForm.results">
+                                        <div
+                                            @click="selectCustomer(customer)"
+                                            class="block px-2 py-1 hover:bg-gray-100 cursor-pointer"
+                                            x-text="customer.name + ' ' + (customer.email || '')"
+                                        >
+                                        </div>
+                                    </template>
+                                </div>
+                                <div x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
+                                     class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">Ничего не найдено</div>
+
+                            </div>
+                            <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">+
                                 New customer
                             </button>
-
-                            <!-- Список найденных клиентов -->
-                            <div x-show="showCustomerModal && results.length" class="absolute bg-white z-30 w-full border rounded shadow mt-1">
-                                <template x-for="customer in results" :key="customer.id">
-                                    <div
-                                        @click="selectCustomer(customer)"
-                                        class="px-2 py-1 hover:bg-gray-100 cursor-pointer"
-                                        x-text="customer.name + ' ' + (customer.email || '')"
-                                    ></div>
-                                </template>
-                            </div>
                         </div>
 
                         <!-- Schedule -->
@@ -586,9 +603,9 @@
                                 <div class="text-xs text-gray-500">Timezone: EDT</div>
                             </div>
                             <div>
-                                <label class="block text-xs text-gray-500">Dispatch</label>
-                                <input type="text" x-model="jobModalForm.dispatch"
-                                       placeholder="Dispatch by name or tag"
+                                <label class="block text-xs text-gray-500">Employee</label>
+                                <input type="text" x-model="jobModalForm.employee"
+                                       placeholder="Dispatch employee by name or tag"
                                        class="w-full border rounded px-3 py-2 text-sm">
                             </div>
                             <div class="flex items-center gap-2">
