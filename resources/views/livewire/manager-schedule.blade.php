@@ -4,13 +4,21 @@
     jobModalOpen: false,
     showAddCustomerModal: false,
     jobModalForm: {
-        customer_id: null,
-        customer_query: '',
-        results: [],
-        employee: [],
-        selectedCustomer: null,
         schedule_from: '',
         schedule_to: '',
+        schedule_from_date: '',
+        schedule_from_time: '',
+        schedule_from_ampp: 'AM',
+        schedule_to_date: '',
+        schedule_to_time: '',
+        schedule_to_ampp: 'PM',
+        customer_id: null,
+        customer_query: '',
+        employees_query: '',
+        results: [],
+        employees: [],
+        employees_results: [],
+        selectedCustomer: null,
         notify_customer: false,
         items: [],
         private_notes: '',
@@ -21,10 +29,11 @@
             name: '',
             email: '',
             phone: '',
-            address: ''
-        }
+            address: '',
+        },
     },
     showCustomerModal: false,
+    showEmployeesDropdown: false,
     customerError: '',
     menuVisible: false,
     menuX: 0,
@@ -183,34 +192,60 @@
                 this.menuVisible = true;
             },
     openJobModal(type = null) {
-        // Если нужен type — сохраняем его
         if (type) this.jobModalType = type;
-
         this.jobModalOpen = true;
-        // Вычисления для времени по selection
-        const startSlot = Math.min(this.selection.start, this.selection.end);
-        const endSlot = Math.max(this.selection.start, this.selection.end);
 
-        const minutesStart = startSlot * 30;
-        const minutesEnd = (endSlot + 1) * 30;
+        const slotDuration = 30;
+        const minHour = 6;
 
-        const start = new Date();
-        start.setHours(6, 0, 0, 0);
-        const end = new Date(start);
+        const baseDate = dayjs(this.selection.date, 'DD.MM.YYYY').toDate();
+        baseDate.setHours(minHour, 0, 0, 0);
 
-        start.setMinutes(start.getMinutes() + minutesStart);
-        end.setMinutes(end.getMinutes() + minutesEnd);
+        const startMinutes = (this.selection.start) * slotDuration;
+        const endMinutes = (this.selection.end + 1) * slotDuration;
+
+        const from = new Date(baseDate);
+        from.setMinutes(from.getMinutes() + startMinutes);
+
+        const to = new Date(baseDate);
+        to.setMinutes(to.getMinutes() + endMinutes);
+
+        function toInputDate(d) {
+            return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+        }
+        function toInputTime12(d) {
+            let h = d.getHours();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            const m = d.getMinutes().toString().padStart(2, '0');
+            return `${h}:${m} ${ampm}`;
+        }
+        function toInputTime24(d) {
+            let h = d.getHours().toString().padStart(2, '0');
+            let m = d.getMinutes().toString().padStart(2, '0');
+            return `${h}:${m}`;
+        }
+        function splitTime12(d) {
+            let h = d.getHours();
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            const m = d.getMinutes().toString().padStart(2, '0');
+            return { hour: h, minute: m, ampm };
+        }
+
+        const fromTime = toInputTime24(from);
+        const toTime   = toInputTime24(to);
+
+        this.jobModalForm.schedule_from_date = toInputDate(from);
+        this.jobModalForm.schedule_from_time = toInputTime24(from);
+        this.jobModalForm.schedule_to_date   = toInputDate(to);
+        this.jobModalForm.schedule_to_time   = toInputTime24(to);
+
+        console.log(this.jobModalForm.schedule_from_time)
 
         const technicianName = this.employees.find(e => e.id === this.selection.technician_id)?.name || '';
-
+        this.jobModalForm.dispatch = technicianName;
         this.menuVisible = false;
-
-        // Заполняем форму
-        this.jobModalForm.schedule_from = start.toISOString().slice(0, 16);
-        this.jobModalForm.schedule_to   = end.toISOString().slice(0, 16);
-        this.jobModalForm.dispatch      = technicianName;
-
-        // Можно добавить другие автозаполняемые поля, если нужно
 
         this.clearSelection();
     },
@@ -246,13 +281,28 @@
         return `${startString} - ${endString}`;
     },
     formatTime(date) {
-        // 12-часовой формат, AM/PM
         let h = date.getHours();
         let m = date.getMinutes();
         const ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12;
         m = m.toString().padStart(2, '0');
         return `${h}:${m} ${ampm}`;
+    },
+    formatTime12(time) {
+        if (!time) return '';
+        let [h, m] = time.split(':');
+        h = parseInt(h);
+        let suffix = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${h}:${m}`;
+    },
+    buildDatetime(date, time, ampm) {
+        let [h, m] = time.split(':');
+        h = parseInt(h);
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        h = h.toString().padStart(2, '0');
+        return `${date}T${h}:${m}:00`;
     },
             registerDraggable(el, task) {
                 if (window.interact) {
@@ -361,7 +411,28 @@
                 this.showCustomerModal = false;
                 $dispatch('customer-selected', customer);
             },
-
+    searchEmployees() {
+        const q = this.jobModalForm.employees_query.trim().toLowerCase();
+        if (q.length < 2) {
+            this.jobModalForm.employees_results = [];
+            return;
+        }
+        // employees — массив всех сотрудников из backend, подгружен заранее!
+        this.jobModalForm.employees_results = this.employees.filter(e =>
+            e.name.toLowerCase().includes(q) ||
+            (e.tag && e.tag.toLowerCase().includes(q))
+        );
+    },
+    addEmployee(employee) {
+        if (!this.jobModalForm.employees.some(e => e.id === employee.id)) {
+            this.jobModalForm.employees.push(employee);
+        }
+        this.jobModalForm.employees_query = '';
+        this.jobModalForm.employees_results = [];
+    },
+    removeEmployee(idx) {
+        this.jobModalForm.employees.splice(idx, 1);
+    },
 }" x-init="init(@js($employees)); scrollToToday();">
     <div class="select-none bg-white text-sm text-gray-900">
         <div class="flex items-center gap-2 bg-white px-4 py-2 sticky top-0 z-30">
@@ -377,7 +448,7 @@
         </div>
         <!-- Sticky колонка -->
         <div
-            class="absolute left-[10px] z-30 bg-white w-[60px] h-[206px] flex-shrink-0 flex flex-col border-y border-gray-400">
+            class="absolute left-[10px] z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400">
             <!-- GMT и техники -->
             <div class="w-[60px] h-[85px] flex-shrink-0 flex items-end justify-center bg-gray-50 text-[11px] font-thin">
                 GMT-04
@@ -589,25 +660,83 @@
                         <!-- Schedule -->
                         <div class="border p-4 rounded space-y-4">
                             <label class="block text-sm font-medium">Schedule</label>
-                            <div class="flex flex-col gap-2">
-                                <div>
-                                    <label class="text-xs text-gray-500">From</label>
-                                    <input type="datetime-local" x-model="jobModalForm.schedule_from"
-                                           class="w-full border rounded px-3 py-2 text-sm">
+                            <div class="flex flex-col gap-2 items-start">
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-xs text-gray-500 mb-1 w-10">From</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input
+                                            type="date"
+                                            :value="jobModalForm.schedule_from_date"
+                                            @input="jobModalForm.schedule_from_date = $event.target.value"
+                                            class="border rounded px-2 py-1"
+                                        >
+                                        <input
+                                            type="time"
+                                            :value="jobModalForm.schedule_from_time"
+                                            @input="jobModalForm.schedule_from_time = $event.target.value"
+                                            class="border rounded px-2 py-1"
+                                            step="900"
+                                        >
+                                    </div>
                                 </div>
-                                <div>
-                                    <label class="text-xs text-gray-500">To</label>
-                                    <input type="datetime-local" x-model="jobModalForm.schedule_to"
-                                           class="w-full border rounded px-3 py-2 text-sm">
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-xs text-gray-500 mb-1 w-10">To</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input
+                                            type="date"
+                                            :value="jobModalForm.schedule_to_date"
+                                            @input="jobModalForm.schedule_to_date = $event.target.value"
+                                            class="border rounded px-2 py-1"
+                                        >
+                                        <input
+                                            type="time"
+                                            :value="jobModalForm.schedule_to_time"
+                                            @input="jobModalForm.schedule_to_time = $event.target.value"
+                                            class="border rounded px-2 py-1"
+                                            step="900"
+                                        >
+                                    </div>
                                 </div>
-                                <div class="text-xs text-gray-500">Timezone: EDT</div>
                             </div>
-                            <div>
-                                <label class="block text-xs text-gray-500">Employee</label>
-                                <input type="text" x-model="jobModalForm.employee"
-                                       placeholder="Dispatch employee by name or tag"
-                                       class="w-full border rounded px-3 py-2 text-sm">
+                            <div class="mb-4">
+                                <label class="block text-xs text-gray-500 mb-1">Employee</label>
+                                <div class="relative">
+                                    <input type="text"
+                                           x-model="jobModalForm.employees_query"
+                                           @input.debounce.300ms="searchEmployees"
+                                           @focus="showEmployeesDropdown = true"
+                                           @blur="setTimeout(() => showEmployeesDropdown = false, 200)"
+                                           placeholder="Dispatch employee by name or tag"
+                                           class="w-full border rounded px-3 py-2 text-sm"
+                                    >
+                                    <!-- ВЫПАДАЮЩИЙ СПИСОК -->
+                                    <div
+                                        x-show="showEmployeesDropdown && jobModalForm.employees_results.length > 0"
+                                        class="absolute z-30 mt-1 bg-white w-full rounded border shadow"
+                                    >
+                                        <template x-for="employee in jobModalForm.employees_results" :key="employee.id">
+                                            <div @click="addEmployee(employee)"
+                                                 class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
+                                                <span x-text="employee.name"></span>
+                                                <span class="ml-2 text-xs text-gray-400" x-text="employee.tag"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <!-- ВЫБРАННЫЕ СОТРУДНИКИ -->
+                                <div class="flex flex-wrap mt-2 gap-2">
+                                    <template x-for="(employee, idx) in jobModalForm.employees" :key="employee.id">
+                                        <div class="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
+                                            <span x-text="employee.name"></span>
+                                            <button class="ml-2 text-gray-500 hover:text-red-500"
+                                                    @click="removeEmployee(idx)">
+                                                &times;
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
+
                             <div class="flex items-center gap-2">
                                 <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
                                 <label class="text-sm">Notify customer</label>
