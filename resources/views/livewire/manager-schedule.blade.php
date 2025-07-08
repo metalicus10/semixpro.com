@@ -8,6 +8,7 @@
         schedule_to: '',
         schedule_from_date: '',
         schedule_from_time: '',
+        schedule_from_time12: '',
         schedule_from_ampp: 'AM',
         schedule_to_date: '',
         schedule_to_time: '',
@@ -118,21 +119,23 @@
                 const width = Math.abs(sel.endX - sel.startX);
                 return `top: 0px; left: ${left}px; width: ${width}px; height: 100%;`;
             },
-            startSelect(event, technician_id, isTouch = false) {
+            startSelect(event, technician_id, dayIdx, date, slotIdx, isTouch = false) {
                 this.selection = {
                     technician_id,
-                    startX: event.offsetX || event.clientX,
-                    endX: event.offsetX || event.clientX
+                    dayIdx,
+                    date,
+                    startSlot: slotIdx,
+                    endSlot: slotIdx,
                 };
                 if (isTouch) {
                     this.menuX = event.pageX;
                     this.menuY = event.pageY;
                 }
+                this.menuVisible = false;
             },
-            dragSelect(event) {
-                if (this.selection) {
-                    this.selection.endX = event.offsetX || event.clientX;
-                }
+            dragSelect(dayIdx, slotIdx, event) {
+                if (!this.selection || this.selection.dayIdx !== dayIdx) return;
+                this.selection.endSlot = slotIdx;
             },
             endSelect(event, isTouch = false) {
                 if (!this.selection) return;
@@ -195,29 +198,35 @@
         if (type) this.jobModalType = type;
         this.jobModalOpen = true;
 
-        const slotDuration = 30;
-        const minHour = 6;
+        const slotDuration = 30;   // 30 минут
+        const minHour = 6;         // 6 утра
+        const baseDate = dayjs(this.selection.date, 'DD.MM.YYYY').startOf('day').toDate();
 
-        const baseDate = dayjs(this.selection.date, 'DD.MM.YYYY').toDate();
-        baseDate.setHours(minHour, 0, 0, 0);
+        const startSlot = Math.min(this.selection.start, this.slotsPerDay - 1);
+        const endSlot   = Math.min(this.selection.end, this.slotsPerDay - 1);
 
-        const startMinutes = (this.selection.start) * slotDuration;
-        const endMinutes = (this.selection.end + 1) * slotDuration;
+        const startMinutes = minHour * 60 + startSlot * slotDuration;
+        const endMinutes   = minHour * 60 + (endSlot + 1) * slotDuration;
 
         const from = new Date(baseDate);
-        from.setMinutes(from.getMinutes() + startMinutes);
-
+        from.setMinutes(startMinutes);
         const to = new Date(baseDate);
-        to.setMinutes(to.getMinutes() + endMinutes);
+        to.setMinutes(endMinutes);
+
+        // Если to.getDate() !== from.getDate(), ограничь время
+        if (to.getDate() !== from.getDate()) {
+            to.setDate(from.getDate());
+            to.setHours(23, 59, 0, 0); // или до 22:00, если у тебя последний слот — 22:00
+        }
 
         function toInputDate(d) {
             return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
         }
         function toInputTime12(d) {
             let h = d.getHours();
+            const m = d.getMinutes().toString().padStart(2, '0');
             const ampm = h >= 12 ? 'PM' : 'AM';
             h = h % 12 || 12;
-            const m = d.getMinutes().toString().padStart(2, '0');
             return `${h}:${m} ${ampm}`;
         }
         function toInputTime24(d) {
@@ -225,24 +234,16 @@
             let m = d.getMinutes().toString().padStart(2, '0');
             return `${h}:${m}`;
         }
-        function splitTime12(d) {
-            let h = d.getHours();
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12 || 12;
-            const m = d.getMinutes().toString().padStart(2, '0');
-            return { hour: h, minute: m, ampm };
-        }
-
-        const fromTime = toInputTime24(from);
-        const toTime   = toInputTime24(to);
 
         this.jobModalForm.schedule_from_date = toInputDate(from);
+        this.jobModalForm.schedule_from_time12 = toInputTime12(from);
         this.jobModalForm.schedule_from_time = toInputTime24(from);
-        this.jobModalForm.schedule_to_date   = toInputDate(to);
-        this.jobModalForm.schedule_to_time   = toInputTime24(to);
 
-        console.log(this.jobModalForm.schedule_from_time)
+        this.jobModalForm.schedule_to_date = toInputDate(to);
+        this.jobModalForm.schedule_to_time12 = toInputTime12(to);
+        this.jobModalForm.schedule_to_time = toInputTime24(to);
 
+        // Остальное — как раньше
         const technicianName = this.employees.find(e => e.id === this.selection.technician_id)?.name || '';
         this.jobModalForm.dispatch = technicianName;
         this.menuVisible = false;
@@ -322,7 +323,6 @@
                 return `left: ${left}px; width: ${width}px; top: 0; height: ${this.slotHeight}px;`;
             },
             totalSlots() {
-                console.log((this.currentWeek.length * 32)*2);
                 return (this.currentWeek.length * 32)*2;
             },
             addLineItem() {
@@ -433,7 +433,8 @@
     removeEmployee(idx) {
         this.jobModalForm.employees.splice(idx, 1);
     },
-}" x-init="init(@js($employees)); scrollToToday();">
+}" x-init="init(@js($employees)); scrollToToday();"
+>
     <div class="select-none bg-white text-sm text-gray-900">
         <div class="flex items-center gap-2 bg-white px-4 py-2 sticky top-0 z-30">
             <button @click="prevWeek" class="px-2 py-1 rounded hover:bg-gray-100 text-xl">&larr;</button>
@@ -476,7 +477,7 @@
                 <div class="flex">
                     <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
                         <div :id="d.isSame(dayjs(), 'day') ? 'today-column' : null"
-                             class="text-start border-y border-gray-400 day-right-border w-[640px] day-column"
+                             class="text-start border-y border-gray-400 day-right-border w-[640px] day-column" :data-date="d.format('YYYY-MM-DD')"
                              :class="{
                             'day-left-border': dayIdx !== 0,
                             'border-r border-gray-200': dayIdx % 1 !== 0,
@@ -490,89 +491,66 @@
                                 <div class="grid grid-cols-16 w-[640px] divide-x divide-gray-200">
                                     <template x-for="i in 16" :key="i">
                                         <div
-                                            class="h-12 w-[40px] text-[11px] font-thin flex items-center justify-center">
+                                            class="h-12 w-[40px] text-[11px] border-b border-gray-100 font-thin flex items-center justify-center">
                                             <span x-text="formatHour(i + 5)"></span>
                                         </div>
                                     </template>
                                 </div>
                             </div>
+                            <template x-for="employee in employees" :key="employee.id">
+                                <div class="flex w-[640px] flex-col relative min-h-[64px] border-gray-100">
+                                    <!-- Правая часть — сетка и задачи -->
+                                    <div id="mainGrid" class="relative">
+                                        <template x-if="selection && selection.technician_id === employee.id">
+                                            <div
+                                                class="absolute bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
+                                                :style="selectionHighlightStyle(employee)"
+                                            >
+                                                <!-- Время с - по -->
+                                                <div
+                                                    class="absolute left-1 top-1 text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
+                                                    x-text="selectionTimeRange"></div>
+                                            </div>
+                                        </template>
+                                        <!-- Сетка 30-минутных слотов -->
+                                        <div class="flex relative w-[640px]">
+                                            <!-- 48 слотов по 30 минут -->
+                                            <template x-for="slotIdx in 32" :key="slotIdx">
+                                                <div
+                                                    :class="{
+                                                    'bg-blue-100': selection && selection.dayIdx === dayIdx && slotIdx-1 >= selection.startSlot && slotIdx-1 <= selection.endSlot
+                                                }"
+                                                    class="flex left-0 border-r border-gray-100 cursor-pointer"
+                                                    :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 64px; width: 20px;'"
+                                                    @mousedown.prevent="startSelect(dayIdx, d.format('YYYY-MM-DD'), slotIdx-1, $event)"
+                                                    @mouseenter="dragSelect(dayIdx, slotIdx-1, $event)"
+                                                    @mouseup="endSelect()"
+                                                    @contextmenu.prevent="openContextMenu($event)"
+                                                ></div>
+                                            </template>
+                                        </div>
+                                        <!-- Задачи -->
+                                        <template x-for="task in employee.tasks" :key="task.id">
+                                            <div
+                                                class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
+                                                :style="taskPosition(task)"
+                                                x-init="$nextTick(() => registerDraggable($el, task))"
+                                            >
+                                                <div class="font-semibold truncate" x-text="task.title"></div>
+                                                <div class="text-[11px] opacity-80"
+                                                     x-text="formatRange(task.start_time, task.end_time)"></div>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
                         </div>
+
                     </template>
                 </div>
             </div>
 
-            <!-- Основная сетка -->
-            <div x-data="{
-                slotHeight: 0,
-                setSlotHeight() {
-                    this.$nextTick(() => {
-                        this.slotHeight = this.$refs.techRow?.offsetHeight || 24;
-                    });
-                }
-            }" x-init="setSlotHeight()" @resize.window="setSlotHeight" class="flex w-[4480px]">
-                <!-- Сетка и задачи -->
-                <div class="flex flex-col relative w-[4480px]">
-                    <template x-for="employee in employees" :key="employee.id">
-                        <div class="flex flex-row relative min-h-[64px] border-gray-100">
-                            <!-- Правая часть — сетка и задачи -->
-                            <div id="mainGrid" class="relative">
-                                <template x-if="selection && selection.technician_id === employee.id">
-                                    <div
-                                        class="absolute bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
-                                        :style="selectionHighlightStyle(employee)"
-                                    >
-                                        <!-- Время с - по -->
-                                        <div
-                                            class="absolute left-1 top-1 text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
-                                            x-text="selectionTimeRange"></div>
-                                    </div>
-                                </template>
-                                <!-- Сетка 30-минутных слотов -->
-                                <div :style="`width: 640px; height: 100%; position: relative;`">
-                                    <template x-for="(col, index) in 224" :key="index">
-                                        <div class="absolute top-0 bottom-0 border-r border-gray-100 w-[20px]"
-                                             :class="{
-                                            [slotClass(index, employee)]: true,
-                                            'border-l-2 border-gray-100': index % 32 === 0,
-                                            'border-l-2 border-gray-700': index % 32 === 0,
-                                            'border-r border-gray-100': index % 32 !== 0,
-                                         }"
-                                             :style="`left: ${index * 20}px; width: 20px; height: ${slotHeight}px;`, selectionHighlightStyle(employee)"
-                                             @click="
-                                            if (!selection || selection.technician_id !== employee.id || !selectionSlots.includes(index)) {
-                                                clearSelection();
-                                                selectSlot(index, employee.id);
-                                            }"
-                                             @mousedown.prevent="
-                                            if ($event.button === 0) {
-                                                clearSelection();
-                                                selectSlot(index, employee.id);
-                                            }"
-                                             @mouseover="if ($event.buttons === 1) selectSlot(index, employee.id)"
-                                             @contextmenu.prevent="showContextMenu($event, index, employee.id)"
-                                             @touchstart.passive="startLongpress($event, index, employee.id)"
-                                             @touchend="cancelLongpress()"
-                                        >
-                                        </div>
-                                    </template>
-                                </div>
-                                <!-- Задачи -->
-                                <template x-for="task in employee.tasks" :key="task.id">
-                                    <div
-                                        class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
-                                        :style="taskPosition(task)"
-                                        x-init="$nextTick(() => registerDraggable($el, task))"
-                                    >
-                                        <div class="font-semibold truncate" x-text="task.title"></div>
-                                        <div class="text-[11px] opacity-80"
-                                             x-text="formatRange(task.start_time, task.end_time)"></div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
+
         </div>
         <!-- Контекстное меню -->
         <div
@@ -664,19 +642,80 @@
                                 <div class="flex justify-between items-center">
                                     <label class="block text-xs text-gray-500 mb-1 w-10">From</label>
                                     <div class="flex gap-2 items-center">
-                                        <input
-                                            type="date"
-                                            :value="jobModalForm.schedule_from_date"
-                                            @input="jobModalForm.schedule_from_date = $event.target.value"
-                                            class="border rounded px-2 py-1"
+                                        <input type="date" x-model="jobModalForm.schedule_from_date"
+                                               class="border rounded px-2 py-1">
+                                        <div
+                                            x-data="{
+                                                show: false,
+                                                hour: 9,
+                                                minute: '00',
+                                                ampm: 'AM',
+                                                get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                setValue(h, m, a) {
+                                                    this.hour = h;
+                                                    this.minute = m;
+                                                    this.ampm = a;
+                                                    this.show = false;
+                                                    // Если нужна двусторонняя связь с jobModalForm:
+                                                    $dispatch('time-changed', { value: this.value });
+                                                },
+                                                setFromExternal(val) {
+                                                    // Позволяет задавать значение извне, например при открытии модалки
+                                                    if (!val) return;
+                                                    let [time, ampm] = val.split(' ');
+                                                    let [h, m] = time.split(':');
+                                                    this.hour = parseInt(h);
+                                                    this.minute = m;
+                                                    this.ampm = ampm || 'AM';
+                                                }
+                                            }"
+                                            x-init="setFromExternal(jobModalForm.schedule_from_time12)"
+                                            @time-changed.window="jobModalForm.schedule_from_time12 = $event.detail.value"
+                                            class="relative w-36"
                                         >
-                                        <input
-                                            type="time"
-                                            :value="jobModalForm.schedule_from_time"
-                                            @input="jobModalForm.schedule_from_time = $event.target.value"
-                                            class="border rounded px-2 py-1"
-                                            step="900"
-                                        >
+                                            <button type="button"
+                                                    @click="show = !show"
+                                                    class="w-full px-3 py-2 border rounded focus:outline-none flex items-center justify-between"
+                                            >
+                                                <span x-text="value"></span>
+                                                <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="show"
+                                                 @click.away="show = false"
+                                                 class="absolute z-10 bg-white rounded shadow-md mt-1 p-2 flex gap-2"
+                                                 style="min-width: 210px"
+                                            >
+                                                <!-- Часы -->
+                                                <select x-model="hour"
+                                                        class="border rounded p-1">
+                                                    <template x-for="h in 12" :key="h">
+                                                        <option :value="h" x-text="h"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- Минуты -->
+                                                <select x-model="minute"
+                                                        class="border rounded p-1">
+                                                    <template x-for="m in [0, 15, 30, 45]" :key="m">
+                                                        <option :value="m.toString().padStart(2, '0')" x-text="m.toString().padStart(2, '0')"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- AM/PM -->
+                                                <select x-model="ampm" class="border rounded p-1">
+                                                    <option>AM</option>
+                                                    <option>PM</option>
+                                                </select>
+                                                <button
+                                                    @click="setValue(hour, minute, ampm)"
+                                                    class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" x-model="jobModalForm.schedule_from_time" name="schedule_from_time12">
                                     </div>
                                 </div>
                                 <div class="flex justify-between items-center">
