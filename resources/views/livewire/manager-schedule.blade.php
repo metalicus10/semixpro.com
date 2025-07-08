@@ -133,13 +133,13 @@
                 }
                 this.menuVisible = false;
             },
-            dragSelect(dayIdx, slotIdx, event) {
+            dragSelect(dayIdx, slotIdx) {
                 if (!this.selection || this.selection.dayIdx !== dayIdx) return;
                 this.selection.endSlot = slotIdx;
             },
-            endSelect(event, isTouch = false) {
+            endSelect() {
                 if (!this.selection) return;
-                this.selection.endX = event.offsetX || event.clientX;
+                this.mouseDown = false;
             },
             startLongpress(e, index, technician_id) {
                 this.longpressTimeout = setTimeout(() => {
@@ -180,11 +180,16 @@
                 }
                 return '';
             },
-            showContextMenu(event, index, technician_id) {
-                event.preventDefault();
-                if (!this.selection || this.selection.technician_id !== technician_id || !this.selectionSlots.includes(index)) {
+            isSelected(dayIdx, slotIdx) {
+                if (!this.selection || dayIdx !== this.selection.dayIdx) return false;
+                let [from, to] = [this.selection.start, this.selection.end].sort((a,b)=>a-b);
+                return slotIdx >= from && slotIdx <= to;
+            },
+            showContextMenu($event, dayIdx, slotIdx, technician_id) {
+                $event.preventDefault();
+                if (!this.selection || this.selection.technician_id !== technician_id || !this.selectionSlots.includes(slotIdx)) {
                     this.clearSelection();
-                    this.selection = { technician_id, start: index, end: index };
+                    this.selection = { technician_id, start: slotIdx, end: slotIdx };
                     this.updateSelectionSlots();
                 }
                 const grid = document.getElementById('mainGrid');
@@ -281,12 +286,11 @@
 
         return `${startString} - ${endString}`;
     },
-    formatTime(date) {
-        let h = date.getHours();
-        let m = date.getMinutes();
+    formatTime(slotIdx) {
+        let h = 6 + Math.floor(slotIdx / 2);
+        let m = slotIdx % 2 === 0 ? '00' : '30';
         const ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12;
-        m = m.toString().padStart(2, '0');
         return `${h}:${m} ${ampm}`;
     },
     formatTime12(time) {
@@ -518,14 +522,16 @@
                                             <template x-for="slotIdx in 32" :key="slotIdx">
                                                 <div
                                                     :class="{
-                                                    'bg-blue-100': selection && selection.dayIdx === dayIdx && slotIdx-1 >= selection.startSlot && slotIdx-1 <= selection.endSlot
-                                                }"
+                                                        'bg-blue-100': selection && selection.dayIdx === dayIdx && slotIdx-1 >= selection.startSlot && slotIdx-1 <= selection.endSlot
+                                                    }"
                                                     class="flex left-0 border-r border-gray-100 cursor-pointer"
                                                     :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 64px; width: 20px;'"
-                                                    @mousedown.prevent="startSelect(dayIdx, d.format('YYYY-MM-DD'), slotIdx-1, $event)"
-                                                    @mouseenter="dragSelect(dayIdx, slotIdx-1, $event)"
-                                                    @mouseup="endSelect()"
-                                                    @contextmenu.prevent="openContextMenu($event)"
+                                                    @mousedown.prevent="startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx-1)"
+                                                    @mouseenter="dragSelect(dayIdx, slotIdx-1)"
+                                                    @mouseup.window="endSelect()"
+                                                    @contextmenu.prevent="showContextMenu($event, dayIdx, employee.id)"
+                                                    @touchstart.passive="startLongPress($event, dayIdx, slotIdx-1)"
+                                                    @touchend="cancelLongPress()"
                                                 ></div>
                                             </template>
                                         </div>
