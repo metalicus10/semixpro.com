@@ -46,6 +46,9 @@
     viewDate: dayjs().startOf('day'),
     slotsPerDay: 32,
     baseHour: 6,
+    mouseDown: false,
+    longPressTimeout: null,
+    slotHeight: 64,
 
     init(data) {
         this.employees = data;
@@ -120,6 +123,7 @@
                 return `top: 0px; left: ${left}px; width: ${width}px; height: 100%;`;
             },
             startSelect(event, technician_id, dayIdx, date, slotIdx, isTouch = false) {
+                console.log('before:', this.selection);
                 this.selection = {
                     technician_id,
                     dayIdx,
@@ -127,17 +131,19 @@
                     startSlot: slotIdx,
                     endSlot: slotIdx,
                 };
+                console.log('after:', this.selection)
                 if (isTouch) {
-                    this.menuX = event.pageX;
-                    this.menuY = event.pageY;
+                    this.menuX = event.touches[0].pageX;
+                    this.menuY = event.touches[0].pageY;
                 }
+                this.mouseDown = true;
                 this.menuVisible = false;
             },
-            dragSelect(dayIdx, slotIdx) {
-                if (!this.selection || this.selection.dayIdx !== dayIdx) return;
+            dragSelect(dayIdx, slotIdx, isTouch = false) {
+                if (!this.mouseDown || !this.selection || this.selection.dayIdx !== dayIdx) return;
                 this.selection.endSlot = slotIdx;
             },
-            endSelect() {
+            endSelect(isTouch = false) {
                 if (!this.selection) return;
                 this.mouseDown = false;
             },
@@ -146,13 +152,12 @@
                     this.showContextMenu(e, index, technician_id);
                 }, 600);
             },
-            cancelLongpress() {
-                clearTimeout(this.longpressTimeout);
+            cancelLongPress() {
+                clearTimeout(this.longPressTimeout);
             },
             clearSelection() {
                 this.selection = null;
                 this.selectionSlots = [];
-                this.menuVisible = false;
             },
             closeMenu() {
                 this.menuVisible = false;
@@ -160,15 +165,15 @@
             },
             selectSlot(index, technician_id) {
                 if (!this.selection || this.selection.technician_id !== technician_id) {
-                    this.selection = { technician_id, start: index, end: index };
+                    this.selection = { technician_id, startSlot: index, endSlot: index };
                 } else {
-                    this.selection.end = index;
+                    this.selection.endSlot = index;
                 }
                 this.updateSelectionSlots();
             },
             updateSelectionSlots() {
-                const start = Math.min(this.selection.start, this.selection.end);
-                const end = Math.max(this.selection.start, this.selection.end);
+                const start = Math.min(this.selection.startSlot, this.selection.endSlot);
+                const end = Math.max(this.selection.startSlot, this.selection.endSlot);
                 this.selectionSlots = [];
                 for (let i = start; i <= end; i++) {
                     this.selectionSlots.push(i);
@@ -185,13 +190,27 @@
                 let [from, to] = [this.selection.start, this.selection.end].sort((a,b)=>a-b);
                 return slotIdx >= from && slotIdx <= to;
             },
-            showContextMenu($event, dayIdx, slotIdx, technician_id) {
-                $event.preventDefault();
-                if (!this.selection || this.selection.technician_id !== technician_id || !this.selectionSlots.includes(slotIdx)) {
+            showContextMenu(event, dayIdx, slotIdx, technician_id) {
+                event.preventDefault();
+
+                const isSelected =
+                    this.selection
+                    && this.selection.technician_id === technician_id
+                    && this.selection.dayIdx === dayIdx
+                    && slotIdx >= this.selection.startSlot
+                    && slotIdx <= this.selection.endSlot;
+
+                if (!isSelected) {
                     this.clearSelection();
-                    this.selection = { technician_id, start: slotIdx, end: slotIdx };
+                    this.selection = {
+                        technician_id,
+                        dayIdx,
+                        startSlot: slotIdx,
+                        endSlot: slotIdx,
+                    };
                     this.updateSelectionSlots();
                 }
+
                 const grid = document.getElementById('mainGrid');
                 const rect = grid.getBoundingClientRect();
                 this.menuX = event.clientX;
@@ -207,8 +226,8 @@
         const minHour = 6;         // 6 утра
         const baseDate = dayjs(this.selection.date, 'DD.MM.YYYY').startOf('day').toDate();
 
-        const startSlot = Math.min(this.selection.start, this.slotsPerDay - 1);
-        const endSlot   = Math.min(this.selection.end, this.slotsPerDay - 1);
+        const startSlot = Math.min(this.selection.startSlot, this.slotsPerDay - 1);
+        const endSlot   = Math.min(this.selection.endSlot, this.slotsPerDay - 1);
 
         const startMinutes = minHour * 60 + startSlot * slotDuration;
         const endMinutes   = minHour * 60 + (endSlot + 1) * slotDuration;
@@ -253,13 +272,13 @@
         this.jobModalForm.dispatch = technicianName;
         this.menuVisible = false;
 
-        this.clearSelection();
+        //this.clearSelection();
     },
     get selectionTimeRange() {
         if (!this.selection) return '';
 
-        const startIdx = Math.min(this.selection.start, this.selection.end ?? this.selection.start);
-        const endIdx   = Math.max(this.selection.start, this.selection.end ?? this.selection.start);
+        const startIdx = Math.min(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
+        const endIdx   = Math.max(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
 
         // День недели (0...6)
         const startDay = Math.floor(startIdx / this.slotsPerDay);
@@ -320,11 +339,16 @@
             },
             selectionHighlightStyle(employee) {
                 if (!this.selection || this.selection.technician_id !== employee.id) return '';
-                const from = Math.min(this.selection.start, this.selection.end ?? this.selection.start);
-                const to = Math.max(this.selection.start, this.selection.end ?? this.selection.start);
-                const left = from * 20;
+                const from = Math.min(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
+                const to = Math.max(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
+                const left = (from - 1) * 20;
                 const width = (to - from + 1) * 20;
                 return `left: ${left}px; width: ${width}px; top: 0; height: ${this.slotHeight}px;`;
+            },
+            setSlotHeight() {
+                this.$nextTick(() => {
+                    this.slotHeight = 64;
+                });
             },
             totalSlots() {
                 return (this.currentWeek.length * 32)*2;
@@ -477,7 +501,7 @@
         </div>
         <div class="select-none bg-white text-sm text-gray-900 relative overflow-x-auto pl-15 pb-2" x-ref="mainGrid">
             <!-- Временная шкала -->
-            <div class="sticky top-0 z-10 bg-white">
+            <div class="sticky top-0 z-10 bg-white w-[4480px]">
                 <div class="flex">
                     <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
                         <div :id="d.isSame(dayjs(), 'day') ? 'today-column' : null"
@@ -504,34 +528,47 @@
                             <template x-for="employee in employees" :key="employee.id">
                                 <div class="flex w-[640px] flex-col relative min-h-[64px] border-gray-100">
                                     <!-- Правая часть — сетка и задачи -->
-                                    <div id="mainGrid" class="relative">
-                                        <template x-if="selection && selection.technician_id === employee.id">
+                                    <div class="relative">
+                                        <template x-if="selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx">
                                             <div
-                                                class="absolute bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
+                                                class="absolute left-1 top-1 bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
                                                 :style="selectionHighlightStyle(employee)"
                                             >
                                                 <!-- Время с - по -->
-                                                <div
-                                                    class="absolute left-1 top-1 text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
-                                                    x-text="selectionTimeRange"></div>
+                                                <span class="text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
+                                                    x-text="selectionTimeRange">
+                                                </span>
                                             </div>
                                         </template>
                                         <!-- Сетка 30-минутных слотов -->
-                                        <div class="flex relative w-[640px]">
-                                            <!-- 48 слотов по 30 минут -->
+                                        <div class="flex relative w-[640px]" id="mainGrid">
+                                            <!-- 32 слотов по 30 минут -->
                                             <template x-for="slotIdx in 32" :key="slotIdx">
                                                 <div
                                                     :class="{
-                                                        'bg-blue-100': selection && selection.dayIdx === dayIdx && slotIdx-1 >= selection.startSlot && slotIdx-1 <= selection.endSlot
+                                                        'bg-blue-100': selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id && slotIdx >= selection.startSlot && slotIdx <= selection.endSlot
                                                     }"
                                                     class="flex left-0 border-r border-gray-100 cursor-pointer"
-                                                    :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 64px; width: 20px;'"
-                                                    @mousedown.prevent="startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx-1)"
-                                                    @mouseenter="dragSelect(dayIdx, slotIdx-1)"
+                                                    :style="'top: ' + ((slotIdx)*16) + 'px; height: 64px; width: 20px;'"
+                                                    @mousedown.prevent="
+                                                        if ($event.button === 0) {
+                                                            startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx);
+                                                        }
+                                                    "
+                                                    @mousemove="dragSelect(dayIdx, slotIdx)"
                                                     @mouseup.window="endSelect()"
-                                                    @contextmenu.prevent="showContextMenu($event, dayIdx, employee.id)"
-                                                    @touchstart.passive="startLongPress($event, dayIdx, slotIdx-1)"
-                                                    @touchend="cancelLongPress()"
+                                                    @contextmenu.prevent="
+                                                        if (selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx && slotIdx >= selection.startSlot && slotIdx <= selection.endSlot) {
+                                                            showContextMenu($event, dayIdx, slotIdx, employee.id);
+                                                        }else{
+                                                            startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx);
+                                                            endSelect();
+                                                            showContextMenu($event, dayIdx, slotIdx, employee.id);
+                                                        }
+                                                    "
+                                                    @touchstart.passive="startLongPress($event, dayIdx, slotIdx)"
+                                                    @touchmove.passive="dragSelect(dayIdx, slotIdx, true)"
+                                                    @touchend="cancelLongPress(true)"
                                                 ></div>
                                             </template>
                                         </div>
