@@ -123,7 +123,6 @@
                 return `top: 0px; left: ${left}px; width: ${width}px; height: 100%;`;
             },
             startSelect(event, technician_id, dayIdx, date, slotIdx, isTouch = false) {
-                console.log('before:', this.selection);
                 this.selection = {
                     technician_id,
                     dayIdx,
@@ -131,7 +130,6 @@
                     startSlot: slotIdx,
                     endSlot: slotIdx,
                 };
-                console.log('after:', this.selection)
                 if (isTouch) {
                     this.menuX = event.touches[0].pageX;
                     this.menuY = event.touches[0].pageY;
@@ -280,15 +278,12 @@
         const startIdx = Math.min(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
         const endIdx   = Math.max(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
 
-        // День недели (0...6)
         const startDay = Math.floor(startIdx / this.slotsPerDay);
         const endDay = Math.floor(endIdx / this.slotsPerDay);
 
-        // Слот в дне (0...31)
         const startSlotInDay = startIdx % this.slotsPerDay;
         const endSlotInDay = endIdx % this.slotsPerDay;
 
-        // Рассчитываем дату (от понедельника недели)
         const weekStart = dayjs(this.currentWeek[0].format('YYYY-MM-DD'));
 
         const startDate = weekStart.add(startDay, 'day').toDate();
@@ -299,9 +294,8 @@
         endDate.setHours(this.baseHour, 0, 0, 0);
         endDate.setMinutes(endDate.getMinutes() + (endSlotInDay + 1) * 30);
 
-        // Выводим время и если нужно — дату
-        const startString = `${this.formatTime(startDate)}${startDay !== endDay ? ' ' + weekStart.add(startDay, 'day').format('ddd') : ''}`;
-        const endString   = `${this.formatTime(endDate)}${startDay !== endDay ? ' ' + weekStart.add(endDay, 'day').format('ddd') : ''}`;
+        const startString = `${this.formatTime12(startDate)}${startDay !== endDay ? ' ' + weekStart.add(startDay, 'day').format('ddd') : ''}`;
+        const endString   = `${this.formatTime12(endDate)}${startDay !== endDay ? ' ' + weekStart.add(endDay, 'day').format('ddd') : ''}`;
 
         return `${startString} - ${endString}`;
     },
@@ -312,13 +306,13 @@
         h = h % 12 || 12;
         return `${h}:${m} ${ampm}`;
     },
-    formatTime12(time) {
-        if (!time) return '';
-        let [h, m] = time.split(':');
-        h = parseInt(h);
-        let suffix = h >= 12 ? 'PM' : 'AM';
+    formatTime12(date) {
+        let h = date.getHours();
+        let m = date.getMinutes();
+        const ampm = h >= 12 ? 'PM' : 'AM';
         h = h % 12 || 12;
-        return `${h}:${m}`;
+        m = m.toString().padStart(2, '0');
+        return `${h}:${m} ${ampm}`;
     },
     buildDatetime(date, time, ampm) {
         let [h, m] = time.split(':');
@@ -341,7 +335,7 @@
                 if (!this.selection || this.selection.technician_id !== employee.id) return '';
                 const from = Math.min(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
                 const to = Math.max(this.selection.startSlot, this.selection.endSlot ?? this.selection.startSlot);
-                const left = (from - 1) * 20;
+                const left = (from) * 20;
                 const width = (to - from + 1) * 20;
                 return `left: ${left}px; width: ${width}px; top: 0; height: ${this.slotHeight}px;`;
             },
@@ -477,7 +471,7 @@
         </div>
         <!-- Sticky колонка -->
         <div
-            class="absolute left-[10px] z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400">
+            class="absolute left-[10px] z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400 mr-[1px]">
             <!-- GMT и техники -->
             <div class="w-[60px] h-[85px] flex-shrink-0 flex items-end justify-center bg-gray-50 text-[11px] font-thin">
                 GMT-04
@@ -531,11 +525,11 @@
                                     <div class="relative">
                                         <template x-if="selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx">
                                             <div
-                                                class="absolute left-1 top-1 bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none"
+                                                class="absolute left-1 top-1 bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none pl-1 pt-1"
                                                 :style="selectionHighlightStyle(employee)"
                                             >
                                                 <!-- Время с - по -->
-                                                <span class="text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
+                                                <span class="block text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
                                                     x-text="selectionTimeRange">
                                                 </span>
                                             </div>
@@ -546,28 +540,25 @@
                                             <template x-for="slotIdx in 32" :key="slotIdx">
                                                 <div
                                                     :class="{
-                                                        'bg-blue-100': selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id && slotIdx >= selection.startSlot && slotIdx <= selection.endSlot
+                                                        'bg-blue-100': selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id &&
+                                                        (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot
                                                     }"
                                                     class="flex left-0 border-r border-gray-100 cursor-pointer"
-                                                    :style="'top: ' + ((slotIdx)*16) + 'px; height: 64px; width: 20px;'"
+                                                    :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 64px; width: 20px;'"
                                                     @mousedown.prevent="
                                                         if ($event.button === 0) {
-                                                            startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx);
+                                                            startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx - 1);
                                                         }
                                                     "
-                                                    @mousemove="dragSelect(dayIdx, slotIdx)"
+                                                    @mousemove="dragSelect(dayIdx, slotIdx - 1)"
                                                     @mouseup.window="endSelect()"
                                                     @contextmenu.prevent="
-                                                        if (selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx && slotIdx >= selection.startSlot && slotIdx <= selection.endSlot) {
-                                                            showContextMenu($event, dayIdx, slotIdx, employee.id);
-                                                        }else{
-                                                            startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx);
-                                                            endSelect();
-                                                            showContextMenu($event, dayIdx, slotIdx, employee.id);
-                                                        }
+                                                        (selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx && (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot)
+                                                        ? showContextMenu($event, dayIdx, slotIdx - 1, employee.id)
+                                                        : (startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx - 1), endSelect(), showContextMenu($event, dayIdx, slotIdx - 1, employee.id))
                                                     "
-                                                    @touchstart.passive="startLongPress($event, dayIdx, slotIdx)"
-                                                    @touchmove.passive="dragSelect(dayIdx, slotIdx, true)"
+                                                    @touchstart.passive="startLongPress($event, dayIdx, slotIdx - 1)"
+                                                    @touchmove.passive="dragSelect(dayIdx, slotIdx - 1, true)"
                                                     @touchend="cancelLongPress(true)"
                                                 ></div>
                                             </template>
