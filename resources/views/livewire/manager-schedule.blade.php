@@ -14,6 +14,7 @@
         schedule_to_time: '',
         schedule_to_ampp: 'PM',
         customer_id: null,
+        employee_id: null,
         customer_query: '',
         employees_query: '',
         results: [],
@@ -109,13 +110,18 @@
                 return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
             },
             taskPosition(task) {
-                const s = new Date(task.start_time);
-                const e = new Date(task.end_time);
-                const minutesStart = (s.getHours() - 6) * 60 + s.getMinutes();
-                const duration = (e - s) / (1000 * 60);
+                if (!task.start_time || !task.end_time) return 'display: none;';
+                const s = dayjs(task.start_time);
+                const e = dayjs(task.end_time);
+                if (!s.isValid() || !e.isValid()) return 'display: none;';
+                const minutesStart = (s.hour() - 6) * 60 + s.minute();
+                const duration = e.diff(s, 'minute');
                 const left = (minutesStart / 30) * 80;
                 const width = (duration / 30) * 80;
-                return `left: ${left}px; width: ${width}px; top: 8px; height: 48px;`;
+                return `left: ${left}px; width: ${width}px; top: 8px; height: 60px;`;
+            },
+            formatDateFromProxy(proxy) {
+                return `${proxy.$y}-${String(proxy.$M + 1).padStart(2, '0')}-${String(proxy.$D).padStart(2, '0')}`;
             },
             selectionBoxStyle(sel) {
                 const left = Math.min(sel.startX, sel.endX);
@@ -266,11 +272,15 @@
         this.jobModalForm.schedule_to_time = toInputTime24(to);
 
         // Остальное — как раньше
-        const technicianName = this.employees.find(e => e.id === this.selection.technician_id)?.name || '';
-        this.jobModalForm.dispatch = technicianName;
+        //const technicianName = this.employees.find(e => e.id === this.selection.technician_id)?.name || '';
+        const tech = this.employees.find(e => e.id === this.selection.technician_id);
+        if (tech && !this.jobModalForm.employees.some(e => e.id === tech.id)) {
+            this.jobModalForm.employees.push(tech);
+        }
+        this.jobModalForm.employees_query = '';
         this.menuVisible = false;
 
-        //this.clearSelection();
+        this.clearSelection();
     },
     get selectionTimeRange() {
         if (!this.selection) return '';
@@ -326,7 +336,7 @@
                 if (window.interact) {
                     interact(el).draggable({
                         onend(event) {
-                            Livewire.dispatch('updateTaskPosition', task.id, event.pageX);
+                            $dispatch('updateTaskPosition', task.id, event.pageX);
                         }
                     });
                 }
@@ -376,7 +386,7 @@
             prefill(data) {
                 this.jobModalForm.schedule_from = data.schedule_from;
                 this.jobModalForm.schedule_to = data.schedule_to;
-                this.jobModalForm.dispatch = data.dispatch;
+                this.jobModalForm.employees_query = data.technicianName;
                 this.open = true;
             },
             addItem(type) {
@@ -471,14 +481,14 @@
         </div>
         <!-- Sticky колонка -->
         <div
-            class="absolute left-[10px] z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400 mr-[1px]">
+            class="absolute left-[10px] h-[217px] z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400 mr-[1px]">
             <!-- GMT и техники -->
-            <div class="w-[60px] h-[85px] flex-shrink-0 flex items-end justify-center bg-gray-50 text-[11px] font-thin">
+            <div class="w-[60px] h-[84px] flex-shrink-0 flex items-end justify-center bg-gray-50 text-[11px] font-thin">
                 GMT-04
             </div>
             <template x-for="employee in employees" :key="employee.id">
                 <div
-                    class="w-[60px] h-[64px] sticky left-0 z-10 flex-shrink-0 flex flex-col justify-center items-center gap-1 px-2 border-t border-gray-400 bg-white"
+                    class="w-[60px] h-[65px] sticky left-0 z-10 flex-shrink-0 flex flex-col justify-center items-center gap-1 px-2 border-t border-gray-400 bg-white"
                     x-ref="techRow">
                     <span x-text="employee.name" class="text-gray-800 text-[11px]"></span>
                     <template x-if="employee.avatar">
@@ -493,9 +503,9 @@
                 </div>
             </template>
         </div>
-        <div class="select-none bg-white text-sm text-gray-900 relative overflow-x-auto pl-15 pb-2" x-ref="mainGrid">
+        <div class="select-none bg-white text-sm text-gray-900 relative overflow-x-auto pl-15 pb-[7px]" x-ref="mainGrid">
             <!-- Временная шкала -->
-            <div class="sticky top-0 z-10 bg-white w-[4480px]">
+            <div class="sticky top-0 z-10 bg-white w-[4480px] mb-[3px]">
                 <div class="flex">
                     <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
                         <div :id="d.isSame(dayjs(), 'day') ? 'today-column' : null"
@@ -525,7 +535,7 @@
                                     <div class="relative">
                                         <template x-if="selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx">
                                             <div
-                                                class="absolute left-1 top-1 bg-blue-200 bg-opacity-70 rounded z-10 pointer-events-none pl-1 pt-1"
+                                                class="absolute left-1 top-1 bg-blue-100 bg-opacity-90 rounded z-10 pointer-events-none pl-[1px] pt-[1px]"
                                                 :style="selectionHighlightStyle(employee)"
                                             >
                                                 <!-- Время с - по -->
@@ -535,7 +545,7 @@
                                             </div>
                                         </template>
                                         <!-- Сетка 30-минутных слотов -->
-                                        <div class="flex relative w-[640px]" id="mainGrid">
+                                        <div class="flex relative w-[640px] border-b border-gray-100" id="mainGrid">
                                             <!-- 32 слотов по 30 минут -->
                                             <template x-for="slotIdx in 32" :key="slotIdx">
                                                 <div
@@ -564,9 +574,8 @@
                                             </template>
                                         </div>
                                         <!-- Задачи -->
-                                        <template x-for="task in employee.tasks" :key="task.id">
-                                            <div
-                                                class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
+                                        <template x-for="task in employee.tasks.filter(t => dayjs(t.start_time).format('YYYY-MM-DD') === d.format('YYYY-MM-DD'))" :key="task.id">
+                                            <div class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
                                                 :style="taskPosition(task)"
                                                 x-init="$nextTick(() => registerDraggable($el, task))"
                                             >
@@ -704,6 +713,7 @@
                                                 }
                                             }"
                                             x-init="setFromExternal(jobModalForm.schedule_from_time12)"
+                                            x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
                                             @time-changed.window="jobModalForm.schedule_from_time12 = $event.detail.value"
                                             class="relative w-36"
                                         >
@@ -719,25 +729,25 @@
 
                                             <div x-show="show"
                                                  @click.away="show = false"
-                                                 class="absolute z-10 bg-white rounded shadow-md mt-1 p-2 flex gap-2"
+                                                 class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
                                                  style="min-width: 210px"
                                             >
                                                 <!-- Часы -->
                                                 <select x-model="hour"
-                                                        class="border rounded p-1">
+                                                        class="w-[60px] border rounded p-1">
                                                     <template x-for="h in 12" :key="h">
                                                         <option :value="h" x-text="h"></option>
                                                     </template>
                                                 </select>
                                                 <!-- Минуты -->
                                                 <select x-model="minute"
-                                                        class="border rounded p-1">
-                                                    <template x-for="m in [0, 15, 30, 45]" :key="m">
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="m in [0, 30]" :key="m">
                                                         <option :value="m.toString().padStart(2, '0')" x-text="m.toString().padStart(2, '0')"></option>
                                                     </template>
                                                 </select>
                                                 <!-- AM/PM -->
-                                                <select x-model="ampm" class="border rounded p-1">
+                                                <select x-model="ampm" class="w-[60px] border rounded p-1">
                                                     <option>AM</option>
                                                     <option>PM</option>
                                                 </select>
@@ -749,25 +759,86 @@
                                             </div>
                                         </div>
 
-                                        <input type="hidden" x-model="jobModalForm.schedule_from_time" name="schedule_from_time12">
+                                        <input type="hidden" x-model="jobModalForm.schedule_from_time12" name="schedule_from_time12">
                                     </div>
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <label class="block text-xs text-gray-500 mb-1 w-10">To</label>
                                     <div class="flex gap-2 items-center">
-                                        <input
-                                            type="date"
-                                            :value="jobModalForm.schedule_to_date"
-                                            @input="jobModalForm.schedule_to_date = $event.target.value"
-                                            class="border rounded px-2 py-1"
+                                        <input type="date" x-model="jobModalForm.schedule_to_date"
+                                               class="border rounded px-2 py-1">
+                                        <div
+                                            x-data="{
+                                                show: false,
+                                                hour: 9,
+                                                minute: '00',
+                                                ampm: 'AM',
+                                                get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                setValue(h, m, a) {
+                                                    this.hour = h;
+                                                    this.minute = m;
+                                                    this.ampm = a;
+                                                    this.show = false;
+                                                    // Если нужна двусторонняя связь с jobModalForm:
+                                                    $dispatch('time-changed', { value: this.value });
+                                                },
+                                                setFromExternal(val) {
+                                                    if (!val) return;
+                                                    let [time, ampm] = val.split(' ');
+                                                    let [h, m] = time.split(':');
+                                                    this.hour = parseInt(h);
+                                                    this.minute = m;
+                                                    this.ampm = ampm || 'AM';
+                                                }
+                                            }"
+                                            x-init="setFromExternal(jobModalForm.schedule_to_time12)"
+                                            x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
+                                            @time-changed.window="jobModalForm.schedule_to_time12 = $event.detail.value"
+                                            class="relative w-36"
                                         >
-                                        <input
-                                            type="time"
-                                            :value="jobModalForm.schedule_to_time"
-                                            @input="jobModalForm.schedule_to_time = $event.target.value"
-                                            class="border rounded px-2 py-1"
-                                            step="900"
-                                        >
+                                            <button type="button"
+                                                    @click="show = !show"
+                                                    class="w-full px-3 py-2 border rounded focus:outline-none flex items-center justify-between"
+                                            >
+                                                <span x-text="value"></span>
+                                                <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="show"
+                                                 @click.away="show = false"
+                                                 class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
+                                                 style="min-width: 210px"
+                                            >
+                                                <!-- Часы -->
+                                                <select x-model="hour"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="h in 12" :key="h">
+                                                        <option :value="h" x-text="h"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- Минуты -->
+                                                <select x-model="minute"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="m in [0, 30]" :key="m">
+                                                        <option :value="m.toString().padStart(2, '0')" x-text="m.toString().padStart(2, '0')"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- AM/PM -->
+                                                <select x-model="ampm" class="w-[60px] border rounded p-1">
+                                                    <option>AM</option>
+                                                    <option>PM</option>
+                                                </select>
+                                                <button
+                                                    @click="setValue(hour, minute, ampm)"
+                                                    class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" x-model="jobModalForm.schedule_to_time12" name="schedule_to_time12">
                                     </div>
                                 </div>
                             </div>

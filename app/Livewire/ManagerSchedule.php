@@ -3,7 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\Customer;
-use Illuminate\Console\View\Components\Task;
+use App\Models\Task;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -24,18 +25,25 @@ class ManagerSchedule extends Component
 
     public function loadSchedule()
     {
-        $this->employees = Technician::with(['tasks' => function ($q) {
-            $q->whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()]);
-        }])->get()->map(function ($technician) {
+        $tasks = Task::whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()])->get();
+        $technicians = Technician::where('manager_id', Auth::id())->get();
+
+        $this->employees = $technicians->map(function ($technician) use ($tasks) {
             return [
                 'id' => $technician->id,
                 'name' => $technician->name,
-                'tasks' => $technician->tasks->map(fn ($task) => [
-                    'id' => $task->id,
-                    'title' => $task->title,
-                    'start_time' => $task->start_time,
-                    'end_time' => $task->end_time,
-                ]),
+                'tasks' => $tasks->filter(function ($task) use ($technician) {
+                    // technician_ids приведем к массиву
+                    $ids = is_array($task->technician_ids) ? $task->technician_ids : json_decode($task->technician_ids, true);
+                    return is_array($ids) && in_array($technician->id, $ids);
+                })->map(function ($task) {
+                    return [
+                        'id' => $task->id,
+                        'title' => $task->title,
+                        'start_time' => $task->start_time,
+                        'end_time' => $task->end_time,
+                    ];
+                })->values(),
             ];
         });
     }
@@ -86,10 +94,10 @@ class ManagerSchedule extends Component
     {
         \App\Models\Task::create([
             'title' => $form['items'][0]['name'] ?? 'Job',
-            'technician_id' => Technician::where('name', $form['dispatch'])->first()?->id,
-            'start_time' => $form['schedule_from'],
-            'end_time' => $form['schedule_to'],
-            'customer_id' => $form['selectedCustomerId'] ?? null,
+            'technician_ids' => collect($form['employees'])->pluck('id'),
+            'start_time' => $form['schedule_from_date'],
+            'end_time' => $form['schedule_to_date'],
+            'customer_id' => $form['customer_id'] ?? null,
         ]);
 
         $this->loadSchedule();
