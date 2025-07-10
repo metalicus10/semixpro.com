@@ -481,7 +481,7 @@
         </div>
         <!-- Sticky колонка -->
         <div
-            class="absolute left-[10px] h-[217px] z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400 mr-[1px]">
+            class="absolute left-[10px] h-auto z-30 bg-white w-[60px] flex-shrink-0 flex flex-col border-y border-gray-400 mr-[1px]">
             <!-- GMT и техники -->
             <div class="w-[60px] h-[84px] flex-shrink-0 flex items-end justify-center bg-gray-50 text-[11px] font-thin">
                 GMT-04
