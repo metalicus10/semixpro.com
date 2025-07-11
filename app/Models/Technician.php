@@ -23,9 +23,15 @@ class Technician extends Authenticatable
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function tasks()
+    /*public function tasks()
     {
         return $this->hasMany(Task::class);
+    }*/
+
+    public function tasks()
+    {
+        return $this->belongsToMany(Task::class, 'task_technician');
     }
+
 
 }

@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Models\Customer;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Task;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -92,13 +94,51 @@ class ManagerSchedule extends Component
 
     public function saveJob($form)
     {
-        \App\Models\Task::create([
+        // 1. Найти/создать заказчика
+        $customerId = $form['customer_id'] ?? null;
+
+        // 2. Создать заказ (order)
+        $order = Order::create([
+            'customer_id' => $customerId,
+            'manager_id'  => auth()->id(),
+            'status'      => 'pending',
+            'total'       => $form['total'] ?? 0,
+        ]);
+
+        // 3. Добавить позиции заказа (order_items)
+        foreach ($form['items'] as $item) {
+            OrderItem::create([
+                'order_id'  => $order->id,
+                'item_type' => $item['type'],
+                'item_id'   => $item['id'],
+                'quantity'  => $item['qty'],
+                'price'     => $item['unit_price'] ?? 0,
+                'total'       => $item['total'] ?? 0,
+            ]);
+        }
+
+        // 4. Сохранить задачу (Task) — для календаря
+        $startTime = $form['schedule_from_date'] . ' ' . $form['schedule_from_time'];
+        $endTime   = $form['schedule_to_date'] . ' ' . $form['schedule_to_time'];
+
+        $task = Task::create([
+            'title'          => $form['items'][0]['name'] ?? 'Job',
+            'technician_ids' => collect($form['employees'])->pluck('id'),
+            'start_time'     => $startTime,
+            'end_time'       => $endTime,
+            'customer_id'    => $customerId,
+            'order_id'       => $order->id,
+        ]);
+
+        $task->technicians()->sync($task['technician_ids']);
+
+        /*Task::create([
             'title' => $form['items'][0]['name'] ?? 'Job',
             'technician_ids' => collect($form['employees'])->pluck('id'),
             'start_time' => $form['schedule_from_date'],
             'end_time' => $form['schedule_to_date'],
             'customer_id' => $form['customer_id'] ?? null,
-        ]);
+        ]);*/
 
         $this->loadSchedule();
     }

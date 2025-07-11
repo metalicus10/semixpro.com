@@ -22,7 +22,14 @@
         employees_results: [],
         selectedCustomer: null,
         notify_customer: false,
-        items: [],
+        items: [
+            /*id: null,
+            type: '',
+            quantity: '',
+            price: 0,
+            total: 0,*/
+        ],
+        total: 0,
         private_notes: '',
         tags: '',
         attachments: [],
@@ -109,16 +116,69 @@
             initials(name) {
                 return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
             },
-            taskPosition(task) {
+            taskPosition(task, dayStr) {
                 if (!task.start_time || !task.end_time) return 'display: none;';
-                const s = dayjs(task.start_time);
-                const e = dayjs(task.end_time);
+                const baseHour12 = 6;
+                const gridStart = dayjs(`${dayStr} ${baseHour12.toString().padStart(2, '0')}:00:00`);
+                const gridEnd = gridStart.add(16, 'hour');
+                const baseAMPM   = 'AM';
+
+                //const dayStart = dayjs(`${dayStr} ${baseHour12.toString().padStart(2, '0')}:00:00`);
+                //const dayEnd   = dayStart.add(12, 'hour');
+
+                let s = dayjs(task.start_time);
+                let e = dayjs(task.end_time);
+
+                if (s.isBefore(gridStart)) s = gridStart;
+                if (e.isAfter(gridEnd)) e = gridEnd;
+
+                const start12 = this.to12HourTime(s.hour(), s.minute());
+                const end12   = this.to12HourTime(e.hour(), e.minute());
+
                 if (!s.isValid() || !e.isValid()) return 'display: none;';
-                const minutesStart = (s.hour() - 6) * 60 + s.minute();
+
+                /*if (s.isBefore(dayStart)) s = dayStart;
+                if (e.isAfter(dayEnd)) e = dayEnd;
+                if (e.isBefore(s)) e = s.add(30, 'minute');*/
+
+                /*const minutesStart = this.getAbsoluteMinutes(start12.hour12, start12.minute, start12.ampm, baseHour12, baseAMPM);
+                const minutesEnd   = this.getAbsoluteMinutes(end12.hour12, end12.minute, end12.ampm, baseHour12, baseAMPM);
+                console.log('minutesStart - '+minutesStart+' | minutesEnd - '+minutesEnd);
+
+                const duration     = minutesEnd - minutesStart;*/
+
+                const minutesStart = s.diff(gridStart, 'minute');
                 const duration = e.diff(s, 'minute');
-                const left = (minutesStart / 30) * 80;
-                const width = (duration / 30) * 80;
-                return `left: ${left}px; width: ${width}px; top: 8px; height: 60px;`;
+
+                const left = Math.max(0, (minutesStart / 30) * 80);
+                const width = Math.max(0, (duration / 30) * 80);
+
+                console.log('gridStart.format() - '+gridStart.format()+' | task.start_time - '+s+' | minutesStart - '+minutesStart);
+
+                return `left: ${left}px; width: ${width}px; top: 0px; height: 64px;`;
+            },
+            to12HourTime(hour, minute = 0) {
+                let ampm = 'AM';
+                let h = hour;
+                if (h >= 12) {
+                    ampm = 'PM';
+                    if (h > 12) h -= 12;
+                }
+                if (h === 0) h = 12;
+                return {
+                    hour12: h,
+                    minute: minute,
+                    ampm: ampm,
+                    // строка с ведущими нулями (например, 01:05 PM)
+                    string: `${h.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} ${ampm}`
+                };
+            },
+            getAbsoluteMinutes(hour12, minute, ampm, baseHour12 = 6, baseAMPM = 'AM') {
+                let hour24 = hour12 % 12;
+                if (ampm === 'PM') hour24 += 12;
+                let base24 = baseHour12 % 12;
+                if (baseAMPM === 'PM') base24 += 12;
+                return (hour24 - base24) * 60 + minute;
             },
             formatDateFromProxy(proxy) {
                 return `${proxy.$y}-${String(proxy.$M + 1).padStart(2, '0')}-${String(proxy.$D).padStart(2, '0')}`;
@@ -309,6 +369,12 @@
 
         return `${startString} - ${endString}`;
     },
+    getFullDatetime(date, time12, ampm) {
+        let [hour, minute] = time12.split(':').map(x => parseInt(x));
+        if (ampm === 'PM' && hour < 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+        return `${date} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`;
+    },
     formatTime(slotIdx) {
         let h = 6 + Math.floor(slotIdx / 2);
         let m = slotIdx % 2 === 0 ? '00' : '30';
@@ -358,7 +424,7 @@
                 return (this.currentWeek.length * 32)*2;
             },
             addLineItem() {
-                this.jobModalForm.items.push({ name: '', qty: 1, unit_price: 0, unit_cost: 0, description: '' });
+                this.jobModalForm.items.push({ name: '', qty: 1, unit_price: 0, unit_cost: 0, total: 0, description: '' });
             },
             handleFiles(e) {
                 this.jobModalForm.attachments = Array.from(e.target.files);
@@ -392,7 +458,17 @@
             addItem(type) {
                 this.jobModalForm.items.push({
                     id: Date.now() + Math.random(),
-                    name: '', qty: 1, unit_price: 0, unit_cost: 0, tax: false, description: '', type
+                    name: '', qty: 1, unit_price: 0, unit_cost: 0, tax: false, taxTotal: 0, description: '', type, total: 0
+                });
+                this.recalcItemsTotal();
+            },
+            recalcItemsTotal() {
+                this.jobModalForm.items.forEach(item => {
+                    // учти, если нужен налог (как в taxTotal)
+                    let base = item.qty * item.unit_price;
+                    let tax = item.tax ? base * 0.1 : 0;
+                    item.total = +(base + tax).toFixed(2);
+                    item.taxTotal = +(base * 0.1).toFixed(2);
                 });
             },
             subtotal() {
@@ -509,7 +585,7 @@
                 <div class="flex">
                     <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
                         <div :id="d.isSame(dayjs(), 'day') ? 'today-column' : null"
-                             class="text-start border-y border-gray-400 day-right-border w-[640px] day-column" :data-date="d.format('YYYY-MM-DD')"
+                             class="text-start border-y border-gray-400 day-right-border w-[640px] day-column" :data-date="d.format('YYYY-MM-DD HH:MM:SS')"
                              :class="{
                             'day-left-border': dayIdx !== 0,
                             'border-r border-gray-200': dayIdx % 1 !== 0,
@@ -574,14 +650,14 @@
                                             </template>
                                         </div>
                                         <!-- Задачи -->
-                                        <template x-for="task in employee.tasks.filter(t => dayjs(t.start_time).format('YYYY-MM-DD') === d.format('YYYY-MM-DD'))" :key="task.id">
+                                        <template x-for="task in employee.tasks.filter(t => dayjs(t.start_time).format('YYYY-MM-DD') === d.format('YYYY-MM-DD'))" :key="task.id" x-init="console.log(employee.tasks);">
                                             <div class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
-                                                :style="taskPosition(task)"
+                                                :style="taskPosition(task, d.format('YYYY-MM-DD'))"
                                                 x-init="$nextTick(() => registerDraggable($el, task))"
                                             >
                                                 <div class="font-semibold truncate" x-text="task.title"></div>
                                                 <div class="text-[11px] opacity-80"
-                                                     x-text="formatRange(task.start_time, task.end_time)"></div>
+                                                     x-text="dayjs(task.start_time).format('h:mm A') + ' - ' + dayjs(task.end_time).format('h:mm A')"></div>
                                             </div>
                                         </template>
                                     </div>
@@ -699,11 +775,9 @@
                                                     this.minute = m;
                                                     this.ampm = a;
                                                     this.show = false;
-                                                    // Если нужна двусторонняя связь с jobModalForm:
                                                     $dispatch('time-changed', { value: this.value });
                                                 },
                                                 setFromExternal(val) {
-                                                    // Позволяет задавать значение извне, например при открытии модалки
                                                     if (!val) return;
                                                     let [time, ampm] = val.split(' ');
                                                     let [h, m] = time.split(':');
@@ -819,8 +893,7 @@
                                                     </template>
                                                 </select>
                                                 <!-- Минуты -->
-                                                <select x-model="minute"
-                                                        class="w-[60px] border rounded p-1">
+                                                <select x-model="minute" class="w-[60px] border rounded p-1">
                                                     <template x-for="m in [0, 30]" :key="m">
                                                         <option :value="m.toString().padStart(2, '0')" x-text="m.toString().padStart(2, '0')"></option>
                                                     </template>
@@ -943,7 +1016,7 @@
                                                         <div class="relative flex flex-col w-full">
                                                             <input :id="`qty-${index}`" :name="`name-${index}`"
                                                                    x-model="item.qty" type="number" step="1" min="0"
-                                                                   placeholder=" "
+                                                                   placeholder=" " @input="recalcItemsTotal()"
                                                                    class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                             <label :for="`qty-${index}`"
                                                                    class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -957,7 +1030,7 @@
                                                             <input :id="`uprice-${index}`" :name="`uprice-${index}`"
                                                                    x-model="item.unit_price" type="number"
                                                                    step="0.01"
-                                                                   min="0"
+                                                                   min="0" @input="recalcItemsTotal()"
                                                                    class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                             <label :for="`uprice-${index}`"
                                                                    class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -977,7 +1050,7 @@
                                                     <div class="relative flex flex-col w-2/5">
                                                         <input :id="`ucost-${index}`" x-model="item.unit_cost"
                                                                type="number" step="0.1"
-                                                               min="0"
+                                                               min="0" @input="recalcItemsTotal()"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <label :for="`ucost-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -991,8 +1064,7 @@
                                         <div class="flex flex-row items-start w-1/5">
                                             <!-- Итоговая цена -->
                                             <div class="p-2 text-right text-sm min-w-[70px]">
-                                                        <span
-                                                            x-text="formatMoney(item.qty * item.unit_price || 0)"></span>
+                                                <span x-text="formatMoney(item.total)"></span>
                                             </div>
 
                                             <!-- Удалить -->
@@ -1059,7 +1131,7 @@
                                                         <div class="relative flex flex-col w-full">
                                                             <input :id="`qty-${index}`" :name="`name-${index}`"
                                                                    x-model="item.qty" type="number" step="1" min="0"
-                                                                   placeholder=" "
+                                                                   placeholder=" " @input="recalcItemsTotal()"
                                                                    class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                             <label :for="`qty-${index}`"
                                                                    class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -1073,7 +1145,7 @@
                                                             <input :id="`uprice-${index}`" :name="`uprice-${index}`"
                                                                    x-model="item.unit_price" type="number"
                                                                    step="0.01"
-                                                                   min="0"
+                                                                   min="0" @input="recalcItemsTotal()"
                                                                    class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                             <label :for="`uprice-${index}`"
                                                                    class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -1093,7 +1165,7 @@
                                                     <div class="relative flex flex-col w-2/5">
                                                         <input :id="`ucost-${index}`" x-model="item.unit_cost"
                                                                type="number" step="0.1"
-                                                               min="0"
+                                                               min="0" @input="recalcItemsTotal()"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <label :for="`ucost-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -1107,8 +1179,7 @@
                                         <div class="flex flex-row items-start w-1/5">
                                             <!-- Итоговая цена -->
                                             <div class="p-2 text-right text-sm min-w-[70px]">
-                                                        <span
-                                                            x-text="formatMoney(item.qty * item.unit_price || 0)"></span>
+                                                <span x-text="formatMoney(item.total)"></span>
                                             </div>
 
                                             <!-- Удалить -->

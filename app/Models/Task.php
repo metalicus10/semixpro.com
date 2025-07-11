@@ -12,4 +12,15 @@ class Task extends Model
     protected $fillable = ['title', 'start_time', 'end_time', 'customer_id', 'technician_ids'];
 
     protected $casts = ['technician_ids' => 'array'];
+
+    public function order()
+    {
+        return $this->hasOne(Order::class);
+    }
+
+    public function technicians()
+    {
+        return $this->belongsToMany(Technician::class, 'task_technician');
+    }
+
 }
