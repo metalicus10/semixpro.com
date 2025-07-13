@@ -6,7 +6,9 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Task;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -27,18 +29,21 @@ class ManagerSchedule extends Component
 
     public function loadSchedule()
     {
-        $tasks = Task::whereBetween('start_time', [now()->startOfDay(), now()->endOfDay()])->get();
+        $tasks = Task::whereBetween('start_time', [now()->startOfDay(), now()->addDays(7)->endOfDay()])->get();
         $technicians = Technician::where('manager_id', Auth::id())->get();
+        $pivot = DB::table('task_technician')->get();
 
-        $this->employees = $technicians->map(function ($technician) use ($tasks) {
+        $taskIdsByTechnician = [];
+        foreach ($pivot as $row) {
+            $taskIdsByTechnician[$row->technician_id][] = $row->task_id;
+        }
+
+        $this->employees = $technicians->map(function ($technician) use ($tasks, $taskIdsByTechnician) {
+            $ids = $taskIdsByTechnician[$technician->id] ?? [];
             return [
                 'id' => $technician->id,
                 'name' => $technician->name,
-                'tasks' => $tasks->filter(function ($task) use ($technician) {
-                    // technician_ids приведем к массиву
-                    $ids = is_array($task->technician_ids) ? $task->technician_ids : json_decode($task->technician_ids, true);
-                    return is_array($ids) && in_array($technician->id, $ids);
-                })->map(function ($task) {
+                'tasks' => $tasks->whereIn('id', $ids)->map(function ($task) {
                     return [
                         'id' => $task->id,
                         'title' => $task->title,
@@ -88,7 +93,6 @@ class ManagerSchedule extends Component
             ->orWhere('phone', 'like', "%$query%")
             ->limit(10)
             ->get(['id', 'name', 'email', 'phone', 'address']);
-        //dd(array_values($results));
         $this->dispatch('search-customers-result', $results);
     }
 
@@ -131,31 +135,16 @@ class ManagerSchedule extends Component
         ]);
 
         $task->technicians()->sync($task['technician_ids']);
-
-        /*Task::create([
-            'title' => $form['items'][0]['name'] ?? 'Job',
-            'technician_ids' => collect($form['employees'])->pluck('id'),
-            'start_time' => $form['schedule_from_date'],
-            'end_time' => $form['schedule_to_date'],
-            'customer_id' => $form['customer_id'] ?? null,
-        ]);*/
-
         $this->loadSchedule();
     }
 
-    public function updateTaskPosition($taskId, $x)
+    public function updateTaskPosition($taskId, $newStart, $newEnd)
     {
         $task = Task::findOrFail($taskId);
-        $duration = strtotime($task->end_time) - strtotime($task->start_time);
-
-        $newStart = now()->startOfDay()->addMinutes(($x / 128) * 60);
-        $newEnd = $newStart->copy()->addSeconds($duration);
-
         $task->update([
-            'start_time' => $newStart,
-            'end_time' => $newEnd
+            'start_time' => $newStart, // 'Y-m-d H:i:s'
+            'end_time' => $newEnd,     // 'Y-m-d H:i:s'
         ]);
-
         $this->loadSchedule();
     }
 

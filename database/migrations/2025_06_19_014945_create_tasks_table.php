@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->json('technician_ids')->nullable();
             $table->foreign('customer_id')->references('id')->on('customers')->nullOnDelete();
             $table->timestamp('start_time');
             $table->timestamp('end_time');

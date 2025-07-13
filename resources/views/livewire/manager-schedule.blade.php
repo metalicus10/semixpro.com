@@ -22,13 +22,7 @@
         employees_results: [],
         selectedCustomer: null,
         notify_customer: false,
-        items: [
-            /*id: null,
-            type: '',
-            quantity: '',
-            price: 0,
-            total: 0,*/
-        ],
+        items: [],
         total: 0,
         private_notes: '',
         tags: '',
@@ -53,13 +47,33 @@
     currentWeek: [],
     viewDate: dayjs().startOf('day'),
     slotsPerDay: 32,
-    baseHour: 6,
+    gridStartHour: 6,
+    gridEndHour: 22,
     mouseDown: false,
     longPressTimeout: null,
-    slotHeight: 64,
+    slotHeight: 65,
+    gridStartX: 60,
+    slotWidth: 20,
+    slotMinutes: 30,
+    dragStartSlot: null,
+    dragEndSlot: null,
+    draggingTask: false,
+    dragSlotIdx: null,
+    dragDayIdx: null,
 
     init(data) {
-        this.employees = data;
+        if (!Array.isArray(data)) {
+            this.employees = [];
+            return;
+        }
+        this.employees = data.map(employee => {
+            const { tasks, maxLevel } = this.assignTaskLevels(employee.tasks || []);
+            return {
+                ...employee,
+                tasks: tasks, // обычный массив!
+                rowHeight: (maxLevel + 1) * 65
+            }
+        });
         this.setWeek(this.viewDate);
         window.addEventListener('customer-validation-error', event => {
             this.customerError = Object.values(event.detail.errors)[0][0] ?? 'Validation error';
@@ -84,6 +98,14 @@
             this.jobModalForm.customer_id = event.detail.id;
             this.showCustomerModal = false;
         });
+
+        window.addEventListener('updateTaskPosition', e => {
+            this.onTaskDrop(e.detail.taskId, e.detail.pageX);
+        });
+        window.addEventListener('mouseup', () => draggingTask = false);
+        window.addEventListener('mouseleave', () => draggingTask = false);
+
+        $watch('viewDate', () => { draggingTask = false });
     },
         setWeek(date) {
             this.weekStart = dayjs(date).startOf('week').add(1, 'day'); // Monday as start
@@ -97,7 +119,9 @@
             },
             goToday() {
                 this.setWeek(dayjs());
+                console.log(this.setWeek(dayjs()));
                 this.viewDate = dayjs().startOf('day');
+                console.log(this.viewDate);
                 this.scrollToToday();
             },
             isToday(d) {
@@ -117,45 +141,15 @@
                 return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
             },
             taskPosition(task, dayStr) {
-                if (!task.start_time || !task.end_time) return 'display: none;';
-                const baseHour12 = 6;
-                const gridStart = dayjs(`${dayStr} ${baseHour12.toString().padStart(2, '0')}:00:00`);
-                const gridEnd = gridStart.add(16, 'hour');
-                const baseAMPM   = 'AM';
-
-                //const dayStart = dayjs(`${dayStr} ${baseHour12.toString().padStart(2, '0')}:00:00`);
-                //const dayEnd   = dayStart.add(12, 'hour');
-
-                let s = dayjs(task.start_time);
-                let e = dayjs(task.end_time);
-
-                if (s.isBefore(gridStart)) s = gridStart;
-                if (e.isAfter(gridEnd)) e = gridEnd;
-
-                const start12 = this.to12HourTime(s.hour(), s.minute());
-                const end12   = this.to12HourTime(e.hour(), e.minute());
-
-                if (!s.isValid() || !e.isValid()) return 'display: none;';
-
-                /*if (s.isBefore(dayStart)) s = dayStart;
-                if (e.isAfter(dayEnd)) e = dayEnd;
-                if (e.isBefore(s)) e = s.add(30, 'minute');*/
-
-                /*const minutesStart = this.getAbsoluteMinutes(start12.hour12, start12.minute, start12.ampm, baseHour12, baseAMPM);
-                const minutesEnd   = this.getAbsoluteMinutes(end12.hour12, end12.minute, end12.ampm, baseHour12, baseAMPM);
-                console.log('minutesStart - '+minutesStart+' | minutesEnd - '+minutesEnd);
-
-                const duration     = minutesEnd - minutesStart;*/
-
-                const minutesStart = s.diff(gridStart, 'minute');
-                const duration = e.diff(s, 'minute');
-
-                const left = Math.max(0, (minutesStart / 30) * 80);
-                const width = Math.max(0, (duration / 30) * 80);
-
-                console.log('gridStart.format() - '+gridStart.format()+' | task.start_time - '+s+' | minutesStart - '+minutesStart);
-
-                return `left: ${left}px; width: ${width}px; top: 0px; height: 64px;`;
+                let snapMinutes = 30;
+                let gridStart = dayjs(`${dayStr} ${this.gridStartHour.toString().padStart(2,'0')}:00:00`);
+                let start = dayjs(task.start_time);
+                let end = dayjs(task.end_time);
+                let minutesStart = start.diff(gridStart, 'minute');
+                let duration = end.diff(start, 'minute');
+                let left = (minutesStart / snapMinutes) * this.slotWidth;
+                let width = (duration / snapMinutes) * this.slotWidth;
+                return `left: ${left}px; width: ${width}px; top: ${task.level * 65}px; height: 65px;`;
             },
             to12HourTime(hour, minute = 0) {
                 let ampm = 'AM';
@@ -357,11 +351,11 @@
         const weekStart = dayjs(this.currentWeek[0].format('YYYY-MM-DD'));
 
         const startDate = weekStart.add(startDay, 'day').toDate();
-        startDate.setHours(this.baseHour, 0, 0, 0);
+        startDate.setHours(this.gridStartHour, 0, 0, 0);
         startDate.setMinutes(startDate.getMinutes() + startSlotInDay * 30);
 
         const endDate = weekStart.add(endDay, 'day').toDate();
-        endDate.setHours(this.baseHour, 0, 0, 0);
+        endDate.setHours(this.gridStartHour, 0, 0, 0);
         endDate.setMinutes(endDate.getMinutes() + (endSlotInDay + 1) * 30);
 
         const startString = `${this.formatTime12(startDate)}${startDay !== endDay ? ' ' + weekStart.add(startDay, 'day').format('ddd') : ''}`;
@@ -400,12 +394,93 @@
     },
             registerDraggable(el, task) {
                 if (window.interact) {
+                    let self = this;
                     interact(el).draggable({
+                        onstart: (event) => {
+                            self.draggingTask = {
+                                ...task,
+                                width: el.offsetWidth,
+                                height: el.offsetHeight,
+                                originalLeft: el.offsetLeft,
+                                originalTop: el.offsetTop,
+                            };
+                            // можно хранить ещё id, dayIdx и т.д.
+                        },
+                        onmove: (event) => {
+                            // тут считаем в какой слот и день попали
+                            let mouseX = event.clientX;
+                            let offset = mouseX - this.gridStartX;
+                            self.dragSlotIdx = Math.floor(offset / self.slotWidth);
+                        },
                         onend(event) {
-                            $dispatch('updateTaskPosition', task.id, event.pageX);
+                            if (self.dragSlotIdx !== null) {
+                                let mouseX = event.clientX;
+                                let dayWidth = 640;
+                                console.log('mouseX:', mouseX, 'gridStartX:', self.gridStartX, 'dayWidth:', dayWidth, 'slotWidth:', self.slotWidth);
+                                let { dayIdx, slotIdx } = self.getDayAndSlotIdx(mouseX, self.gridStartX, dayWidth, self.slotWidth, self.slotsPerDay);
+                                slotIdx = Math.max(0, Math.min(slotIdx, self.slotsPerDay - 1));
+
+                                if (isNaN(dayIdx) || isNaN(slotIdx)) {
+                                    console.error('ОШИБКА: dayIdx или slotIdx — не число!', { dayIdx, slotIdx, clientX });
+                                    return;
+                                }
+
+                                let minutes = slotIdx * self.slotMinutes;
+                                console.log('snap check', {slotIdx, dayIdx, minutes});
+
+                                // Получаем дату текущего дня (относительно viewDate + dayIdx)
+                                let baseDate = dayjs(self.viewDate).add(dayIdx, 'day').hour(self.gridStartHour).minute(0).second(0).millisecond(0);
+                                let newStart = baseDate.add(slotIdx * self.slotMinutes, 'minute').set('second', 0).set('millisecond', 0);
+
+                                let originalDuration = dayjs(self.draggingTask.end_time).diff(dayjs(self.draggingTask.start_time), 'minute');
+                                let duration = Math.round(originalDuration / self.slotMinutes) * self.slotMinutes; // округление к ближайшему слоту
+                                let newEnd = newStart.add(duration, 'minute');
+
+                                // Граничные проверки (за пределы сетки, не в прошлое)
+                                let gridEnd = baseDate.add(self.slotsPerDay * self.slotMinutes, 'minute');
+                                let now = dayjs();
+                                if (newStart.isBefore(baseDate)) newStart = baseDate;
+                                if (newEnd.isAfter(gridEnd)) newEnd = gridEnd;
+                                if (newStart.isBefore(now)) {
+                                    newStart = now;
+                                    newEnd = newStart.add(duration, 'minute');
+                                }
+
+                                let startStr = newStart.format('YYYY-MM-DD HH:mm:00');
+                                let endStr = newEnd.format('YYYY-MM-DD HH:mm:00');
+
+                                console.log({
+                                  dayIdx, slotIdx, viewDate: self.viewDate,
+                                  gridStartHour: self.gridStartHour,
+                                  baseDate: baseDate.format('YYYY-MM-DD HH:mm:ss'),
+                                  newStart: newStart.format('YYYY-MM-DD HH:mm:ss'),
+                                  startStr: startStr,
+                                });
+
+                                self.saveTaskPosition(self.draggingTask.id, startStr, endStr);
+
+                                self.draggingTask = false;
+                                self.dragSlotIdx = null;
+                                self.dragDayIdx = null;
+                            }
                         }
                     });
                 }
+            },
+            getDayAndSlotIdx(clientX, gridStartX, dayWidth, slotWidth, slotsPerDay = 32) {
+                if (typeof clientX !== 'number' || typeof gridStartX !== 'number' ||
+                    typeof dayWidth !== 'number' || typeof slotWidth !== 'number') {
+                    return { dayIdx: 0, slotIdx: 0 };
+                }
+                let dayIdx = Math.floor((clientX - gridStartX) / dayWidth);
+                if (dayIdx < 0) dayIdx = 0;
+                let dayStartX = gridStartX + dayIdx * dayWidth;
+                let offsetInDay = clientX - dayStartX;
+                let slotIdx = Math.round(offsetInDay / slotWidth);
+                if (slotIdx < 0) slotIdx = 0;
+                if (slotIdx > slotsPerDay - 1) slotIdx = slotsPerDay - 1;
+                console.log('getDayAndSlotIdx:', {clientX, gridStartX, dayWidth, slotWidth, dayIdx, slotIdx});
+                return { dayIdx, slotIdx };
             },
             selectionHighlightStyle(employee) {
                 if (!this.selection || this.selection.technician_id !== employee.id) return '';
@@ -541,6 +616,72 @@
     removeEmployee(idx) {
         this.jobModalForm.employees.splice(idx, 1);
     },
+    onTaskDrop(taskId, pageX) {
+        let task = this.employees.flatMap(e => e.tasks).find(t => t.id === taskId);
+        let offsetX = pageX - this.gridStartX;
+        if (offsetX < 0) offsetX = 0;
+        let slotIdx = Math.round(offsetX / this.slotWidth);
+        let day = dayjs(task.start_time).format('YYYY-MM-DD');
+        let baseDate = dayjs(`${day} ${this.gridStartHour.toString().padStart(2, '0')}:00:00`);
+        let minutes = slotIdx * this.slotMinutes;
+        // --- КОРРЕКТНЫЙ СЧЕТ ВРЕМЕНИ (snap to grid) ---
+        let newStart = baseDate.add(minutes, 'minute');
+        let duration = dayjs(task.end_time).diff(dayjs(task.start_time), 'minute');
+        let newEnd = newStart.add(duration, 'minute');
+        // --- ОГРАНИЧЕНИЯ ---
+        let gridEnd = dayjs(`${day} ${this.gridEndHour.toString().padStart(2, '0')}:00:00`);
+        if (newStart.isBefore(baseDate)) newStart = baseDate;
+        if (newEnd.isAfter(gridEnd)) newEnd = gridEnd;
+        // --- Не даём таскать в прошлое ---
+        let now = dayjs();
+        if (newStart.isBefore(now)) {
+            newStart = now;
+            newEnd = newStart.add(duration, 'minute');
+        }
+        // --- Форматируем ---
+        let startStr = newStart.format('YYYY-MM-DD HH:mm:ss');
+        let endStr = newEnd.format('YYYY-MM-DD HH:mm:ss');
+        this.saveTaskPosition(task.id, startStr, endStr);
+    },
+    async saveTaskPosition(taskId, newStart, newEnd) {
+        await $wire.call('updateTaskPosition', taskId, newStart, newEnd);
+        let employee = this.employees.find(e => e.tasks.some(t => t.id === taskId));
+        if (employee) {
+            // Копируем задачи, чтобы обновить ссылку (на случай reactivity)
+            employee.tasks = [...employee.tasks];
+            // Пересчёт уровней и высоты
+            const { tasks, maxLevel } = this.assignTaskLevels(employee.tasks);
+            employee.tasks = tasks;
+            employee.rowHeight = (maxLevel + 1) * 65;
+        }
+    },
+    assignTaskLevels(tasks) {
+        if (!Array.isArray(tasks)) return { tasks: [], maxLevel: 0 };
+
+        let levels = [];
+        tasks.forEach(task => {
+            let placed = false;
+            for (let i = 0; i < levels.length; i++) {
+                if (!levels[i].some(t => !(task.end_time <= t.start_time || task.start_time >= t.end_time))) {
+                    levels[i].push(task);
+                    task.level = i;
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                levels.push([task]);
+                task.level = levels.length - 1;
+            }
+        });
+        let maxLevel = tasks.reduce((max, t) => Math.max(max, t.level || 0), 0);
+
+        // ВАЖНО: делаем tasks обычным массивом!
+        return {
+            tasks: [...tasks], // Это снимет Proxy если tasks был реактивным объектом
+            maxLevel
+        };
+    }
 }" x-init="init(@js($employees)); scrollToToday();"
 >
     <div class="select-none bg-white text-sm text-gray-900">
@@ -606,7 +747,7 @@
                                 </div>
                             </div>
                             <template x-for="employee in employees" :key="employee.id">
-                                <div class="flex w-[640px] flex-col relative min-h-[64px] border-gray-100">
+                                <div class="flex w-[640px] flex-col relative min-h-[65px] border-gray-100">
                                     <!-- Правая часть — сетка и задачи -->
                                     <div class="relative">
                                         <template x-if="selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx">
@@ -621,39 +762,46 @@
                                             </div>
                                         </template>
                                         <!-- Сетка 30-минутных слотов -->
-                                        <div class="flex relative w-[640px] border-b border-gray-100" id="mainGrid">
-                                            <!-- 32 слотов по 30 минут -->
-                                            <template x-for="slotIdx in 32" :key="slotIdx">
-                                                <div
-                                                    :class="{
-                                                        'bg-blue-100': selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id &&
-                                                        (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot
-                                                    }"
-                                                    class="flex left-0 border-r border-gray-100 cursor-pointer"
-                                                    :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 64px; width: 20px;'"
-                                                    @mousedown.prevent="
-                                                        if ($event.button === 0) {
-                                                            startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx - 1);
-                                                        }
-                                                    "
-                                                    @mousemove="dragSelect(dayIdx, slotIdx - 1)"
-                                                    @mouseup.window="endSelect()"
-                                                    @contextmenu.prevent="
-                                                        (selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx && (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot)
-                                                        ? showContextMenu($event, dayIdx, slotIdx - 1, employee.id)
-                                                        : (startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx - 1), endSelect(), showContextMenu($event, dayIdx, slotIdx - 1, employee.id))
-                                                    "
-                                                    @touchstart.passive="startLongPress($event, dayIdx, slotIdx - 1)"
-                                                    @touchmove.passive="dragSelect(dayIdx, slotIdx - 1, true)"
-                                                    @touchend="cancelLongPress(true)"
-                                                ></div>
-                                            </template>
+                                        <div :style="'height: ' + employee.rowHeight + 'px;'" class="flex relative w-[640px] border-b border-gray-100" id="mainGrid">
+                                            <div class="absolute inset-0 z-0 flex w-full">
+                                                <!-- 32 слотов по 30 минут -->
+                                                <template x-for="slotIdx in 32" :key="slotIdx">
+                                                    <div
+                                                        :class="{
+                                                            'bg-blue-100': (
+                                                              (selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id &&
+                                                                (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot
+                                                              )
+                                                              ||
+                                                              (draggingTask && slotIdx >= dragStartSlot && slotIdx < dragEndSlot)
+                                                            )
+                                                        }"
+                                                        class="flex left-0 border-r border-gray-100 cursor-pointer"
+                                                        :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 100%; width: 20px;'"
+                                                        @mousedown.prevent="
+                                                            if ($event.button === 0) {
+                                                                startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx - 1);
+                                                            }
+                                                        "
+                                                        @mousemove="dragSelect(dayIdx, slotIdx - 1)"
+                                                        @mouseup.window="endSelect()"
+                                                        @contextmenu.prevent="
+                                                            (selection && selection.technician_id === employee.id && selection.dayIdx === dayIdx && (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot)
+                                                            ? showContextMenu($event, dayIdx, slotIdx - 1, employee.id)
+                                                            : (startSelect($event, employee.id, dayIdx, d.format('YYYY-MM-DD'), slotIdx - 1), endSelect(), showContextMenu($event, dayIdx, slotIdx - 1, employee.id))
+                                                        "
+                                                        @touchstart.passive="startLongPress($event, dayIdx, slotIdx - 1)"
+                                                        @touchmove.passive="dragSelect(dayIdx, slotIdx - 1, true)"
+                                                        @touchend="cancelLongPress(true)"
+                                                    ></div>
+                                                </template>
+                                            </div>
                                         </div>
                                         <!-- Задачи -->
-                                        <template x-for="task in employee.tasks.filter(t => dayjs(t.start_time).format('YYYY-MM-DD') === d.format('YYYY-MM-DD'))" :key="task.id" x-init="console.log(employee.tasks);">
+                                        <template x-for="task in employee.tasks.filter(t => dayjs(t.start_time).format('YYYY-MM-DD') === d.format('YYYY-MM-DD'))" :key="task.id">
                                             <div class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
-                                                :style="taskPosition(task, d.format('YYYY-MM-DD'))"
-                                                x-init="$nextTick(() => registerDraggable($el, task))"
+                                                 :style="taskPosition(task, d.format('YYYY-MM-DD')) + `top: ${task.level * 65}px;`"
+                                                 x-init="$nextTick(() => registerDraggable($el, task))"
                                             >
                                                 <div class="font-semibold truncate" x-text="task.title"></div>
                                                 <div class="text-[11px] opacity-80"
@@ -663,12 +811,25 @@
                                     </div>
                                 </div>
                             </template>
+                            <!-- Превью (ghost) блока задачи -->
+                            <template x-if="draggingTask">
+                                <div
+                                    class="absolute z-50 pointer-events-none border-2 border-red-500 bg-white bg-opacity-70 rounded"
+                                    :style="`
+                                        left: ${draggingTask.originalLeft}px;
+                                        top: ${draggingTask.originalTop}px;
+                                        width: ${draggingTask.width}px;
+                                        height: ${draggingTask.height}px;
+                                    `">
+                                    <!-- Можно сюда вставить превью/контент -->
+                                </div>
+                            </template>
+
                         </div>
 
                     </template>
                 </div>
             </div>
-
 
         </div>
         <!-- Контекстное меню -->
