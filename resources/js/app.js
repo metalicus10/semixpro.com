@@ -4,10 +4,10 @@ import * as simpleDatatables from "simple-datatables";
 import Chart from 'chart.js/auto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
-import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+window.dayjs = dayjs;
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
-window.dayjs = dayjs;
 import interact from 'interactjs';
 window.interact = interact;
 

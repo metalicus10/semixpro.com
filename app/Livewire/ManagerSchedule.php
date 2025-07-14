@@ -98,10 +98,8 @@ class ManagerSchedule extends Component
 
     public function saveJob($form)
     {
-        // 1. Найти/создать заказчика
         $customerId = $form['customer_id'] ?? null;
 
-        // 2. Создать заказ (order)
         $order = Order::create([
             'customer_id' => $customerId,
             'manager_id'  => auth()->id(),
@@ -109,7 +107,6 @@ class ManagerSchedule extends Component
             'total'       => $form['total'] ?? 0,
         ]);
 
-        // 3. Добавить позиции заказа (order_items)
         foreach ($form['items'] as $item) {
             OrderItem::create([
                 'order_id'  => $order->id,
@@ -121,20 +118,21 @@ class ManagerSchedule extends Component
             ]);
         }
 
-        // 4. Сохранить задачу (Task) — для календаря
         $startTime = $form['schedule_from_date'] . ' ' . $form['schedule_from_time'];
         $endTime   = $form['schedule_to_date'] . ' ' . $form['schedule_to_time'];
 
         $task = Task::create([
             'title'          => $form['items'][0]['name'] ?? 'Job',
-            'technician_ids' => collect($form['employees'])->pluck('id'),
+            //'technician_ids' => collect($form['employees'])->pluck('id'),
             'start_time'     => $startTime,
             'end_time'       => $endTime,
             'customer_id'    => $customerId,
             'order_id'       => $order->id,
         ]);
 
-        $task->technicians()->sync($task['technician_ids']);
+        $technicianIds = collect($form['employees'])->pluck('id');
+
+        $task->technicians()->sync($technicianIds);
         $this->loadSchedule();
     }
 

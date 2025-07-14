@@ -17,7 +17,7 @@ class Task extends Model
 
     public function technicians()
     {
-        return $this->belongsToMany(Technician::class, 'task_technician');
+        return $this->belongsToMany(Technician::class, 'task_technician', 'task_id', 'technician_id');
     }
 
 }
