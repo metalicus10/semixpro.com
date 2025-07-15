@@ -138,10 +138,11 @@ class ManagerSchedule extends Component
 
     public function updateTaskPosition($taskId, $newStart, $newEnd)
     {
+        if($newStart == "0000-00-00 00:00:00" || $newEnd == "0000-00-00 00:00:00") {return;}
         $task = Task::findOrFail($taskId);
         $task->update([
-            'start_time' => $newStart, // 'Y-m-d H:i:s'
-            'end_time' => $newEnd,     // 'Y-m-d H:i:s'
+            'start_time' => $newStart,
+            'end_time' => $newEnd,
         ]);
         $this->loadSchedule();
     }

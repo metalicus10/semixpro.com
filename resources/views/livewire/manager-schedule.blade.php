@@ -103,10 +103,10 @@
         window.addEventListener('updateTaskPosition', e => {
             this.onTaskDrop(e.detail.taskId, e.detail.pageX);
         });
-        window.addEventListener('mouseup', () => draggingTask = false);
-        window.addEventListener('mouseleave', () => draggingTask = false);
+        window.addEventListener('mouseup', () => this.draggingTask = null);
+        window.addEventListener('mouseleave', () => this.draggingTask = null);
 
-        $watch('viewDate', () => { draggingTask = false });
+        $watch('viewDate', () => { this.draggingTask = null });
     },
         setWeek(date) {
             this.weekStart = dayjs(date).startOf('week').add(1, 'day'); // Monday as start
@@ -142,6 +142,7 @@
                 return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
             },
             taskPosition(task, dayStr) {
+                console.log(task);
                 let snapMinutes = 30;
                 let gridStart = dayjs(`${dayStr} ${this.gridStartHour.toString().padStart(2,'0')}:00:00`);
                 let start = dayjs(task.start_time);
@@ -393,64 +394,76 @@
         h = h.toString().padStart(2, '0');
         return `${date}T${h}:${m}:00`;
     },
-            registerDraggable(el, task) {
+            registerDraggable(el, task, dayIdx) {
                 if (window.interact) {
                     let self = this;
                     interact(el).draggable({
                         onstart: (event) => {
                             const el = event.target;
+                            const dayColumn = document.getElementById('day-column-' + dayIdx);
+                            const rect = dayColumn.getBoundingClientRect();
+                            //console.log(dayColumn);
                             self.draggingTask = {
                                 ...task,
+                                dayIdx: dayIdx,
+                                dayColumnRect: rect,
+                                startDayIdx: dayIdx,
                                 width: el.offsetWidth,
                                 height: el.offsetHeight,
                                 originalLeft: el.offsetLeft,
                                 originalTop: el.offsetTop,
                                 left: el.offsetLeft,
                                 top: el.offsetTop,
+                                dragOffsetX: event.clientX - el.offsetLeft,
+                                dragOffsetY: event.clientY - el.offsetTop,
+                                dayColumnLeft: rect.left,
+                                dayColumnTop: rect.top,
                             };
                             this.isDragging = true;
                         },
                         onmove: (event) => {
-                            if (!this.draggingTask) return;
-                            this.draggingTask.left += event.dx;
-                            this.draggingTask.top += event.dy;
+                            if (!self.draggingTask) return;
+                            const dayIdx = getDayColumnUnderCursor(event.clientX, event.clientY);
 
-                            const { dayIdx, slotIdx } = self.getDayAndSlotIdx(
-                                this.draggingTask.left + self.draggingTask.width/2,
-                                this.draggingTask.top + self.draggingTask.height/2
-                            );
+                            const dayColumns = document.elementsFromPoint(event.clientX, event.clientY).filter(el => el.id && el.id.startsWith('day-column-'));
+                            const rect = dayColumns[0].getBoundingClientRect();
+                            self.draggingTask.left = event.clientX - rect.left - self.draggingTask.width / 2;
+                            self.draggingTask.top  = event.clientY - rect.top  - self.draggingTask.height / 2;
+
+                            //console.log({'left':self.draggingTask.left, 'top':self.draggingTask.top});
+
                             self.highlightedDayIdx = dayIdx;
                             self.highlightedSlotIdx = slotIdx;
 
-                            let mouseX = event.clientX;
-                            let offset = mouseX - this.gridStartX;
+                            let offset = event.clientX - this.gridStartX;
                             self.dragSlotIdx = Math.floor(offset / self.slotWidth);
                         },
                         onend(event) {
                             if (self.dragSlotIdx !== null) {
-                                let mouseX = event.clientX;
                                 let dayWidth = 640;
                                 let slotWidth = 20;
                                 let slotMinutes = 30;
                                 let gridStartHour = 6;
 
-                                self.saveTaskPosition(
-                                    self.draggingTask.id,
-                                    self.highlightedDayIdx,
-                                    self.highlightedSlotIdx
-                                );
+                                const x = event.clientX;
+                                const y = event.clientY;
+                                const dayIdx = self.getDayColumnUnderCursor(x, y);
+                                if (dayIdx === null) return;
+                                const column = document.getElementById('day-column-' + dayIdx);
+                                const rect = column.getBoundingClientRect();
+                                const offsetX = x - rect.left;
 
                                 let viewDate = dayjs().startOf('day');
-                                console.log('mouseX:', mouseX, 'gridStartX:', self.gridStartX, 'dayWidth:', dayWidth, 'slotWidth:', slotWidth);
-                                let { dayIdx, slotIdx, offset } = self.getDayAndSlotIdx(
-                                    mouseX, self.gridStartX, dayWidth, slotWidth
+                                let { slotIdx, offset } = self.getDayAndSlotIdx(
+                                    offsetX, 0, 0, dayWidth, slotWidth
                                 );
                                 if (isNaN(dayIdx) || isNaN(slotIdx)) {
-                                    console.error('ОШИБКА: dayIdx или slotIdx — не число!', { dayIdx, slotIdx, mouseX });
+                                    console.error('ОШИБКА: dayIdx или slotIdx — не число!', { dayIdx, slotIdx, relativeX });
                                     return;
                                 }
 
                                 let baseDate = dayjs(viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(0).second(0).millisecond(0);
+                                //let minutePerPixel = slotMinutes / slotWidth;
                                 let minutes = slotIdx * slotMinutes;
                                 let pixelOffsetMinutes = 0;
                                 if (offset && offset > 0) {
@@ -461,12 +474,10 @@
                                 }
                                 let newStart = baseDate.add(minutes, 'minute').set('second', 0).set('millisecond', 0);
 
-                                // duration
                                 let originalDuration = dayjs(self.draggingTask.end_time).diff(dayjs(self.draggingTask.start_time), 'minute');
                                 let duration = Math.round(originalDuration / slotMinutes) * slotMinutes;
                                 let newEnd = newStart.add(duration, 'minute').set('second', 0).set('millisecond', 0);
 
-                                // Граничные проверки (за пределы сетки, не в прошлое)
                                 let gridEnd = baseDate.add(self.slotsPerDay * slotMinutes, 'minute');
                                 let now = dayjs();
                                 if (newStart.isBefore(baseDate)) newStart = baseDate;
@@ -475,17 +486,12 @@
                                     newStart = now;
                                     newEnd = newStart.add(duration, 'minute');
                                 }
-
                                 let startStr = newStart.format('YYYY-MM-DD HH:mm:00');
                                 let endStr = newEnd.format('YYYY-MM-DD HH:mm:00');
-
-                                console.log({ dayIdx, slotIdx, baseDate: baseDate.format(), 'minutes': minutes, newStart: startStr, newEnd: endStr });
-
                                 self.saveTaskPosition(self.draggingTask.id, startStr, endStr);
 
                                 self.dragSlotIdx = null;
                                 self.dragDayIdx = null;
-
                                 self.draggingTask = null;
                                 self.isDragging = false;
                                 self.highlightedDayIdx = null;
@@ -495,7 +501,7 @@
                     });
                 }
             },
-            getDayAndSlotIdx(clientX, gridStartX, dayWidth, slotWidth, slotsPerDay = 32) {
+            getDayAndSlotIdx(clientX, clientY, gridStartX, dayWidth, slotWidth, slotsPerDay = 32) {
                 if (typeof clientX !== 'number' || typeof gridStartX !== 'number' ||
                     typeof dayWidth !== 'number' || typeof slotWidth !== 'number') {
                     return { dayIdx: 0, slotIdx: 0 };
@@ -510,14 +516,29 @@
                 if (slotIdx < 0) slotIdx = 0;
                 if (slotIdx > slotsPerDay - 1) slotIdx = slotsPerDay - 1;
 
+                const origSlotIdx = slotIdx;
                 if (this.isSlotPast(dayIdx, slotIdx)) {
-                    slotIdx = this.getFirstAvailableSlot(dayIdx);
-                    offsetInDay = slotIdx * slotWidth;
-                    offsetX = dayStartX + offsetInDay;
+                    const firstAvail = this.getFirstAvailableSlot(dayIdx);
+                    // Только если реально пытаются в прошлое, меняй slotIdx
+                    if (slotIdx < firstAvail) {
+                        slotIdx = firstAvail;
+                        offsetInDay = slotIdx * slotWidth;
+                        offsetX = dayStartX + offsetInDay;
+                    }
                 }
-
                 return { dayIdx, slotIdx, offset: offsetX };
             },
+            getDayColumnUnderCursor(x, y) {
+                const columns = Array.from(document.querySelectorAll('[id^=day-column-]'));
+                for (let col of columns) {
+                    const rect = col.getBoundingClientRect();
+                    if (x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom) {
+                        const match = col.id.match(/day-column-(\d+)/);
+                        return match ? parseInt(match[1], 10) : null;
+                    }
+                }
+                return null;
+            }
             getFirstAvailableSlot(dayIdx){
                 let now = dayjs();
                 let baseDate = dayjs(this.viewDate)
@@ -543,7 +564,7 @@
             },
             setSlotHeight() {
                 this.$nextTick(() => {
-                    this.slotHeight = 64;
+                    this.slotHeight = 65;
                 });
             },
             totalSlots() {
@@ -616,7 +637,8 @@
             },
             scrollToToday() {
                 this.$nextTick(() => {
-                    const todayCol = document.getElementById('today-column');
+                    const todayCol = document.getElementsByClassName('today-column');
+                    //console.log(todayCol);
                     const grid = this.$refs.mainGrid;
                     if (todayCol && grid) {
                         // todayCol.offsetLeft - положение столбца
@@ -667,7 +689,7 @@
     removeEmployee(idx) {
         this.jobModalForm.employees.splice(idx, 1);
     },
-    onTaskDrop(taskId, pageX) {
+    /*onTaskDrop(taskId, pageX) {
         let task = this.employees.flatMap(e => e.tasks).find(t => t.id === taskId);
         let offsetX = pageX - this.gridStartX;
         if (offsetX < 0) offsetX = 0;
@@ -693,7 +715,7 @@
         let startStr = newStart.format('YYYY-MM-DD HH:mm:ss');
         let endStr = newEnd.format('YYYY-MM-DD HH:mm:ss');
         this.saveTaskPosition(task.id, startStr, endStr);
-    },
+    },*/
     async saveTaskPosition(taskId, newStart, newEnd) {
         await $wire.call('updateTaskPosition', taskId, newStart, newEnd);
         let employee = this.employees.find(e => e.tasks.some(t => t.id === taskId));
@@ -801,9 +823,10 @@
             <div class="sticky top-0 z-10 bg-white w-[4480px] mb-[3px]">
                 <div class="flex">
                     <template x-for="(d, dayIdx) in currentWeek" :key="d.format('YYYY-MM-DD')">
-                        <div :id="d.isSame(dayjs(), 'day') ? 'today-column' : null"
-                             class="text-start border-y border-gray-400 day-right-border w-[640px] day-column" :data-date="d.format('YYYY-MM-DD HH:MM:00')"
+                        <div :id="`day-column-${dayIdx}`"
+                             class="text-start border-y border-gray-400 day-right-border w-[640px]" :data-date="d.format('YYYY-MM-DD')"
                              :class="{
+                             'today-column': d.isSame(dayjs(), 'day'),
                              'bg-gray-100/70 pointer-events-none': isDayPast(dayIdx),
                             'day-left-border': dayIdx !== 0,
                             'border-r border-gray-200': dayIdx % 1 !== 0,
@@ -881,7 +904,7 @@
                                             <div class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
                                                  :class="{'opacity-30 pointer-events-none': draggingTask && draggingTask.id === task.id}"
                                                  :style="taskPosition(task, d.format('YYYY-MM-DD')) + `top: ${task.level * 65}px;`"
-                                                 x-bind="registerDraggable($el, task)"
+                                                 x-init="registerDraggable($el, task, dayIdx)"
                                             >
                                                 <div class="font-semibold truncate" x-text="task.title"></div>
                                                 <div class="text-[11px] opacity-80"
@@ -895,7 +918,7 @@
                             <template x-if="draggingTask">
                                 <div
                                     class="absolute z-50 bg-blue-600 opacity-50 rounded shadow pointer-events-none"
-                                    :style="`left:${draggingTask.left}px; top:${draggingTask.top}px; width:${draggingTask.width}px; height:${draggingTask.height}px; opacity:0.6`">
+                                    :style="'left:' + draggingTask.left + 'px; top:' + draggingTask.top + 'px; width:' + draggingTask.width + 'px; height:' + draggingTask.height + 'px;'">
                                     <span x-text="draggingTask.title"></span>
                                 </div>
                             </template>
