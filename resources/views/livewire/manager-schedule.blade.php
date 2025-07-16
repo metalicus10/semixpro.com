@@ -394,7 +394,7 @@
         h = h.toString().padStart(2, '0');
         return `${date}T${h}:${m}:00`;
     },
-            registerDraggable(el, task, dayIdx) {
+            registerDraggable(el, task, dayIdx, slotIdx) {
                 if (window.interact) {
                     let self = this;
                     interact(el).draggable({
@@ -408,6 +408,7 @@
                                 dayIdx: dayIdx,
                                 dayColumnRect: rect,
                                 startDayIdx: dayIdx,
+                                startSlotIdx: slotIdx,
                                 width: el.offsetWidth,
                                 height: el.offsetHeight,
                                 originalLeft: el.offsetLeft,
@@ -422,21 +423,21 @@
                             this.isDragging = true;
                         },
                         onmove: (event) => {
-                            if (!self.draggingTask) return;
-                            const dayIdx = getDayColumnUnderCursor(event.clientX, event.clientY);
+                            const dayIdx = self.getDayColumnUnderCursor(event.clientX, event.clientY);
+                            if (dayIdx == null) return;
 
-                            const dayColumns = document.elementsFromPoint(event.clientX, event.clientY).filter(el => el.id && el.id.startsWith('day-column-'));
-                            const rect = dayColumns[0].getBoundingClientRect();
-                            self.draggingTask.left = event.clientX - rect.left - self.draggingTask.width / 2;
-                            self.draggingTask.top  = event.clientY - rect.top  - self.draggingTask.height / 2;
+                            const col = document.getElementById('day-column-' + dayIdx);
+                            const rect = col.getBoundingClientRect();
+                            const offsetX = event.clientX - rect.left;
+                            const slotIdx = Math.floor(offsetX / self.slotWidth);
 
                             //console.log({'left':self.draggingTask.left, 'top':self.draggingTask.top});
 
                             self.highlightedDayIdx = dayIdx;
                             self.highlightedSlotIdx = slotIdx;
 
-                            let offset = event.clientX - this.gridStartX;
-                            self.dragSlotIdx = Math.floor(offset / self.slotWidth);
+                            /*let offset = event.clientX - this.gridStartX;
+                            self.dragSlotIdx = Math.floor(offset / self.slotWidth);*/
                         },
                         onend(event) {
                             if (self.dragSlotIdx !== null) {
@@ -447,22 +448,28 @@
 
                                 const x = event.clientX;
                                 const y = event.clientY;
-                                const dayIdx = self.getDayColumnUnderCursor(x, y);
-                                if (dayIdx === null) return;
-                                const column = document.getElementById('day-column-' + dayIdx);
-                                const rect = column.getBoundingClientRect();
-                                const offsetX = x - rect.left;
+                                const dayIdx = self.getDayColumnUnderCursor(event.clientX, event.clientY);
+                                if (dayIdx == null) return;
+                                const col = document.getElementById('day-column-' + dayIdx);
+                                const rect = col.getBoundingClientRect();
+                                const offsetX = event.clientX - rect.left;
 
-                                let viewDate = dayjs().startOf('day');
-                                let { slotIdx, offset } = self.getDayAndSlotIdx(
-                                    offsetX, 0, 0, dayWidth, slotWidth
-                                );
+                                let slotIdx = Math.floor(offsetX / self.slotWidth);
+
                                 if (isNaN(dayIdx) || isNaN(slotIdx)) {
                                     console.error('ОШИБКА: dayIdx или slotIdx — не число!', { dayIdx, slotIdx, relativeX });
                                     return;
                                 }
 
-                                let baseDate = dayjs(viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(0).second(0).millisecond(0);
+                                if (slotIdx < 0) slotIdx = 0;
+                                if (slotIdx >= self.slotsPerDay) slotIdx = self.slotsPerDay - 1;
+                                if (self.isSlotPast(dayIdx, slotIdx)) {
+                                    slotIdx = self.getFirstAvailableSlot(dayIdx);
+                                }
+
+                                const baseDate = dayjs(self.viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(slotIdx * self.slotMinutes).second(0).millisecond(0);
+
+                                //let baseDate = dayjs(viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(0).second(0).millisecond(0);
                                 //let minutePerPixel = slotMinutes / slotWidth;
                                 let minutes = slotIdx * slotMinutes;
                                 let pixelOffsetMinutes = 0;
@@ -488,6 +495,7 @@
                                 }
                                 let startStr = newStart.format('YYYY-MM-DD HH:mm:00');
                                 let endStr = newEnd.format('YYYY-MM-DD HH:mm:00');
+
                                 self.saveTaskPosition(self.draggingTask.id, startStr, endStr);
 
                                 self.dragSlotIdx = null;
@@ -538,7 +546,7 @@
                     }
                 }
                 return null;
-            }
+            },
             getFirstAvailableSlot(dayIdx){
                 let now = dayjs();
                 let baseDate = dayjs(this.viewDate)
@@ -689,33 +697,13 @@
     removeEmployee(idx) {
         this.jobModalForm.employees.splice(idx, 1);
     },
-    /*onTaskDrop(taskId, pageX) {
-        let task = this.employees.flatMap(e => e.tasks).find(t => t.id === taskId);
-        let offsetX = pageX - this.gridStartX;
-        if (offsetX < 0) offsetX = 0;
-        let slotIdx = Math.round(offsetX / this.slotWidth);
-        let day = dayjs(task.start_time).format('YYYY-MM-DD');
-        let baseDate = dayjs(`${day} ${this.gridStartHour.toString().padStart(2, '0')}:00:00`);
-        let minutes = slotIdx * this.slotMinutes;
-        // --- КОРРЕКТНЫЙ СЧЕТ ВРЕМЕНИ (snap to grid) ---
-        let newStart = baseDate.add(minutes, 'minute');
-        let duration = dayjs(task.end_time).diff(dayjs(task.start_time), 'minute');
-        let newEnd = newStart.add(duration, 'minute');
-        // --- ОГРАНИЧЕНИЯ ---
-        let gridEnd = dayjs(`${day} ${this.gridEndHour.toString().padStart(2, '0')}:00:00`);
-        if (newStart.isBefore(baseDate)) newStart = baseDate;
-        if (newEnd.isAfter(gridEnd)) newEnd = gridEnd;
-        // --- Не даём таскать в прошлое ---
-        let now = dayjs();
-        if (newStart.isBefore(now)) {
-            newStart = now;
-            newEnd = newStart.add(duration, 'minute');
-        }
-        // --- Форматируем ---
-        let startStr = newStart.format('YYYY-MM-DD HH:mm:ss');
-        let endStr = newEnd.format('YYYY-MM-DD HH:mm:ss');
-        this.saveTaskPosition(task.id, startStr, endStr);
-    },*/
+    getSlotIdxForTask(task, gridStartHour = 6, slotMinutes = 30) {
+        const start = dayjs(task.start_time);
+        const hour = start.hour();
+        const minute = start.minute();
+        const slotIdx = Math.floor((hour * 60 + minute - gridStartHour * 60) / slotMinutes);
+        return slotIdx + 1; // Если у тебя слоты начинаются с 1, иначе убери +1
+    },
     async saveTaskPosition(taskId, newStart, newEnd) {
         await $wire.call('updateTaskPosition', taskId, newStart, newEnd);
         let employee = this.employees.find(e => e.tasks.some(t => t.id === taskId));
@@ -904,7 +892,7 @@
                                             <div class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
                                                  :class="{'opacity-30 pointer-events-none': draggingTask && draggingTask.id === task.id}"
                                                  :style="taskPosition(task, d.format('YYYY-MM-DD')) + `top: ${task.level * 65}px;`"
-                                                 x-init="registerDraggable($el, task, dayIdx)"
+                                                 x-init="registerDraggable($el, task, dayIdx, getSlotIdxForTask(task, 6, 30))"
                                             >
                                                 <div class="font-semibold truncate" x-text="task.title"></div>
                                                 <div class="text-[11px] opacity-80"
