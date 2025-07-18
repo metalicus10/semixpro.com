@@ -122,7 +122,6 @@
                 this.setWeek(dayjs());
                 console.log(this.setWeek(dayjs()));
                 this.viewDate = dayjs().startOf('day');
-                console.log(this.viewDate);
                 this.scrollToToday();
             },
             isToday(d) {
@@ -394,7 +393,7 @@
         h = h.toString().padStart(2, '0');
         return `${date}T${h}:${m}:00`;
     },
-            registerDraggable(el, task, dayIdx, slotIdx) {
+            registerDraggable(el, task, dayIdx, slotIdx, employeeId) {
                 if (window.interact) {
                     let self = this;
                     interact(el).draggable({
@@ -402,6 +401,7 @@
                             const el = event.target;
                             const dayColumn = document.getElementById('day-column-' + dayIdx);
                             const rect = dayColumn.getBoundingClientRect();
+                            const durationSlots = self.taskDurationInSlots(task, 30);
                             //console.log(dayColumn);
                             self.draggingTask = {
                                 ...task,
@@ -419,6 +419,8 @@
                                 dragOffsetY: event.clientY - el.offsetTop,
                                 dayColumnLeft: rect.left,
                                 dayColumnTop: rect.top,
+                                durationSlots: durationSlots,
+                                technician_id: employeeId,
                             };
                             this.isDragging = true;
                         },
@@ -436,15 +438,18 @@
                             self.highlightedDayIdx = dayIdx;
                             self.highlightedSlotIdx = slotIdx;
 
-                            /*let offset = event.clientX - this.gridStartX;
-                            self.dragSlotIdx = Math.floor(offset / self.slotWidth);*/
+                            let offset = event.clientX - offsetX;
+                            self.dragSlotIdx = Math.floor(offset / self.slotWidth);
                         },
                         onend(event) {
+                            console.log('onend start');
                             if (self.dragSlotIdx !== null) {
+                                console.log('dragSlotIdx: '+self.dragSlotIdx);
                                 let dayWidth = 640;
                                 let slotWidth = 20;
                                 let slotMinutes = 30;
                                 let gridStartHour = 6;
+                                let viewDate = dayjs().startOf('week').add(1, 'day');
 
                                 const x = event.clientX;
                                 const y = event.clientY;
@@ -467,17 +472,15 @@
                                     slotIdx = self.getFirstAvailableSlot(dayIdx);
                                 }
 
-                                const baseDate = dayjs(self.viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(slotIdx * self.slotMinutes).second(0).millisecond(0);
+                                const baseDate = dayjs(viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(slotIdx * self.slotMinutes).second(0).millisecond(0);
 
-                                //let baseDate = dayjs(viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(0).second(0).millisecond(0);
-                                //let minutePerPixel = slotMinutes / slotWidth;
                                 let minutes = slotIdx * slotMinutes;
                                 let pixelOffsetMinutes = 0;
-                                if (offset && offset > 0) {
+                                if (offsetX && offsetX > 0) {
                                     let dayPixelWidth = dayWidth;
                                     let minutePerPixel = (slotMinutes * self.slotsPerDay) / dayPixelWidth;
                                     // Сколько минут сместить относительно первого доступного слота
-                                    pixelOffsetMinutes = Math.round(offset * minutePerPixel);
+                                    pixelOffsetMinutes = Math.round(offsetX * minutePerPixel);
                                 }
                                 let newStart = baseDate.add(minutes, 'minute').set('second', 0).set('millisecond', 0);
 
@@ -496,6 +499,7 @@
                                 let startStr = newStart.format('YYYY-MM-DD HH:mm:00');
                                 let endStr = newEnd.format('YYYY-MM-DD HH:mm:00');
 
+                                console.log('SAVE', self.draggingTask.id, startStr, endStr);
                                 self.saveTaskPosition(self.draggingTask.id, startStr, endStr);
 
                                 self.dragSlotIdx = null;
@@ -762,11 +766,20 @@
     isWeekPast(weekStartDate) {
         return this.weekStart.endOf('isoWeek').isBefore(dayjs(), 'second');
     },
-    isSlotHighlighted(dayIdx, slotIdx) {
-        if (!this.isDragging) return false;
-        return dayIdx === this.highlightedDayIdx &&
-            slotIdx >= this.highlightedSlotIdx &&
-            slotIdx < this.highlightedSlotIdx + this.draggingTask.durationSlots;
+    isSlotHighlighted(employeeId, dayIdx, slotIdx) {
+      if (!this.isDragging || !this.draggingTask) return false;
+      return (
+        this.draggingTask.technician_id === employeeId &&
+        dayIdx === this.highlightedDayIdx &&
+        slotIdx >= this.highlightedSlotIdx &&
+        slotIdx < this.highlightedSlotIdx + this.draggingTask.durationSlots
+      );
+    },
+    taskDurationInSlots(task, slotMinutes = 30) {
+        const start = dayjs(task.start_time);
+        const end = dayjs(task.end_time);
+        const duration = end.diff(start, 'minute');
+        return Math.ceil(duration / slotMinutes);
     },
 }" x-init="init(@js($employees)); scrollToToday();"
 >
@@ -856,7 +869,7 @@
                                                 <template x-for="slotIdx in slotsPerDay" :key="slotIdx">
                                                     <div
                                                         :class="{
-                                                            'bg-blue-200': isSlotHighlighted(dayIdx, slotIdx),
+                                                            'bg-blue-200': isSlotHighlighted(employee.id, dayIdx, slotIdx),
                                                             'bg-gray-200 pointer-events-none opacity-60': isDayPast(dayIdx) || isSlotPast(dayIdx, slotIdx),
                                                             'bg-blue-100': (
                                                               (selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id &&
@@ -892,7 +905,7 @@
                                             <div class="absolute bg-blue-600 text-white text-xs rounded shadow px-2 py-1 flex flex-col justify-center"
                                                  :class="{'opacity-30 pointer-events-none': draggingTask && draggingTask.id === task.id}"
                                                  :style="taskPosition(task, d.format('YYYY-MM-DD')) + `top: ${task.level * 65}px;`"
-                                                 x-init="registerDraggable($el, task, dayIdx, getSlotIdxForTask(task, 6, 30))"
+                                                 x-init="registerDraggable($el, task, dayIdx, getSlotIdxForTask(task, 6, 30), employee.id)"
                                             >
                                                 <div class="font-semibold truncate" x-text="task.title"></div>
                                                 <div class="text-[11px] opacity-80"
