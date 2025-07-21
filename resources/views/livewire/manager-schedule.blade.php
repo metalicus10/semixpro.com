@@ -439,6 +439,8 @@
 
                             // границы
                             slotIdx = Math.max(0, Math.min(slotIdx, self.slotsPerDay - 1));
+                            self.draggingTask.left = rect.left + slotIdx * self.slotWidth;
+                            self.draggingTask.top  = rect.top;
                             if (self.isSlotPast(dayIdx, slotIdx)) {
                                 slotIdx = self.getFirstAvailableSlot(dayIdx);
                             }
@@ -874,6 +876,7 @@
                                                 <template x-for="slotIdx in slotsPerDay" :key="slotIdx">
                                                     <div
                                                         :class="{
+                                                            'border-r border-gray-100': !(draggingTask && slotIdx >= dragStartSlot && slotIdx < dragEndSlot),
                                                             'bg-blue-200': isSlotHighlighted(employee.id, dayIdx, slotIdx),
                                                             'bg-gray-200 pointer-events-none opacity-60': isDayPast(dayIdx) || isSlotPast(dayIdx, slotIdx),
                                                             'bg-blue-100': (
@@ -884,7 +887,7 @@
                                                               (draggingTask && slotIdx >= dragStartSlot && slotIdx < dragEndSlot)
                                                             )
                                                         }"
-                                                        class="flex left-0 border-r border-gray-100 cursor-pointer"
+                                                        class="flex left-0 cursor-pointer"
                                                         :style="'top: ' + ((slotIdx-1)*16) + 'px; height: 100%; width: 20px;'"
                                                         @mousedown.prevent="
                                                             if ($event.button === 0) {
@@ -918,14 +921,6 @@
                                             </div>
                                         </template>
                                     </div>
-                                </div>
-                            </template>
-                            <!-- Превью (ghost) блока задачи -->
-                            <template x-if="draggingTask">
-                                <div
-                                    class="absolute z-50 bg-blue-600 opacity-50 rounded shadow pointer-events-none"
-                                    :style="'left:' + draggingTask.left + 'px; top:' + draggingTask.top + 'px; width:' + draggingTask.width + 'px; height:' + draggingTask.height + 'px;'">
-                                    <span x-text="draggingTask.title"></span>
                                 </div>
                             </template>
 
