@@ -409,6 +409,7 @@
                                 dayColumnRect: rect,
                                 startDayIdx: dayIdx,
                                 startSlotIdx: slotIdx,
+                                cursorOffsetX: event.clientX - el.getBoundingClientRect().left,
                                 width: el.offsetWidth,
                                 height: el.offsetHeight,
                                 originalLeft: el.offsetLeft,
@@ -422,93 +423,97 @@
                                 durationSlots: durationSlots,
                                 technician_id: employeeId,
                             };
-                            this.isDragging = true;
+                            self.isDragging = true;
                         },
                         onmove: (event) => {
-                            const dayIdx = self.getDayColumnUnderCursor(event.clientX, event.clientY);
-                            if (dayIdx == null) return;
+                            if (!self.draggingTask) return;
 
-                            const col = document.getElementById('day-column-' + dayIdx);
+                            const x = event.clientX;
+                            const y = event.clientY;
+                            const dayIdx = self.getDayColumnUnderCursor(x, y);
+                            if (dayIdx === null) return;
+
+                            const col = document.getElementById(`day-column-${dayIdx}`);
                             const rect = col.getBoundingClientRect();
-                            const offsetX = event.clientX - rect.left;
-                            const slotIdx = Math.floor(offsetX / self.slotWidth);
+                            let slotIdx = Math.floor((x - rect.left) / self.slotWidth);
 
-                            //console.log({'left':self.draggingTask.left, 'top':self.draggingTask.top});
+                            // границы
+                            slotIdx = Math.max(0, Math.min(slotIdx, self.slotsPerDay - 1));
+                            if (self.isSlotPast(dayIdx, slotIdx)) {
+                                slotIdx = self.getFirstAvailableSlot(dayIdx);
+                            }
 
                             self.highlightedDayIdx = dayIdx;
                             self.highlightedSlotIdx = slotIdx;
-
-                            let offset = event.clientX - offsetX;
-                            self.dragSlotIdx = Math.floor(offset / self.slotWidth);
                         },
                         onend(event) {
                             console.log('onend start');
-                            if (self.dragSlotIdx !== null) {
-                                console.log('dragSlotIdx: '+self.dragSlotIdx);
-                                let dayWidth = 640;
-                                let slotWidth = 20;
-                                let slotMinutes = 30;
-                                let gridStartHour = 6;
-                                let viewDate = dayjs().startOf('week').add(1, 'day');
+                            if (!self.draggingTask) return;
 
-                                const x = event.clientX;
-                                const y = event.clientY;
-                                const dayIdx = self.getDayColumnUnderCursor(event.clientX, event.clientY);
-                                if (dayIdx == null) return;
-                                const col = document.getElementById('day-column-' + dayIdx);
-                                const rect = col.getBoundingClientRect();
-                                const offsetX = event.clientX - rect.left;
+                            // снова нашли колонку под курсором
+                            const x = event.clientX;
+                            const y = event.clientY;
+                            const dayIdx = self.getDayColumnUnderCursor(x, y);
+                            if (dayIdx === null) return;
 
-                                let slotIdx = Math.floor(offsetX / self.slotWidth);
+                            const colRect = document.getElementById(`day-column-${dayIdx}`).getBoundingClientRect();
+                            let rawSlot = Math.floor((x - colRect.left) / self.slotWidth);
+                            rawSlot = Math.max(0, Math.min(rawSlot, self.slotsPerDay - 1));
 
-                                if (isNaN(dayIdx) || isNaN(slotIdx)) {
-                                    console.error('ОШИБКА: dayIdx или slotIdx — не число!', { dayIdx, slotIdx, relativeX });
-                                    return;
-                                }
+                            const slotOffset = Math.floor(
+                                self.draggingTask.cursorOffsetX / self.slotWidth
+                            );
 
-                                if (slotIdx < 0) slotIdx = 0;
-                                if (slotIdx >= self.slotsPerDay) slotIdx = self.slotsPerDay - 1;
-                                if (self.isSlotPast(dayIdx, slotIdx)) {
-                                    slotIdx = self.getFirstAvailableSlot(dayIdx);
-                                }
+                            let dropStartSlot = rawSlot - slotOffset;
+                            if (dropStartSlot < 0) dropStartSlot = 0;
+                            if (dropStartSlot >= self.slotsPerDay) dropStartSlot = self.slotsPerDay - 1;
 
-                                const baseDate = dayjs(viewDate).add(dayIdx, 'day').hour(gridStartHour).minute(slotIdx * self.slotMinutes).second(0).millisecond(0);
+                            /*let slotIdx = Math.floor((x - rect.left) / self.slotWidth);
+                            slotIdx = Math.max(0, Math.min(slotIdx, self.slotsPerDay - 1));*/
 
-                                let minutes = slotIdx * slotMinutes;
-                                let pixelOffsetMinutes = 0;
-                                if (offsetX && offsetX > 0) {
-                                    let dayPixelWidth = dayWidth;
-                                    let minutePerPixel = (slotMinutes * self.slotsPerDay) / dayPixelWidth;
-                                    // Сколько минут сместить относительно первого доступного слота
-                                    pixelOffsetMinutes = Math.round(offsetX * minutePerPixel);
-                                }
-                                let newStart = baseDate.add(minutes, 'minute').set('second', 0).set('millisecond', 0);
-
-                                let originalDuration = dayjs(self.draggingTask.end_time).diff(dayjs(self.draggingTask.start_time), 'minute');
-                                let duration = Math.round(originalDuration / slotMinutes) * slotMinutes;
-                                let newEnd = newStart.add(duration, 'minute').set('second', 0).set('millisecond', 0);
-
-                                let gridEnd = baseDate.add(self.slotsPerDay * slotMinutes, 'minute');
-                                let now = dayjs();
-                                if (newStart.isBefore(baseDate)) newStart = baseDate;
-                                if (newEnd.isAfter(gridEnd)) newEnd = gridEnd;
-                                if (newStart.isBefore(now)) {
-                                    newStart = now;
-                                    newEnd = newStart.add(duration, 'minute');
-                                }
-                                let startStr = newStart.format('YYYY-MM-DD HH:mm:00');
-                                let endStr = newEnd.format('YYYY-MM-DD HH:mm:00');
-
-                                console.log('SAVE', self.draggingTask.id, startStr, endStr);
-                                self.saveTaskPosition(self.draggingTask.id, startStr, endStr);
-
-                                self.dragSlotIdx = null;
-                                self.dragDayIdx = null;
-                                self.draggingTask = null;
-                                self.isDragging = false;
-                                self.highlightedDayIdx = null;
-                                self.highlightedSlotIdx = null;
+                            if (self.isSlotPast(dayIdx, dropStartSlot)) {
+                               dropStartSlot = self.getFirstAvailableSlot(dayIdx);
                             }
+
+                            const baseDate = dayjs(self.weekStart)
+                                .add(dayIdx, 'day')
+                                .hour(self.gridStartHour)
+                                .minute(dropStartSlot  * self.slotMinutes)
+                                .second(0)
+                                .millisecond(0);
+
+                            // сохраняем длительность из оригинала
+                            const origDur = dayjs(self.draggingTask.end_time).diff(dayjs(self.draggingTask.start_time), 'minute');
+                            const duration = Math.round(origDur / self.slotMinutes) * self.slotMinutes;
+                            console.log('origDur: '+origDur+'| duration: '+duration);
+
+                            let newStart = baseDate;
+                            let newEnd   = baseDate.add(duration, 'minute');
+                            console.log('newStart: '+newStart+'| newEnd: '+newEnd);
+
+                            // границы: не раньше сейчас, и не позже конца дня
+                            const now     = dayjs();
+                            const gridEnd = dayjs(self.weekStart)
+                                .add(dayIdx, 'day')
+                                .hour(self.gridStartHour)
+                                .add(self.slotsPerDay * self.slotMinutes, 'minute');
+
+                            if (newStart.isBefore(now))       newStart = now;
+                            if (newEnd.isAfter(gridEnd))      newEnd   = gridEnd;
+                            if (newEnd.isBefore(newStart))    newEnd   = newStart.add(duration, 'minute');
+
+                          // отправляем в базу
+                          const startStr = newStart.format('YYYY-MM-DD HH:mm:00');
+                          const endStr   = newEnd.format('YYYY-MM-DD HH:mm:00');
+
+                          console.log('startStr: '+startStr+'| endStr: '+endStr);
+                          self.saveTaskPosition(self.draggingTask.id, startStr, endStr);
+
+                          // чистим
+                          self.draggingTask     = null;
+                          self.highlightedDayIdx  = null;
+                          self.highlightedSlotIdx = null;
+                          self.isDragging       = false;
                         }
                     });
                 }
@@ -541,15 +546,15 @@
                 return { dayIdx, slotIdx, offset: offsetX };
             },
             getDayColumnUnderCursor(x, y) {
-                const columns = Array.from(document.querySelectorAll('[id^=day-column-]'));
-                for (let col of columns) {
-                    const rect = col.getBoundingClientRect();
-                    if (x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom) {
-                        const match = col.id.match(/day-column-(\d+)/);
-                        return match ? parseInt(match[1], 10) : null;
-                    }
+                for (let i = 0; i < this.currentWeek.length; i++) {
+                const col = document.getElementById(`day-column-${i}`);
+                if (!col) continue;
+                const r = col.getBoundingClientRect();
+                if (x >= r.left && x < r.right && y >= r.top && y < r.bottom) {
+                  return i;
                 }
-                return null;
+              }
+              return null;
             },
             getFirstAvailableSlot(dayIdx){
                 let now = dayjs();
