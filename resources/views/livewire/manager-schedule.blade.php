@@ -431,6 +431,7 @@
                             const x = event.clientX;
                             const y = event.clientY;
                             const dayIdx = self.getDayColumnUnderCursor(x, y);
+                            console.log(dayIdx);
                             if (dayIdx === null) return;
 
                             const col = document.getElementById(`day-column-${dayIdx}`);
@@ -469,6 +470,8 @@
                             let dropStartSlot = rawSlot - slotOffset;
                             if (dropStartSlot < 0) dropStartSlot = 0;
                             if (dropStartSlot >= self.slotsPerDay) dropStartSlot = self.slotsPerDay - 1;
+
+                            //dropStartSlot = self.highlightedSlotIdx;
 
                             /*let slotIdx = Math.floor((x - rect.left) / self.slotWidth);
                             slotIdx = Math.max(0, Math.min(slotIdx, self.slotsPerDay - 1));*/
@@ -754,21 +757,30 @@
         };
     },
     isSlotPast(dayIdx, slotIdx) {
-        if (this.isDayPast(dayIdx)) return true;
-        let baseDate = dayjs(this.viewDate).add(dayIdx, 'day').hour(this.gridStartHour).minute(0).second(0).millisecond(0);
+        const now = dayjs();
+        const startOfWeek = this.weekStart;
+        const todayIdx = now.diff(startOfWeek, 'day')
+        if (dayIdx < todayIdx) return true;
 
-        let slotStart = baseDate.add(slotIdx * this.slotMinutes, 'minute')
-        let slotEnd = slotStart.add(this.slotMinutes, 'minute')
-        let now = dayjs();
+        const slotStart = dayjs(this.weekStart).add(dayIdx, 'day').hour(this.gridStartHour).minute(slotIdx * this.slotMinutes).second(0).millisecond(0);
+        const slotEnd = slotStart.add(this.slotMinutes, 'minute');
 
-        if (baseDate.isBefore(now.startOf('day'))) return true;
-        if (baseDate.isSame(now, 'day') && slotStart.isSameOrBefore(now) || slotEnd.isBefore(now) ) return true;
+        if(now >= slotStart){return true;}
+
+        const dayDate = dayjs(this.weekStart).add(dayIdx, 'day');
+        if (dayDate.isSame(now, 'day') && now.isSameOrAfter(slotEnd)) {
+            return true;
+        }
+        const slotDay = startOfWeek.add(dayIdx, 'day');
+        if (slotDay.isSame(now, 'day') && now.isSameOrAfter(slotStart)) {
+            return true;
+        }
 
         return false;
     },
     isDayPast(dayIdx) {
-        const d = this.weekStart.add(dayIdx, 'day');
-        return d.endOf('day').isBefore(dayjs(), 'second');
+        const d = dayjs(this.weekStart).add(dayIdx, 'day');
+        return d.endOf('day').isBefore(dayjs());
     },
     isWeekPast(weekStartDate) {
         return this.weekStart.endOf('isoWeek').isBefore(dayjs(), 'second');
@@ -834,11 +846,11 @@
                         <div :id="`day-column-${dayIdx}`"
                              class="text-start border-y border-gray-400 day-right-border w-[640px]" :data-date="d.format('YYYY-MM-DD')"
                              :class="{
-                             'today-column': d.isSame(dayjs(), 'day'),
-                             'bg-gray-100/70 pointer-events-none': isDayPast(dayIdx),
-                            'day-left-border': dayIdx !== 0,
-                            'border-r border-gray-200': dayIdx % 1 !== 0,
-                         }"
+                                 'today-column': d.isSame(dayjs(), 'day'),
+                                 'bg-gray-100/70 pointer-events-none': isDayPast(dayIdx),
+                                'day-left-border': dayIdx !== 0,
+                                'border-r border-gray-200': dayIdx % 1 !== 0,
+                             }"
                         >
                             <div class="w-[640px] flex gap-1 items-baseline px-3 py-1 border-b border-gray-400">
                                 <div class="text-xl font-medium" x-text="d.format('D')"></div>
@@ -865,7 +877,7 @@
                                             >
                                                 <!-- Время с - по -->
                                                 <span class="block text-[8px] text-shadow-2xs text-shadow-white text-black font-thin drop-shadow"
-                                                    x-text="selectionTimeRange">
+                                                      x-text="selectionTimeRange">
                                                 </span>
                                             </div>
                                         </template>
@@ -878,7 +890,7 @@
                                                         :class="{
                                                             'border-r border-gray-100': !(draggingTask && slotIdx >= dragStartSlot && slotIdx < dragEndSlot),
                                                             'bg-blue-200': isSlotHighlighted(employee.id, dayIdx, slotIdx),
-                                                            'bg-gray-200 pointer-events-none opacity-60': isDayPast(dayIdx) || isSlotPast(dayIdx, slotIdx),
+                                                            'bg-gray-200 pointer-events-none opacity-60': isSlotPast(dayIdx, slotIdx),
                                                             'bg-blue-100': (
                                                               (selection && selection.dayIdx === dayIdx && selection.technician_id === employee.id &&
                                                                 (slotIdx - 1) >= selection.startSlot && (slotIdx - 1) <= selection.endSlot

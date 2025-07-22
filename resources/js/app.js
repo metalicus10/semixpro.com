@@ -5,9 +5,11 @@ import Chart from 'chart.js/auto';
 import dayjs from "dayjs";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import isBetween from 'dayjs/plugin/isBetween'
 window.dayjs = dayjs;
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
+dayjs.extend(isBetween);
 import interact from 'interactjs';
 window.interact = interact;
 
