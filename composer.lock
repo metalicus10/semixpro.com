@@ -62,16 +62,16 @@
         },
         {
             "name": "aws/aws-sdk-php",
-            "version": "3.349.2",
+            "version": "3.351.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/aws/aws-sdk-php.git",
-                "reference": "63cc727845f077d17cb94791deb327249e1626ce"
+                "reference": "2f00efa2544d158ea366c1e1174097ef330ec883"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/63cc727845f077d17cb94791deb327249e1626ce",
-                "reference": "63cc727845f077d17cb94791deb327249e1626ce",
+                "url": "https://api.github.com/repos/aws/aws-sdk-php/zipball/2f00efa2544d158ea366c1e1174097ef330ec883",
+                "reference": "2f00efa2544d158ea366c1e1174097ef330ec883",
                 "shasum": ""
             },
             "require": {
@@ -153,9 +153,9 @@
             "support": {
                 "forum": "https://github.com/aws/aws-sdk-php/discussions",
                 "issues": "https://github.com/aws/aws-sdk-php/issues",
-                "source": "https://github.com/aws/aws-sdk-php/tree/3.349.2"
+                "source": "https://github.com/aws/aws-sdk-php/tree/3.351.5"
             },
-            "time": "2025-07-03T18:08:27+00:00"
+            "time": "2025-07-23T18:04:16+00:00"
         },
         {
             "name": "barryvdh/laravel-dompdf",
@@ -2078,16 +2078,16 @@
         },
         {
             "name": "laravel/scout",
-            "version": "v10.16.0",
+            "version": "v10.17.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/scout.git",
-                "reference": "5d56b6116a05d004e6a5d16a8ed95c2dc089b587"
+                "reference": "66b064ab1f987560d1edfbc10f46557fddfed600"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/scout/zipball/5d56b6116a05d004e6a5d16a8ed95c2dc089b587",
-                "reference": "5d56b6116a05d004e6a5d16a8ed95c2dc089b587",
+                "url": "https://api.github.com/repos/laravel/scout/zipball/66b064ab1f987560d1edfbc10f46557fddfed600",
+                "reference": "66b064ab1f987560d1edfbc10f46557fddfed600",
                 "shasum": ""
             },
             "require": {
@@ -2155,7 +2155,7 @@
                 "issues": "https://github.com/laravel/scout/issues",
                 "source": "https://github.com/laravel/scout"
             },
-            "time": "2025-07-08T15:09:47+00:00"
+            "time": "2025-07-22T15:54:45+00:00"
         },
         {
             "name": "laravel/serializable-closure",
@@ -2286,16 +2286,16 @@
         },
         {
             "name": "league/commonmark",
-            "version": "2.7.0",
+            "version": "2.7.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/thephpleague/commonmark.git",
-                "reference": "6fbb36d44824ed4091adbcf4c7d4a3923cdb3405"
+                "reference": "10732241927d3971d28e7ea7b5712721fa2296ca"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/6fbb36d44824ed4091adbcf4c7d4a3923cdb3405",
-                "reference": "6fbb36d44824ed4091adbcf4c7d4a3923cdb3405",
+                "url": "https://api.github.com/repos/thephpleague/commonmark/zipball/10732241927d3971d28e7ea7b5712721fa2296ca",
+                "reference": "10732241927d3971d28e7ea7b5712721fa2296ca",
                 "shasum": ""
             },
             "require": {
@@ -2324,7 +2324,7 @@
                 "symfony/process": "^5.4 | ^6.0 | ^7.0",
                 "symfony/yaml": "^2.3 | ^3.0 | ^4.0 | ^5.0 | ^6.0 | ^7.0",
                 "unleashedtech/php-coding-standard": "^3.1.1",
-                "vimeo/psalm": "^4.24.0 || ^5.0.0"
+                "vimeo/psalm": "^4.24.0 || ^5.0.0 || ^6.0.0"
             },
             "suggest": {
                 "symfony/yaml": "v2.3+ required if using the Front Matter extension"
@@ -2389,7 +2389,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-05-05T12:20:28+00:00"
+            "time": "2025-07-20T12:47:49+00:00"
         },
         {
             "name": "league/config",
@@ -4981,16 +4981,16 @@
         },
         {
             "name": "sabberworm/php-css-parser",
-            "version": "v8.8.0",
+            "version": "v8.9.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/MyIntervals/PHP-CSS-Parser.git",
-                "reference": "3de493bdddfd1f051249af725c7e0d2c38fed740"
+                "reference": "d8e916507b88e389e26d4ab03c904a082aa66bb9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MyIntervals/PHP-CSS-Parser/zipball/3de493bdddfd1f051249af725c7e0d2c38fed740",
-                "reference": "3de493bdddfd1f051249af725c7e0d2c38fed740",
+                "url": "https://api.github.com/repos/MyIntervals/PHP-CSS-Parser/zipball/d8e916507b88e389e26d4ab03c904a082aa66bb9",
+                "reference": "d8e916507b88e389e26d4ab03c904a082aa66bb9",
                 "shasum": ""
             },
             "require": {
@@ -4998,7 +4998,8 @@
                 "php": "^5.6.20 || ^7.0.0 || ~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0"
             },
             "require-dev": {
-                "phpunit/phpunit": "5.7.27 || 6.5.14 || 7.5.20 || 8.5.41"
+                "phpunit/phpunit": "5.7.27 || 6.5.14 || 7.5.20 || 8.5.41",
+                "rawr/cross-data-providers": "^2.0.0"
             },
             "suggest": {
                 "ext-mbstring": "for parsing UTF-8 CSS"
@@ -5040,9 +5041,9 @@
             ],
             "support": {
                 "issues": "https://github.com/MyIntervals/PHP-CSS-Parser/issues",
-                "source": "https://github.com/MyIntervals/PHP-CSS-Parser/tree/v8.8.0"
+                "source": "https://github.com/MyIntervals/PHP-CSS-Parser/tree/v8.9.0"
             },
-            "time": "2025-03-23T17:59:05+00:00"
+            "time": "2025-07-11T13:20:48+00:00"
         },
         {
             "name": "symfony/clock",
@@ -7727,16 +7728,16 @@
     "packages-dev": [
         {
             "name": "barryvdh/laravel-debugbar",
-            "version": "v3.15.4",
+            "version": "v3.16.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/barryvdh/laravel-debugbar.git",
-                "reference": "c0667ea91f7185f1e074402c5788195e96bf8106"
+                "reference": "f265cf5e38577d42311f1a90d619bcd3740bea23"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/barryvdh/laravel-debugbar/zipball/c0667ea91f7185f1e074402c5788195e96bf8106",
-                "reference": "c0667ea91f7185f1e074402c5788195e96bf8106",
+                "url": "https://api.github.com/repos/barryvdh/laravel-debugbar/zipball/f265cf5e38577d42311f1a90d619bcd3740bea23",
+                "reference": "f265cf5e38577d42311f1a90d619bcd3740bea23",
                 "shasum": ""
             },
             "require": {
@@ -7744,7 +7745,7 @@
                 "illuminate/session": "^9|^10|^11|^12",
                 "illuminate/support": "^9|^10|^11|^12",
                 "php": "^8.1",
-                "php-debugbar/php-debugbar": "~2.1.1",
+                "php-debugbar/php-debugbar": "~2.2.0",
                 "symfony/finder": "^6|^7"
             },
             "require-dev": {
@@ -7764,7 +7765,7 @@
                     ]
                 },
                 "branch-alias": {
-                    "dev-master": "3.15-dev"
+                    "dev-master": "3.16-dev"
                 }
             },
             "autoload": {
@@ -7796,7 +7797,7 @@
             ],
             "support": {
                 "issues": "https://github.com/barryvdh/laravel-debugbar/issues",
-                "source": "https://github.com/barryvdh/laravel-debugbar/tree/v3.15.4"
+                "source": "https://github.com/barryvdh/laravel-debugbar/tree/v3.16.0"
             },
             "funding": [
                 {
@@ -7808,7 +7809,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-04-16T06:32:06+00:00"
+            "time": "2025-07-14T11:56:43+00:00"
         },
         {
             "name": "fakerphp/faker",
@@ -7997,16 +7998,16 @@
         },
         {
             "name": "laravel/breeze",
-            "version": "v2.3.7",
+            "version": "v2.3.8",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/breeze.git",
-                "reference": "73149b5d84be3881b2fdda94b2ad289e7905c1a4"
+                "reference": "1a29c5792818bd4cddf70b5f743a227e02fbcfcd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/breeze/zipball/73149b5d84be3881b2fdda94b2ad289e7905c1a4",
-                "reference": "73149b5d84be3881b2fdda94b2ad289e7905c1a4",
+                "url": "https://api.github.com/repos/laravel/breeze/zipball/1a29c5792818bd4cddf70b5f743a227e02fbcfcd",
+                "reference": "1a29c5792818bd4cddf70b5f743a227e02fbcfcd",
                 "shasum": ""
             },
             "require": {
@@ -8054,7 +8055,7 @@
                 "issues": "https://github.com/laravel/breeze/issues",
                 "source": "https://github.com/laravel/breeze"
             },
-            "time": "2025-06-17T13:07:20+00:00"
+            "time": "2025-07-18T18:49:59+00:00"
         },
         {
             "name": "laravel/pail",
@@ -8137,16 +8138,16 @@
         },
         {
             "name": "laravel/pint",
-            "version": "v1.23.0",
+            "version": "v1.24.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/pint.git",
-                "reference": "9ab851dba4faa51a3c3223dd3d07044129021024"
+                "reference": "0345f3b05f136801af8c339f9d16ef29e6b4df8a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/pint/zipball/9ab851dba4faa51a3c3223dd3d07044129021024",
-                "reference": "9ab851dba4faa51a3c3223dd3d07044129021024",
+                "url": "https://api.github.com/repos/laravel/pint/zipball/0345f3b05f136801af8c339f9d16ef29e6b4df8a",
+                "reference": "0345f3b05f136801af8c339f9d16ef29e6b4df8a",
                 "shasum": ""
             },
             "require": {
@@ -8157,7 +8158,7 @@
                 "php": "^8.2.0"
             },
             "require-dev": {
-                "friendsofphp/php-cs-fixer": "^3.76.0",
+                "friendsofphp/php-cs-fixer": "^3.82.2",
                 "illuminate/view": "^11.45.1",
                 "larastan/larastan": "^3.5.0",
                 "laravel-zero/framework": "^11.45.0",
@@ -8202,20 +8203,20 @@
                 "issues": "https://github.com/laravel/pint/issues",
                 "source": "https://github.com/laravel/pint"
             },
-            "time": "2025-07-03T10:37:47+00:00"
+            "time": "2025-07-10T18:09:32+00:00"
         },
         {
             "name": "laravel/sail",
-            "version": "v1.43.1",
+            "version": "v1.44.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/sail.git",
-                "reference": "3e7d899232a8c5e3ea4fc6dee7525ad583887e72"
+                "reference": "a09097bd2a8a38e23ac472fa6a6cf5b0d1c1d3fe"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/sail/zipball/3e7d899232a8c5e3ea4fc6dee7525ad583887e72",
-                "reference": "3e7d899232a8c5e3ea4fc6dee7525ad583887e72",
+                "url": "https://api.github.com/repos/laravel/sail/zipball/a09097bd2a8a38e23ac472fa6a6cf5b0d1c1d3fe",
+                "reference": "a09097bd2a8a38e23ac472fa6a6cf5b0d1c1d3fe",
                 "shasum": ""
             },
             "require": {
@@ -8265,7 +8266,7 @@
                 "issues": "https://github.com/laravel/sail/issues",
                 "source": "https://github.com/laravel/sail"
             },
-            "time": "2025-05-19T13:19:21+00:00"
+            "time": "2025-07-04T16:17:06+00:00"
         },
         {
             "name": "mockery/mockery",
@@ -8629,22 +8630,25 @@
         },
         {
             "name": "php-debugbar/php-debugbar",
-            "version": "v2.1.6",
+            "version": "v2.2.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/php-debugbar/php-debugbar.git",
-                "reference": "16fa68da5617220594aa5e33fa9de415f94784a0"
+                "reference": "3146d04671f51f69ffec2a4207ac3bdcf13a9f35"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/php-debugbar/php-debugbar/zipball/16fa68da5617220594aa5e33fa9de415f94784a0",
-                "reference": "16fa68da5617220594aa5e33fa9de415f94784a0",
+                "url": "https://api.github.com/repos/php-debugbar/php-debugbar/zipball/3146d04671f51f69ffec2a4207ac3bdcf13a9f35",
+                "reference": "3146d04671f51f69ffec2a4207ac3bdcf13a9f35",
                 "shasum": ""
             },
             "require": {
                 "php": "^8",
                 "psr/log": "^1|^2|^3",
                 "symfony/var-dumper": "^4|^5|^6|^7"
+            },
+            "replace": {
+                "maximebf/debugbar": "self.version"
             },
             "require-dev": {
                 "dbrekelmans/bdi": "^1",
@@ -8660,7 +8664,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.0-dev"
+                    "dev-master": "2.1-dev"
                 }
             },
             "autoload": {
@@ -8693,9 +8697,9 @@
             ],
             "support": {
                 "issues": "https://github.com/php-debugbar/php-debugbar/issues",
-                "source": "https://github.com/php-debugbar/php-debugbar/tree/v2.1.6"
+                "source": "https://github.com/php-debugbar/php-debugbar/tree/v2.2.4"
             },
-            "time": "2025-02-21T17:47:03+00:00"
+            "time": "2025-07-22T14:01:30+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",
@@ -9034,16 +9038,16 @@
         },
         {
             "name": "phpunit/phpunit",
-            "version": "11.5.26",
+            "version": "11.5.27",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/phpunit.git",
-                "reference": "4ad8fe263a0b55b54a8028c38a18e3c5bef312e0"
+                "reference": "446d43867314781df7e9adf79c3ec7464956fd8f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/4ad8fe263a0b55b54a8028c38a18e3c5bef312e0",
-                "reference": "4ad8fe263a0b55b54a8028c38a18e3c5bef312e0",
+                "url": "https://api.github.com/repos/sebastianbergmann/phpunit/zipball/446d43867314781df7e9adf79c3ec7464956fd8f",
+                "reference": "446d43867314781df7e9adf79c3ec7464956fd8f",
                 "shasum": ""
             },
             "require": {
@@ -9053,7 +9057,7 @@
                 "ext-mbstring": "*",
                 "ext-xml": "*",
                 "ext-xmlwriter": "*",
-                "myclabs/deep-copy": "^1.13.1",
+                "myclabs/deep-copy": "^1.13.3",
                 "phar-io/manifest": "^2.0.4",
                 "phar-io/version": "^3.2.1",
                 "php": ">=8.2",
@@ -9115,7 +9119,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/phpunit/issues",
                 "security": "https://github.com/sebastianbergmann/phpunit/security/policy",
-                "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.26"
+                "source": "https://github.com/sebastianbergmann/phpunit/tree/11.5.27"
             },
             "funding": [
                 {
@@ -9139,7 +9143,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-07-04T05:58:21+00:00"
+            "time": "2025-07-11T04:10:06+00:00"
         },
         {
             "name": "sebastian/cli-parser",

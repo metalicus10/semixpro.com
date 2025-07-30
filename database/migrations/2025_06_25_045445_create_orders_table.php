@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('customer_id');
             $table->unsignedBigInteger('manager_id')->nullable();
-            $table->decimal('total', 10, 2)->default(0);
+            $table->decimal('total', 10, 2)->default(0.00);
             $table->string('status')->default('pending');
             $table->timestamps();
 

@@ -25,7 +25,9 @@ class Technician extends Authenticatable
 
     public function tasks()
     {
-        return $this->belongsToMany(Task::class, 'task_technician');
+        return $this->belongsToMany(Task::class, 'task_technician','technician_id', 'task_id')
+            ->withPivot(['status', 'assigned_at'])
+            ->withTimestamps();
     }
 
 
