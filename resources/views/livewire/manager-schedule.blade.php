@@ -2,7 +2,8 @@
 <div
     x-data="scheduler()"
     @mouseup.window="$event.button === 0 && endSelection()"
-    @alert.window="alert($event.detail.message)"
+    @unique-slot-error.window="alert($event.detail[0].message)"
+    @interval-overlap-error.window="alert($event.detail[0].message)"
     class="overflow-x-auto bg-white text-gray-800 border pb-[10px]"
     x-init="init()"
 >
@@ -17,13 +18,15 @@
             <template x-for="day in days" :key="day">
                 <div class="flex flex-col">
                     {{-- Дата --}}
-                    <div class="h-5 px-2 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
+                    <div
+                        class="h-5 px-2 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
                         <span x-text="formatFullDate(day)"></span>
                     </div>
                     {{-- Часы --}}
                     <div class="flex">
                         <template x-for="(time, idx) in timeSlots" :key="idx">
-                            <div class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
+                            <div
+                                class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
                                 <span x-text="time"></span>
                             </div>
                         </template>
@@ -49,7 +52,8 @@
             {{-- Семь дней --}}
             <div class="flex-1 inline-flex relative">
                 <template x-for="day in days" :key="day">
-                    <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`" :class="{ 'day-left-border': day !== 0 }" :data-day="day">
+                    <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`"
+                         :class="{ 'day-left-border': day !== 0 }" :data-day="day">
                         {{-- Фоновые ячейки часов --}}
                         <div class="flex">
                             <template x-for="(_, idx) in timeSlots" :key="idx">
@@ -67,14 +71,16 @@
                         </div>
 
                         {{-- Задачи --}}
-                        <template
-                            x-for="task in dayTasks(employee.id, day)"
-                            :key="task.id"
+                        <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
                         >
-                            <div
-                                class="absolute top-1 left-0 h-14 bg-green-500 text-white text-xs rounded shadow cursor-move px-1 flex items-center space-x-1"
-                                :style="taskStyle(task)"
+                            <div x-init="console.log(task);"
+                                class="absolute top-1 h-14 bg-green-500 text-white text-xs rounded shadow cursor-move px-1 flex items-center space-x-1"
                                 @mousedown.prevent="startDrag(task, $event)"
+                                x-bind:style="
+                                    drag.task && drag.task.id === task.id
+                                        ? `left:${drag.previewX}px; width:${drag.widthPx}px;`
+                                        : taskStyle(task)
+                                "
                             >
                                 <span class="truncate" x-text="task.client"></span>
                                 <span class="whitespace-nowrap" x-text="`${task.start}–${task.end}`"></span>
@@ -140,7 +146,8 @@
                                    class="w-full rounded px-2 py-1 text-sm border"
                                    placeholder="Name, email, phone, or address"/>
                             <!-- Список найденных клиентов -->
-                            <div x-show="showCustomerModal && jobModalForm.results.length" class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
+                            <div x-show="showCustomerModal && jobModalForm.results.length"
+                                 class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
                                 <template x-for="customer in jobModalForm.results">
                                     <div
                                         @click="selectCustomer(customer)"
@@ -150,8 +157,11 @@
                                     </div>
                                 </template>
                             </div>
-                            <div x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
-                                 class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">Ничего не найдено</div>
+                            <div
+                                x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
+                                class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">
+                                Ничего не найдено
+                            </div>
 
                         </div>
                         <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">+
@@ -201,7 +211,8 @@
                                                 class="w-full px-3 py-2 border rounded focus:outline-none flex items-center justify-between"
                                         >
                                             <span x-text="value"></span>
-                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
+                                                 viewBox="0 0 24 24">
                                                 <path d="M19 9l-7 7-7-7"/>
                                             </svg>
                                         </button>
@@ -222,7 +233,8 @@
                                             <select x-model="minute"
                                                     class="w-[60px] border rounded p-1">
                                                 <template x-for="m in [0, 30]" :key="m">
-                                                    <option :value="m.toString().padStart(2, '0')" x-text="m.toString().padStart(2, '0')"></option>
+                                                    <option :value="m.toString().padStart(2, '0')"
+                                                            x-text="m.toString().padStart(2, '0')"></option>
                                                 </template>
                                             </select>
                                             <!-- AM/PM -->
@@ -238,7 +250,8 @@
                                         </div>
                                     </div>
 
-                                    <input type="hidden" x-model="jobModalForm.schedule_from_time12" name="schedule_from_time12">
+                                    <input type="hidden" x-model="jobModalForm.schedule_from_time12"
+                                           name="schedule_from_time12">
                                 </div>
                             </div>
                             <div class="flex justify-between items-center">
@@ -280,7 +293,8 @@
                                                 class="w-full px-3 py-2 border rounded focus:outline-none flex items-center justify-between"
                                         >
                                             <span x-text="value"></span>
-                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
+                                                 viewBox="0 0 24 24">
                                                 <path d="M19 9l-7 7-7-7"/>
                                             </svg>
                                         </button>
@@ -300,7 +314,8 @@
                                             <!-- Минуты -->
                                             <select x-model="minute" class="w-[60px] border rounded p-1">
                                                 <template x-for="m in [0, 30]" :key="m">
-                                                    <option :value="m.toString().padStart(2, '0')" x-text="m.toString().padStart(2, '0')"></option>
+                                                    <option :value="m.toString().padStart(2, '0')"
+                                                            x-text="m.toString().padStart(2, '0')"></option>
                                                 </template>
                                             </select>
                                             <!-- AM/PM -->
@@ -316,7 +331,8 @@
                                         </div>
                                     </div>
 
-                                    <input type="hidden" x-model="jobModalForm.schedule_to_time12" name="schedule_to_time12">
+                                    <input type="hidden" x-model="jobModalForm.schedule_to_time12"
+                                           name="schedule_to_time12">
                                 </div>
                             </div>
                         </div>
@@ -671,8 +687,8 @@
             timeSlots: @entangle('timeSlots'),
             tasks: @entangle('tasks'),
             now: new Date(),
-            slotWidth: 20,
-            sel: { emp:null, day:null, startIdx:null, endIdx:null },
+            slotWidth: 30,
+            sel: {emp: null, day: null, startIdx: null, endIdx: null},
             jobModalOpen: false,
             menuVisible: false,
             menuX: 0,
@@ -716,7 +732,7 @@
             },
 
             get currentDayIdx() {
-                const today = this.now.toISOString().slice(0,10); // "YYYY-MM-DD"
+                const today = this.now.toISOString().slice(0, 10); // "YYYY-MM-DD"
                 return this.days.findIndex(d => d === today);
             },
 
@@ -760,7 +776,7 @@
             },
 
             clearSelection() {
-                this.sel = { emp:null, day:null, startIdx:null, endIdx:null };
+                this.sel = {emp: null, day: null, startIdx: null, endIdx: null};
             },
 
             isPast(day, idx) {
@@ -771,7 +787,7 @@
                 return di === this.currentDayIdx && idx <= this.currentSlotIdx;
             },
 
-            dayWidth:  function() {
+            dayWidth: function () {
                 return this.slotWidth * this.timeSlots.length;
             },
 
@@ -780,8 +796,8 @@
                 const d = new Date(day);
                 return d.toLocaleDateString('en-US', {
                     month: 'short',
-                    day:   'numeric',
-                    weekday:'short'
+                    day: 'numeric',
+                    weekday: 'short'
                 });
             },
 
@@ -792,7 +808,7 @@
 
             // Разметка при выделении для создания задачи
             startSelection(emp, day, idx) {
-                this.sel = { emp, day, startIdx: idx, endIdx: idx };
+                this.sel = {emp, day, startIdx: idx, endIdx: idx};
             },
             dragSelection(emp, day, idx) {
                 if (this.sel.emp !== emp || this.sel.day !== day) return;
@@ -806,51 +822,77 @@
             },
             isSelected(emp, day, idx) {
                 if (this.sel.emp !== emp || this.sel.day !== day) return false;
-                const [min, max] = [this.sel.startIdx, this.sel.endIdx].sort((a,b)=>a-b);
+                const [min, max] = [this.sel.startIdx, this.sel.endIdx].sort((a, b) => a - b);
                 return idx >= min && idx < max + 1;
             },
 
             // Перетаскивание задач
-            drag: { task:null, offsetX:0 },
+            drag: {task: null, offsetX: 0, widthPx: 0, cell: null, previewX: 0, moved: false, startX: null},
             startDrag(task, evt) {
-                this.drag.task    = task;
+                this.drag.task = task;
                 this.drag.offsetX = evt.offsetX;
-                this.drag.cell   = evt.currentTarget.closest('div[data-day]');
-                console.log(this.drag.cell);
+                this.drag.moved = false;
+                this.drag.startX = evt.clientX;
+                this.drag.cell = evt.currentTarget.closest('div[data-day]');
+                const startIx = this.timeSlots.indexOf(task.start);
+                const endIx = this.timeSlots.indexOf(task.end);
+                console.log('startIx: ' + startIx + '| endIx: ' + endIx);
+                this.drag.previewX = startIx * this.slotWidth;
+                this.drag.widthPx = (endIx - startIx) * this.slotWidth;
 
                 this._onDragHandler = this.onDrag.bind(this);
                 this._onDropHandler = this.onDrop.bind(this);
 
                 document.addEventListener('mousemove', this._onDragHandler);
-                document.addEventListener('mouseup',   this._onDropHandler);
+                document.addEventListener('mouseup', this._onDropHandler);
             },
             onDrag(evt) {
                 if (!this.drag.task) return;
                 const cell = this.drag.cell;
                 if (!cell) return;
-                const day = cell.dataset.day;
-                const emp = +cell.closest('[data-emp]').dataset.emp;
-                if (day !== this.drag.task.day || emp !== this.drag.task.technician) return;
-                const rect = cell.getBoundingClientRect();
-                let x = evt.clientX - rect.left - this.drag.offsetX;
-                x = Math.max(0, Math.min(rect.width, x));
-                const idx = Math.floor(x / this.slotWidth);
-                this.$wire.moveTask(this.drag.task.id, this.timeSlots[idx]);
+                if (Math.abs(evt.clientX - this.drag.startX) > 3) {
+                    this.drag.moved = true;
+                    const day = cell.dataset.day;
+                    const emp = +cell.closest('[data-emp]').dataset.emp;
+                    if (day !== this.drag.task.day || emp !== this.drag.task.technician) return;
+                    const rect = cell.getBoundingClientRect();
+                    let slotCount = this.timeSlots.length;
+                    let slotWidth = this.slotWidth;
+                    let x = evt.clientX - rect.left - this.drag.offsetX;
+                    let idx = Math.max(0, Math.min(slotCount - 1, Math.floor(x / slotWidth)));
+                    this.drag.previewX = idx * slotWidth;
+                    let start = dayjs(this.drag.task.start, 'HH:mm:ss');
+                    let end = dayjs(this.drag.task.end, 'HH:mm:ss');
+                    let durationSlots = Math.max(1, Math.round((end.diff(start, 'minute')) / 30));
+                    this.drag.widthPx = durationSlots * slotWidth;
+                }
             },
             onDrop() {
                 document.removeEventListener('mousemove', this._onDragHandler);
-                document.removeEventListener('mouseup',   this._onDropHandler);
+                document.removeEventListener('mouseup', this._onDropHandler);
+                const cell = this.drag.cell;
+                if (cell && this.drag.cell && this.drag.task && this.drag.moved) {
+                    const rect = cell.getBoundingClientRect();
+                    const idx = Math.floor(this.drag.previewX / this.slotWidth);
+                    const safeIdx = Math.max(0, Math.min(this.timeSlots.length - 1, idx));
+                    const newStart = this.timeSlots[safeIdx];
+                    console.log('newStart:', newStart, 'idx:', idx);
+                    this.$wire.moveTask(this.drag.task.id, safeIdx);
+                }
                 this.drag.task = null;
                 this.drag.cell = null;
+                this.drag.previewX = null;
             },
 
             // Стиль задачи: позиционирование и ширина в px
             taskStyle(task) {
-                console.log(task);
-                const startIx = this.timeSlots.indexOf(task.start);
-                const endIx   = this.timeSlots.indexOf(task.end);
-                const leftPx  = startIx * this.slotWidth;
-                const wPx     = (endIx - startIx) * this.slotWidth;
+                console.log(this.timeSlots);
+                let startStr = dayjs(task.start, 'HH:mm:ss').format('h:mm A');
+                let endStr = dayjs(task.end, 'HH:mm:ss').format('h:mm A');
+                const startIx = this.timeSlots.indexOf(startStr);
+                const endIx = this.timeSlots.indexOf(endStr);
+                const leftPx = startIx * this.slotWidth;
+                const wPx = (endIx - startIx) * this.slotWidth;
                 return `left:${leftPx}px; width:${wPx}px;`;
             },
 
@@ -885,7 +927,15 @@
             addItem(type) {
                 this.jobModalForm.items.push({
                     id: Date.now() + Math.random(),
-                    name: '', qty: 1, unit_price: 0, unit_cost: 0, tax: false, taxTotal: 0, description: '', type, total: 0
+                    name: '',
+                    qty: 1,
+                    unit_price: 0,
+                    unit_cost: 0,
+                    tax: false,
+                    taxTotal: 0,
+                    description: '',
+                    type,
+                    total: 0
                 });
                 this.recalcItemsTotal();
             },
@@ -922,7 +972,8 @@
                     this.jobModalForm.results = [];
                     return;
                 }
-                @this.call('searchCustomers', this.jobModalForm.customer_query);
+            @this.call('searchCustomers', this.jobModalForm.customer_query)
+                ;
             },
             selectCustomer(customer) {
                 if (!customer || !customer.id) {
@@ -932,7 +983,7 @@
                     this.showCustomerModal = false;
                     return;
                 }
-                this.jobModalForm.customer_query = customer.name + (customer.email ? ' ('+customer.email+')' : '');
+                this.jobModalForm.customer_query = customer.name + (customer.email ? ' (' + customer.email + ')' : '');
                 this.jobModalForm.customer_id = customer.id;
                 this.selectedCustomer = customer;
                 this.showCustomerModal = false;
@@ -949,10 +1000,10 @@
                 const baseDate = dayjs(this.sel.day, 'DD.MM.YYYY').startOf('day').toDate();
 
                 const startSlot = Math.min(this.sel.startIdx, slotsPerDay - 1);
-                const endSlot   = Math.min(this.sel.endIdx, slotsPerDay - 1);
+                const endSlot = Math.min(this.sel.endIdx, slotsPerDay - 1);
 
                 const startMinutes = minHour * 60 + startSlot * slotDuration;
-                const endMinutes   = minHour * 60 + (endSlot + 1) * slotDuration;
+                const endMinutes = minHour * 60 + (endSlot + 1) * slotDuration;
 
                 const from = new Date(baseDate);
                 from.setMinutes(startMinutes);
@@ -967,6 +1018,7 @@
                 function toInputDate(d) {
                     return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
                 }
+
                 function toInputTime12(d) {
                     let h = d.getHours();
                     const m = d.getMinutes().toString().padStart(2, '0');
@@ -974,6 +1026,7 @@
                     h = h % 12 || 12;
                     return `${h}:${m} ${ampm}`;
                 }
+
                 function toInputTime24(d) {
                     let h = d.getHours().toString().padStart(2, '0');
                     let m = d.getMinutes().toString().padStart(2, '0');

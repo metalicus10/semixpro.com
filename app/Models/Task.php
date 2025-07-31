@@ -12,8 +12,7 @@ class Task extends Model
 
     protected $casts = [
         'day'        => 'date',
-        'start_time' => 'datetime:H:i:s',
-        'end_time'   => 'datetime:H:i:s',
+
     ];
 
     public function order()
@@ -26,6 +25,11 @@ class Task extends Model
         return $this->belongsToMany(Technician::class, 'task_technician', 'task_id', 'technician_id')
             ->withPivot(['status', 'assigned_at'])
             ->withTimestamps();
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
     }
 
 }

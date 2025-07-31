@@ -35,11 +35,12 @@ class ManagerSchedule extends Component
         }
 
         $start = Carbon::createFromTimeString('06:00');
-        $end   = Carbon::createFromTimeString('22:00');
-        while ($start->lt($end)) {
+        $end = Carbon::createFromTimeString('22:00');
+        while ($start < $end) {
             $this->timeSlots[] = $start->format('g:i A');
             $start->addMinutes(30);
         }
+        $this->timeSlots[] = $end->format('g:i A');
 
         $this->loadTasks();
     }
@@ -189,9 +190,9 @@ class ManagerSchedule extends Component
                 'id'         => $task->id,
                 'technician'=> $tech->id,
                 'day'        => $task->day->toDateString(),
-                'start'      => $task->start_time->format('g:i A'),
-                'end'        => $task->end_time->format('g:i A'),
-                'client'     => $task->customer_id,
+                'start'      => $task->start_time,
+                'end'        => $task->end_time,
+                'client' => $task->customer ? $task->customer->name : '',
                 'status'     => $tech->pivot->status,
                 'assigned_at' => $tech->pivot->assigned_at
                     ? Carbon::parse($tech->pivot->assigned_at)->format('Y-m-d H:i:s')
@@ -225,6 +226,15 @@ class ManagerSchedule extends Component
                 })->values(),
             ];
         });
+    }
+
+    public function getStartSlotAttribute($start_time)
+    {
+        return $start_time ? $start_time->format('g:i A') : null;
+    }
+    public function getEndSlotAttribute($end_time)
+    {
+        return $end_time ? $end_time->format('g:i A') : null;
     }
 
     public function addTask($employeeId, $day, $startTime, $endTime, $client)
@@ -263,42 +273,78 @@ class ManagerSchedule extends Component
         $this->loadTasks();
     }
 
-    public function moveTask($id, $newStart)
+    public function moveTask(int $id, int $newIdx)
     {
         $task = Task::find($id);
         if (!$task) {
             return;
         }
 
-        $start = Carbon::createFromFormat('g:i A', $newStart);
-        $durationSec = Carbon::parse($task->end_time)
-            ->diffInSeconds(Carbon::parse($task->start_time));
-        $end = $start->copy()->addSeconds($durationSec);
+        $timeString = $task->start_time instanceof \Carbon\Carbon
+            ? $task->start_time->format('H:i:s')
+            : $task->start_time;
+        $taskStart = Carbon::createFromFormat('H:i:s', $timeString);
 
-        $technicianId = $task->technicians->first()->id;
-        // Проверка пересечения (исключаем саму задачу)
-        $overlap = Task::where('day', $task->day)
-            ->where('id', '!=', $task->id)
-            ->whereTime('start_time', '<', $end->format('H:i:s'))
-            ->whereTime('end_time',   '>', $start->format('H:i:s'))
-            ->whereHas('technicians', function($q) use ($technicianId) {
-                $q->where('technician_id', $technicianId);
-            })
-            ->exists();
+        $taskEnd = $task->end_time instanceof \Carbon\Carbon
+            ? $task->end_time->copy()
+            : Carbon::createFromFormat('H:i:s', $task->end_time);
 
-        if ($overlap) {
-            $this->dispatch('alert', [
-                'message' => 'Ошибка: перенос невозможен из‑за пересечения.'
+        $totalMinutes = $taskStart->hour * 60 + $taskStart->minute;
+        $zeroMinutes  = 6 * 60;
+        $diffMinutes = $totalMinutes - $zeroMinutes;
+        $oldIdx      = intval($diffMinutes / 30);
+
+        // Если вдруг не нашли — выходим
+        if ($oldIdx === false) {
+            $this->dispatch('unique-slot-error', [
+                'message' => 'Ошибка: не удалось определить начальный слот.'
             ]);
             return;
         }
 
-        // Сохраняем новые времена
+        $maxIdx = count($this->timeSlots) - 1;
+        if ($newIdx > $maxIdx) {
+            $newIdx = $maxIdx;
+        }
+
+        $delta = $newIdx - $oldIdx;
+        $newStart = $taskStart->copy()->addMinutes($delta * 30);
+        $newEnd = $taskEnd->copy()->addMinutes($delta * 30);
+        $maxStart = Carbon::createFromTimeString('21:30:00');
+        $maxEnd = Carbon::createFromTimeString('22:00:00');
+
+        // Проверяем, не ушли ли за пределы дня
+        if ($newStart->greaterThan($maxStart) || $newEnd->greaterThan($maxEnd)) {
+            $this->dispatch('interval-overlap-error', [
+                'message' => 'Задача не может начинаться позже 21:30 или заканчиваться позже 22:00.',
+            ]);
+            return;
+        }
+
+        //Проверка пересечений (ваша существующая логика,
+        //но с whereHas('technicians') и без Carbon::parse)
+        $techId = $task->technicians->first()->id;
+        $overlap = Task::where('day', $task->day)
+            ->where('id', '!=', $task->id)
+            ->whereTime('start_time', '<', $newEnd->format('H:i:s'))
+            ->whereTime('end_time',   '>', $newStart->format('H:i:s'))
+            ->whereHas('technicians', fn($q) => $q->where('technician_id', $techId))
+            ->exists();
+
+        if ($overlap) {
+            $this->dispatch('interval-overlap-error', [
+                'message' => 'Ошибка: новый интервал пересекается с другой задачей.'
+            ]);
+            return;
+        }
+
+        //Сохраняем в БД в формате H:i:s
         $task->update([
-            'start_time' => $start->format('H:i:s'),
-            'end_time'   => $end->format('H:i:s'),
+            'start_time' => $newStart->format('H:i:s'),
+            'end_time'   => $newEnd->format('H:i:s'),
         ]);
 
+        //Перезагружаем задачи для Alpine
         $this->loadTasks();
     }
 
