@@ -8,11 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Task extends Model
 {
     use HasFactory;
-    protected $fillable = ['title', 'day', 'start_time', 'end_time', 'customer_id', 'order_id'];
+    protected $fillable = ['title', 'day', 'start_time', 'end_time', 'customer_id', 'order_id', 'message'];
 
     protected $casts = [
-        'day'        => 'date',
-
+        'day' => 'date',
     ];
 
     public function order()

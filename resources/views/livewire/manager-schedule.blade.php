@@ -61,7 +61,7 @@
                                     class="w-[30px] h-16 flex-shrink-0 border-r border-r-gray-300"
                                     :class="{
                                         'bg-blue-100': isSelected(employee.id, day, idx),
-                                        'bg-gray-100 pointer-events-none': isPast(day, idx)
+                                        'bg-gray-200 pointer-events-none': isPast(day, idx)
                                     }"
                                     @mousedown.prevent="$event.button === 0  && !isPast(day, idx) && startSelection(employee.id, day, idx)"
                                     @mouseenter.prevent="$event.buttons === 1  && !isPast(day, idx) && dragSelection(employee.id, day, idx)"
@@ -74,16 +74,23 @@
                         <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
                         >
                             <div x-init="console.log(task);"
-                                class="absolute top-1 h-14 bg-green-500 text-white text-xs rounded shadow cursor-move px-1 flex items-center space-x-1"
-                                @mousedown.prevent="startDrag(task, $event)"
-                                x-bind:style="
+                                 class="absolute top-1 h-14 bg-green-500 text-white text-xs rounded shadow cursor-move px-1 flex items-center space-x-1"
+                                 :class="{
+                                    'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
+
+                                    'cursor-move': !isTaskPast(task)
+                                 }"
+                                 @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                 x-bind:style="
                                     drag.task && drag.task.id === task.id
                                         ? `left:${drag.previewX}px; width:${drag.widthPx}px;`
                                         : taskStyle(task)
                                 "
                             >
-                                <span class="truncate" x-text="task.client"></span>
-                                <span class="whitespace-nowrap" x-text="`${task.start}–${task.end}`"></span>
+                                <div class="flex flex-col">
+                                    <span class="truncate" x-text="task.client"></span>
+                                    <span class="whitespace-nowrap" x-text="`${task.start}–${task.end}`"></span>
+                                </div>
                             </div>
                         </template>
                     </div>
@@ -100,7 +107,7 @@
         :style="`top: ${menuY}px; left: ${menuX}px;`"
     >
         <button
-            @click="openJobModal('job'); closeMenu()"
+            @click="openJobModal('job', sel); closeMenu()"
             class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
         >
             <span class="font-medium">+Job</span>
@@ -645,8 +652,9 @@
             </div>
 
             <div class="flex justify-end mt-6">
-                <button @click="$wire.call('saveJob', jobModalForm); jobModalOpen = false"
-                        class="bg-blue-600 text-white px-6 py-2 rounded">Save job
+                <button @click="onSubmit(jobModalForm); jobModalOpen = false"
+                        :disabled="!validateJobModalForm(jobModalForm)"
+                        class="disabled:opacity-50 bg-blue-600 text-white px-6 py-2 rounded">Save job
                 </button>
             </div>
         </div>
@@ -655,6 +663,26 @@
 </div>
 
 <script>
+    function validateJobModalForm(form) {
+        if (
+            !form.customer_id ||
+            !Array.isArray(form.employees) ||
+            !form.employees.length ||
+            !form.schedule_from_date ||
+            !form.schedule_from_time
+        ) {
+            return false;
+        }
+
+        // Проверяем, что у каждого сотрудника есть id
+        for (const emp of form.employees) {
+            if (!emp.id) {
+                return false;
+            }
+        }
+
+        return true;
+    }
     function scheduler() {
         return {
             init() {
@@ -718,7 +746,7 @@
                 selectedCustomer: null,
                 notify_customer: false,
                 items: [],
-                total: 0,
+                total: 0.00,
                 private_notes: '',
                 tags: '',
                 attachments: [],
@@ -768,7 +796,6 @@
                 this.menuX = event.pageX;
                 this.menuY = event.pageY;
                 this.menuVisible = true;
-                console.log(this.sel);
             },
 
             closeMenu() {
@@ -785,6 +812,13 @@
                     return true;
                 }
                 return di === this.currentDayIdx && idx <= this.currentSlotIdx;
+            },
+
+            isTaskPast(task) {
+                //const dayIdx = this.days.indexOf(task.day);
+                const startIdx = this.timeSlots.indexOf(dayjs(task.start, 'HH:mm:ss').format('h:mm A'));
+                const endIdx = this.timeSlots.indexOf(dayjs(task.end, 'HH:mm:ss').format('h:mm A'));
+                return this.isPast(task.day, startIdx) && this.isPast(task.day, endIdx);
             },
 
             dayWidth: function () {
@@ -929,13 +963,13 @@
                     id: Date.now() + Math.random(),
                     name: '',
                     qty: 1,
-                    unit_price: 0,
-                    unit_cost: 0,
+                    unit_price: 0.00,
+                    unit_cost: 0.00,
                     tax: false,
                     taxTotal: 0,
                     description: '',
                     type,
-                    total: 0
+                    total: 0.00
                 });
                 this.recalcItemsTotal();
             },
@@ -972,8 +1006,7 @@
                     this.jobModalForm.results = [];
                     return;
                 }
-            @this.call('searchCustomers', this.jobModalForm.customer_query)
-                ;
+                @this.call('searchCustomers', this.jobModalForm.customer_query);
             },
             selectCustomer(customer) {
                 if (!customer || !customer.id) {
@@ -990,17 +1023,23 @@
                 Livewire.dispatch('customer-selected', customer);
             },
 
-            openJobModal(type = null) {
+            onSubmit(jobModalForm) {
+                if (validateJobModalForm(jobModalForm)) {
+                    this.$wire.saveJob(jobModalForm);
+                }
+            },
+
+            openJobModal(type = null, sel) {
                 if (type) this.jobModalType = type;
                 this.jobModalOpen = true;
 
                 const slotDuration = 30;
                 const slotsPerDay = 32;
                 const minHour = 6;
-                const baseDate = dayjs(this.sel.day, 'DD.MM.YYYY').startOf('day').toDate();
+                const baseDate = dayjs(sel.day, 'YYYY.MM.DD').startOf('day').toDate();
 
-                const startSlot = Math.min(this.sel.startIdx, slotsPerDay - 1);
-                const endSlot = Math.min(this.sel.endIdx, slotsPerDay - 1);
+                const startSlot = Math.min(sel.startIdx, slotsPerDay - 1);
+                const endSlot = Math.min(sel.endIdx, slotsPerDay - 1);
 
                 const startMinutes = minHour * 60 + startSlot * slotDuration;
                 const endMinutes = minHour * 60 + (endSlot + 1) * slotDuration;

@@ -21,11 +21,44 @@ class ManagerSchedule extends Component
     public $employees = [];
     public $customerSearch = '';
     public $customerResults = [];
-    public $jobModalForm = [];
 
     public $tasks;
     public array $days = [];
     public array $timeSlots = [];
+
+    public $jobModalForm = [
+        'schedule_from' => '',
+        'schedule_to' => '',
+        'schedule_from_date' => '',
+        'schedule_from_time' => '',
+        'schedule_from_time12' => '',
+        'schedule_from_ampp' => 'AM',
+        'schedule_to_date' => '',
+        'schedule_to_time' => '',
+        'schedule_to_time12' => '',
+        'schedule_to_ampp' => 'PM',
+        'customer_id' => null,
+        'employee_id' => null,
+        'customer_query' => '',
+        'employees_query' => '',
+        'results' => [],
+        'employees' => [],
+        'employees_results' => [],
+        'selectedCustomer' => null,
+        'notify_customer' => false,
+        'items' => [],
+        'total' => 0,
+        'private_notes' => '',
+        'tags' => '',
+        'attachments' => [],
+        'message' => null,
+        'new_customer' => [
+            'name' => '',
+            'email' => '',
+            'phone' => '',
+            'address' => '',
+        ],
+    ];
 
     public function mount()
     {
@@ -115,23 +148,56 @@ class ManagerSchedule extends Component
         $this->dispatch('search-customers-result', $results);
     }
 
-    public function saveJob($form)
+    public function saveJob($jobModalForm)
     {
-        $customerId = $form['customer_id'] ?? null;
+        //dd($jobModalForm);
+        $validator = Validator::make($jobModalForm, [
+            'customer_id' => 'required|integer|exists:customers,id',
+            'message' => 'nullable|string',
+            'employees' => 'required|array|min:1',
+            'employees.*.id' => 'required|integer|exists:users,id',
+            'employees.*.name' => 'required|string|max:255',
+            'employees.*.tasks' => 'nullable|array',
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|numeric',
+            'items.*.name' => 'nullable|string',
+            'items.*.qty' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.unit_cost' => 'nullable|numeric|min:0',
+            'items.*.tax' => 'required|boolean',
+            'items.*.taxTotal' => 'nullable|numeric|min:0',
+            'items.*.description' => 'nullable|string',
+            'items.*.type' => 'required|string',
+            'items.*.total' => 'required|numeric|min:0',
+            'total' => 'nullable|numeric',
+            'schedule_from_date' => 'required|date',
+            'schedule_to_date' => 'required|date',
+            'schedule_from_time' => 'required|date_format:H:i',
+            'schedule_to_time' => 'required|date_format:H:i',
+        ]);
 
-        foreach ($form['items'] as $item){
+        if ($validator->fails()) {
+            // Если нужно: вернуть ошибки на фронт или кинуть исключение
+            $this->dispatch('showNotification', 'error', $validator->errors()->all());
+            return;
+        }
+
+        $data = $validator->validated();
+        $customerId = $data['customer_id'] ?? null;
+
+        foreach ($data['items'] as $item){
             //if($item['tax']) { $form['total'] += $item['taxTotal']; }
-            $form['total'] += floatval($item['total']) ?? 0.00;
+            $data['total'] += floatval($item['total']) ?? 0.00;
         }
 
         $order = Order::create([
             'customer_id' => $customerId,
             'manager_id'  => auth()->id(),
             'status'      => 'pending',
-            'total'       => floatval($form['total']) ?? 0.00,
+            'total'       => floatval($data['total']) ?? 0.00,
         ]);
 
-        foreach ($form['items'] as $item) {
+        foreach ($data['items'] as $item) {
             OrderItem::create([
                 'order_id'  => $order->id,
                 'item_type' => $item['type'],
@@ -142,20 +208,21 @@ class ManagerSchedule extends Component
             ]);
         }
 
-        $startTime = $form['schedule_from_date'] . ' ' . $form['schedule_from_time'];
-        $endTime   = $form['schedule_to_date'] . ' ' . $form['schedule_to_time'];
+        $startTime = $data['schedule_from_date'] . ' ' . $data['schedule_from_time'];
+        $endTime   = $data['schedule_to_date'] . ' ' . $data['schedule_to_time'];
 
         $task = Task::create([
-            'title'          => $form['items'][0]['name'] ?? 'Job',
-            'day'            => $form['schedule_from_date'],
+            'title'          => $data['items'][0]['name'] ?? 'Job',
+            'day'            => $data['schedule_from_date'],
             //'technician_ids' => collect($form['employees'])->pluck('id'),
             'start_time'     => $startTime,
             'end_time'       => $endTime,
             'customer_id'    => $customerId,
             'order_id'       => $order->id,
+            'message'        => $data['message'] ?? '',
         ]);
 
-        $syncData = collect($form['employees'])
+        $syncData = collect($data['employees'])
             ->pluck('id')
             ->mapWithKeys(function($techId) {
                 return [
@@ -168,7 +235,6 @@ class ManagerSchedule extends Component
             ->all();
 
         $task->technicians()->sync($syncData);
-
         $this->loadTasks();
     }
 
