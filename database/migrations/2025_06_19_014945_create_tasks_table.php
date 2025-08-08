@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
             $table->foreign('customer_id')->references('id')->on('customers')->nullOnDelete();
             $table->unsignedBigInteger('order_id');
             $table->date('day');

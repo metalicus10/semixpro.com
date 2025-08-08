@@ -151,7 +151,10 @@ class ManagerSchedule extends Component
     public function saveJob($jobModalForm)
     {
         //dd($jobModalForm);
-        $validator = Validator::make($jobModalForm, [
+        $data = $jobModalForm;
+        $data['schedule_from_time12'] = $this->normalizeTimeTo24($jobModalForm['schedule_from_time12'] ?? null);
+        $data['schedule_to_time12']   = $this->normalizeTimeTo24($jobModalForm['schedule_to_time12'] ?? null);
+        $validator = Validator::make($data, [
             'customer_id' => 'required|integer|exists:customers,id',
             'message' => 'nullable|string',
             'employees' => 'required|array|min:1',
@@ -172,8 +175,8 @@ class ManagerSchedule extends Component
             'total' => 'nullable|numeric',
             'schedule_from_date' => 'required|date',
             'schedule_to_date' => 'required|date',
-            'schedule_from_time' => 'required|date_format:H:i',
-            'schedule_to_time' => 'required|date_format:H:i',
+            'schedule_from_time12' => 'required|date_format:H:i',
+            'schedule_to_time12' => 'required|date_format:H:i',
         ]);
 
         if ($validator->fails()) {
@@ -201,6 +204,8 @@ class ManagerSchedule extends Component
             OrderItem::create([
                 'order_id'  => $order->id,
                 'item_type' => $item['type'],
+                'item_title' => $item['name'] ?? '',
+                'item_description' => $item['description'] ?? '',
                 'item_id'   => $item['id'],
                 'quantity'  => $item['qty'],
                 'price'     => $item['unit_price'] ?? 0.00,
@@ -208,13 +213,11 @@ class ManagerSchedule extends Component
             ]);
         }
 
-        $startTime = $data['schedule_from_date'] . ' ' . $data['schedule_from_time'];
-        $endTime   = $data['schedule_to_date'] . ' ' . $data['schedule_to_time'];
+        $startTime = $data['schedule_from_date'] . ' ' . $data['schedule_from_time12'];
+        $endTime   = $data['schedule_to_date'] . ' ' . $data['schedule_to_time12'];
 
         $task = Task::create([
-            'title'          => $data['items'][0]['name'] ?? 'Job',
             'day'            => $data['schedule_from_date'],
-            //'technician_ids' => collect($form['employees'])->pluck('id'),
             'start_time'     => $startTime,
             'end_time'       => $endTime,
             'customer_id'    => $customerId,
@@ -238,6 +241,31 @@ class ManagerSchedule extends Component
         $this->loadTasks();
     }
 
+    private function normalizeTimeTo24(?string $time): ?string
+    {
+        if ($time === null) return null;
+        $t = trim($time);
+
+        // Уже 'H:i'
+        if (preg_match('/^\d{1,2}:\d{2}$/', $t)) {
+            return $t;
+        }
+
+        // 'H:i:s' -> 'H:i'
+        if (preg_match('/^\d{1,2}:\d{2}:\d{2}$/', $t)) {
+            try { return Carbon::createFromFormat('H:i:s', $t)->format('H:i'); } catch (\Throwable $e) {}
+        }
+
+        // '7:30 PM' / '07:30 PM'
+        if (preg_match('/am|pm/i', $t)) {
+            try { return Carbon::createFromFormat('g:i A', strtoupper($t))->format('H:i'); } catch (\Throwable $e) {}
+            try { return Carbon::createFromFormat('h:i A', strtoupper($t))->format('H:i'); } catch (\Throwable $e) {}
+        }
+
+        // Пусть валидатор отловит ошибку формата
+        return $t;
+    }
+
     public function updateTaskPosition($taskId, $newStart, $newEnd)
     {
         if($newStart == "0000-00-00 00:00:00" || $newEnd == "0000-00-00 00:00:00") {return;}
@@ -251,18 +279,21 @@ class ManagerSchedule extends Component
 
     protected function loadTasks()
     {
-        $this->tasks = Task::with('technicians')->get()->flatMap(function(Task $task) {
+        $this->tasks = Task::with('technicians', 'order.items')->get()->flatMap(function(Task $task) {
             return $task->technicians->map(fn($tech) => [
                 'id'         => $task->id,
                 'technician'=> $tech->id,
+                'employees' => $task->technicians ? $task->technicians->values()->toArray() : [],
                 'day'        => $task->day->toDateString(),
                 'start'      => $task->start_time,
                 'end'        => $task->end_time,
-                'client' => $task->customer ? $task->customer->name : '',
+                'client' => $task->customer ? $task->customer->toArray() : [],
                 'status'     => $tech->pivot->status,
+                'items' => $task->order ? $task->order->items->values()->toArray() : [],
                 'assigned_at' => $tech->pivot->assigned_at
                     ? Carbon::parse($tech->pivot->assigned_at)->format('Y-m-d H:i:s')
                     : null,
+                'message' => $task->message,
             ]);
         });
         //dd(Task::with('technicians')->get());
@@ -361,7 +392,7 @@ class ManagerSchedule extends Component
         $oldIdx      = intval($diffMinutes / 30);
 
         // Если вдруг не нашли — выходим
-        if ($oldIdx === false) {
+        if (!$oldIdx) {
             $this->dispatch('unique-slot-error', [
                 'message' => 'Ошибка: не удалось определить начальный слот.'
             ]);
@@ -411,6 +442,12 @@ class ManagerSchedule extends Component
         ]);
 
         //Перезагружаем задачи для Alpine
+        $this->loadTasks();
+    }
+
+    public function deleteTask($taskId)
+    {
+        Task::findOrFail($taskId)->delete();
         $this->loadTasks();
     }
 

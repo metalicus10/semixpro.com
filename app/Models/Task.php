@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class Task extends Model
 {
     use HasFactory;
-    protected $fillable = ['title', 'day', 'start_time', 'end_time', 'customer_id', 'order_id', 'message'];
+    protected $fillable = ['day', 'start_time', 'end_time', 'customer_id', 'order_id', 'message'];
 
     protected $casts = [
         'day' => 'date',
@@ -16,7 +16,7 @@ class Task extends Model
 
     public function order()
     {
-        return $this->hasOne(Order::class);
+        return $this->belongsTo(Order::class, 'order_id');
     }
 
     public function technicians()

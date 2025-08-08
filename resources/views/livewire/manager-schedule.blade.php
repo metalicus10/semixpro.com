@@ -73,14 +73,20 @@
                         {{-- Задачи --}}
                         <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
                         >
-                            <div x-init="console.log(task);"
-                                 class="absolute top-1 h-14 bg-green-500 text-white text-xs rounded shadow cursor-move px-1 flex items-center space-x-1"
+                            <div
+                                 class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
                                  :class="{
                                     'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
 
                                     'cursor-move': !isTaskPast(task)
                                  }"
                                  @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                 @contextmenu.prevent="
+                                    contextMenu.x = $event.clientX;
+                                    contextMenu.y = $event.clientY;
+                                    contextMenu.task = task;
+                                    contextMenu.visible = true;
+                                 "
                                  x-bind:style="
                                     drag.task && drag.task.id === task.id
                                         ? `left:${drag.previewX}px; width:${drag.widthPx}px;`
@@ -88,8 +94,8 @@
                                 "
                             >
                                 <div class="flex flex-col">
-                                    <span class="truncate" x-text="task.client"></span>
-                                    <span class="whitespace-nowrap" x-text="`${task.start}–${task.end}`"></span>
+                                    <span class="truncate" x-text="task.client.name"></span>
+                                    <span class="whitespace-wrap" x-text="`${to12Hour(task.start)} – ${to12Hour(task.end)}`"></span>
                                 </div>
                             </div>
                         </template>
@@ -99,7 +105,7 @@
         </div>
     </template>
 
-    <!-- Контекстное меню -->
+    <!-- Контекстное меню таймлайна -->
     <div
         x-show="menuVisible"
         @click.away="closeMenu()"
@@ -107,20 +113,20 @@
         :style="`top: ${menuY}px; left: ${menuX}px;`"
     >
         <button
-            @click="openJobModal('job', sel); closeMenu()"
+            @click="openJobModal('createJob', sel); closeMenu()"
             class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
         >
             <span class="font-medium">+Job</span>
         </button>
         <button
-            @click="openJobModal('estimate'); closeMenu()"
+            @click="openJobModal('createEstimate'); closeMenu()"
             class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
         >
             <!-- … SVG … -->
             <span class="font-medium">+Estimate</span>
         </button>
         <button
-            @click="openJobModal('event'); closeMenu()"
+            @click="openJobModal('createEvent'); closeMenu()"
             class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
         >
             <!-- … SVG … -->
@@ -128,11 +134,105 @@
         </button>
     </div>
 
+    <!-- Контекстное меню задачи -->
+    <div
+        x-show="contextMenu.visible"
+        :style="`top:${contextMenu.y}px; left:${contextMenu.x}px`"
+        class="fixed z-50 bg-white border rounded shadow-lg animate-fade-in"
+        @click.away="contextMenu.visible = false"
+    >
+        <button
+            class="block w-full px-4 py-2 hover:bg-gray-100 text-left"
+            @click="
+                contextMenu.visible = false;
+                openJobModal('edit', sel, contextMenu);
+            "
+        >Изменить
+        </button>
+        <button
+            class="block w-full px-4 py-2 hover:bg-gray-100 text-left text-red-600"
+            @click="
+                contextMenu.visible = false;
+                taskToDelete = contextMenu.task;
+                confirmDeleteOpen = true;
+            "
+        >Удалить
+        </button>
+    </div>
+
+    <!-- Подтверждение удаления задачи -->
+    <div
+        x-show="confirmDeleteOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+    >
+        <div class="bg-white rounded shadow-lg p-8 w-full max-w-sm">
+            <div class="mb-4 text-lg">Вы уверены, что хотите удалить задачу?</div>
+            <div class="flex justify-end space-x-4">
+                <button class="px-4 py-2" @click="confirmDeleteOpen = false">Отмена</button>
+                <button class="px-4 py-2 bg-red-600 text-white rounded"
+                        @click="deleteTask(taskToDelete)"
+                >Да
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AddCustomerModal -->
+    <div
+        x-show="showAddCustomerModal"
+        x-transition
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+        style="display: none;"
+    >
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+             @click.away="showAddCustomerModal = false">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold">Add new customer</h2>
+                <button type="button" @click="showAddCustomerModal = false"
+                        class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;
+                </button>
+            </div>
+            <form @submit.prevent="saveNewCustomer">
+                <template x-if="customerError">
+                    <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
+                </template>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Name*</label>
+                    <input type="text" x-model="jobModalForm.new_customer.name" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" x-model="jobModalForm.new_customer.email"
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Phone</label>
+                    <input type="text" x-model="jobModalForm.new_customer.phone"
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Address</label>
+                    <input type="text" x-model="jobModalForm.new_customer.address"
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" @click="showAddCustomerModal = false"
+                            class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Add
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div x-show="jobModalOpen"
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+         class="fixed inset-0 z-[45] flex items-center justify-center bg-black bg-opacity-40">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
             <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <h2 class="text-xl font-semibold">New job</h2>
+                <h2 class="text-xl font-semibold" x-text="jobModalType === 'edit' ? 'Edit job' : 'New job'"></h2>
                 <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
                 </button>
             </div>
@@ -171,8 +271,8 @@
                             </div>
 
                         </div>
-                        <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">+
-                            New customer
+                        <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">
+                            + New customer
                         </button>
                     </div>
 
@@ -197,7 +297,7 @@
                                                     this.minute = m;
                                                     this.ampm = a;
                                                     this.show = false;
-                                                    $dispatch('time-changed', { value: this.value });
+                                                    $dispatch('time-changed', { field: 'from', value: this.value });
                                                 },
                                                 setFromExternal(val) {
                                                     if (!val) return;
@@ -210,12 +310,12 @@
                                             }"
                                         x-init="setFromExternal(jobModalForm.schedule_from_time12)"
                                         x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
-                                        @time-changed.window="jobModalForm.schedule_from_time12 = $event.detail.value"
+                                        @time-changed.window="updateTime($event.detail)"
                                         class="relative w-36"
                                     >
                                         <button type="button"
                                                 @click="show = !show"
-                                                class="w-full px-3 py-2 border rounded focus:outline-none flex items-center justify-between"
+                                                class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
                                         >
                                             <span x-text="value"></span>
                                             <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
@@ -279,7 +379,7 @@
                                                     this.ampm = a;
                                                     this.show = false;
                                                     // Если нужна двусторонняя связь с jobModalForm:
-                                                    $dispatch('time-changed', { value: this.value });
+                                                    $dispatch('time-changed', { field: 'to', value: this.value });
                                                 },
                                                 setFromExternal(val) {
                                                     if (!val) return;
@@ -292,12 +392,12 @@
                                             }"
                                         x-init="setFromExternal(jobModalForm.schedule_to_time12)"
                                         x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
-                                        @time-changed.window="jobModalForm.schedule_to_time12 = $event.detail.value"
+                                        @time-changed.window="updateTime($event.detail)"
                                         class="relative w-36"
                                     >
                                         <button type="button"
                                                 @click="show = !show"
-                                                class="w-full px-3 py-2 border rounded focus:outline-none flex items-center justify-between"
+                                                class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
                                         >
                                             <span x-text="value"></span>
                                             <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
@@ -538,7 +638,7 @@
                                         <div class="flex flex-col bg-white rounded w-full ">
                                             <div class="flex gap-2 mb-2 w-full">
 
-                                                <!-- Service Name + Tax -->
+                                                <!-- Material Name + Tax -->
                                                 <div class="flex-1 flex flex-col w-3/5">
                                                     <label class="sr-only">Material name</label>
                                                     <div class="relative flex items-center">
@@ -664,12 +764,13 @@
 
 <script>
     function validateJobModalForm(form) {
+        //console.log(form.schedule_from_time12);
         if (
             !form.customer_id ||
             !Array.isArray(form.employees) ||
             !form.employees.length ||
             !form.schedule_from_date ||
-            !form.schedule_from_time
+            !form.schedule_from_time12
         ) {
             return false;
         }
@@ -683,6 +784,74 @@
 
         return true;
     }
+
+    function defaultJobModalForm() {
+        return {
+            schedule_from: '',
+            schedule_to: '',
+            schedule_from_date: '',
+            schedule_from_time: '',
+            schedule_from_time12: '',
+            schedule_from_ampp: 'AM',
+            schedule_to_date: '',
+            schedule_to_time: '',
+            schedule_to_time12: '',
+            schedule_to_ampp: 'PM',
+            customer_id: null,
+            employee_id: null,
+            customer_query: '',
+            employees_query: '',
+            results: [],
+            employees: [],
+            employees_results: [],
+            selectedCustomer: null,
+            notify_customer: false,
+            items: [],
+            total: 0.00,
+            private_notes: '',
+            tags: '',
+            attachments: [],
+            message: null,
+            new_customer: {
+                name: '',
+                email: '',
+                phone: '',
+                address: '',
+            },
+        };
+    }
+
+    function deepMerge(target, source) {
+        for (const key in source) {
+            if (
+                source[key] &&
+                typeof source[key] === 'object' &&
+                !Array.isArray(source[key])
+            ) {
+                if (!target[key]) target[key] = {};
+                deepMerge(target[key], source[key]);
+            } else {
+                target[key] = source[key];
+            }
+        }
+        return target;
+    }
+
+    function deepAssign(target, source) {
+        for (const key in source) {
+            if (
+                source[key] !== null &&
+                typeof source[key] === "object" &&
+                !Array.isArray(source[key])
+            ) {
+                if (!target[key]) target[key] = {};
+                deepAssign(target[key], source[key]);
+            } else {
+                target[key] = source[key];
+            }
+        }
+    }
+
     function scheduler() {
         return {
             init() {
@@ -717,15 +886,23 @@
             now: new Date(),
             slotWidth: 30,
             sel: {emp: null, day: null, startIdx: null, endIdx: null},
-            jobModalOpen: false,
-            menuVisible: false,
             menuX: 0,
             menuY: 0,
             jobModalType: null,
             showAddCustomerModal: false,
             showCustomerModal: false,
             showEmployeesDropdown: false,
+            jobModalOpen: false,
+            confirmDeleteOpen: false,
+            taskToDelete: null,
+            menuVisible: false,
             customerError: '',
+            contextMenu: {
+                visible: false,
+                x: 0,
+                y: 0,
+                task: null,
+            },
             jobModalForm: {
                 schedule_from: '',
                 schedule_to: '',
@@ -800,6 +977,7 @@
 
             closeMenu() {
                 this.menuVisible = false;
+                this.clearSelection();
             },
 
             clearSelection() {
@@ -833,6 +1011,23 @@
                     day: 'numeric',
                     weekday: 'short'
                 });
+            },
+
+            updateTime({ field, value }) {
+                if (field === 'from') {
+                    this.jobModalForm.schedule_from_time12 = value;
+                } else if (field === 'to') {
+                    this.jobModalForm.schedule_to_time12 = value;
+                }
+            },
+
+            to12Hour(time24) {
+                // time24: "19:30:00" или "08:05:00"
+                let [h, m, s] = time24.split(':');
+                h = parseInt(h, 10);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return `${h}:${m} ${ampm}`;
             },
 
             // Получить задачи сотрудника на конкретный день
@@ -870,7 +1065,6 @@
                 this.drag.cell = evt.currentTarget.closest('div[data-day]');
                 const startIx = this.timeSlots.indexOf(task.start);
                 const endIx = this.timeSlots.indexOf(task.end);
-                console.log('startIx: ' + startIx + '| endIx: ' + endIx);
                 this.drag.previewX = startIx * this.slotWidth;
                 this.drag.widthPx = (endIx - startIx) * this.slotWidth;
 
@@ -910,7 +1104,6 @@
                     const idx = Math.floor(this.drag.previewX / this.slotWidth);
                     const safeIdx = Math.max(0, Math.min(this.timeSlots.length - 1, idx));
                     const newStart = this.timeSlots[safeIdx];
-                    console.log('newStart:', newStart, 'idx:', idx);
                     this.$wire.moveTask(this.drag.task.id, safeIdx);
                 }
                 this.drag.task = null;
@@ -920,7 +1113,6 @@
 
             // Стиль задачи: позиционирование и ширина в px
             taskStyle(task) {
-                console.log(this.timeSlots);
                 let startStr = dayjs(task.start, 'HH:mm:ss').format('h:mm A');
                 let endStr = dayjs(task.end, 'HH:mm:ss').format('h:mm A');
                 const startIx = this.timeSlots.indexOf(startStr);
@@ -1020,7 +1212,7 @@
                 this.jobModalForm.customer_id = customer.id;
                 this.selectedCustomer = customer;
                 this.showCustomerModal = false;
-                Livewire.dispatch('customer-selected', customer);
+                //Livewire.dispatch('customer-selected', customer);
             },
 
             onSubmit(jobModalForm) {
@@ -1029,26 +1221,73 @@
                 }
             },
 
-            openJobModal(type = null, sel) {
+            deleteTask(task) {
+                // Можно через Livewire.emit, Livewire.call, fetch/AJAX — как в остальном проекте
+                this.$wire.call('deleteTask', task.id)
+                    .then(() => {
+                        this.confirmDeleteOpen = false;
+                        // обновить UI, убрать задачу из локального списка, показать уведомление и т.д.
+                    });
+            },
+
+            saveNewCustomer() {
+                this.customerError = '';
+                const customer = this.jobModalForm.new_customer;
+                if (!customer.name || (!customer.email && !customer.phone)) {
+                    this.customerError = 'Name and either email or phone are required.';
+                    return;
+                }
+
+                this.$wire.createCustomer(customer);
+                this.showAddCustomerModal = false;
+                this.jobModalForm.new_customer = {name: '', email: '', phone: '', address: ''};
+            },
+
+            openJobModal(type = null, sel, contextMenu = null) {
                 if (type) this.jobModalType = type;
                 this.jobModalOpen = true;
+                if (type === 'edit' && contextMenu.task) {
+                    deepAssign(this.jobModalForm, defaultJobModalForm());
+                    deepAssign(this.jobModalForm, contextMenu.task);
+                    for(customer in this.jobModalForm.results){
+                        this.jobModalForm.customer_id = customer;
+                    }
+                    this.selectCustomer(contextMenu.task.client);
+                    this.jobModalForm.schedule_from_date = contextMenu.task.day || '';
+                    this.jobModalForm.schedule_to_date   = contextMenu.task.day || '';
+                    this.jobModalForm.schedule_from_time12 = toTime12String(contextMenu.task.start);
+                    this.jobModalForm.schedule_to_time12   = toTime12String(contextMenu.task.end);
+                    this.jobModalForm.items = (contextMenu.task.items || []).map(item => ({
+                        id: item.id,
+                        type: item.item_type,
+                        name: item.item_title ?? '',
+                        qty: item.quantity ?? 1,
+                        unit_price: item.price ?? '',
+                        unit_cost: item.unit_cost ?? '',
+                        description: item.item_description ?? '',
+                        tax: item.tax ?? false,
+                        total: item.total ?? '',
+                        item_id: item.item_id,
+                    }));
+                    this.jobModalForm.message = contextMenu.task.message || '';
 
+                    console.log(this.jobModalForm.message);
+                    return;
+                }else{
+                    deepAssign(this.jobModalForm, defaultJobModalForm());
+                }
                 const slotDuration = 30;
                 const slotsPerDay = 32;
                 const minHour = 6;
                 const baseDate = dayjs(sel.day, 'YYYY.MM.DD').startOf('day').toDate();
-
                 const startSlot = Math.min(sel.startIdx, slotsPerDay - 1);
                 const endSlot = Math.min(sel.endIdx, slotsPerDay - 1);
-
                 const startMinutes = minHour * 60 + startSlot * slotDuration;
                 const endMinutes = minHour * 60 + (endSlot + 1) * slotDuration;
-
                 const from = new Date(baseDate);
                 from.setMinutes(startMinutes);
                 const to = new Date(baseDate);
                 to.setMinutes(endMinutes);
-
                 if (to.getDate() !== from.getDate()) {
                     to.setDate(from.getDate());
                     to.setHours(23, 59, 0, 0);
@@ -1056,6 +1295,14 @@
 
                 function toInputDate(d) {
                     return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+                }
+
+                function toTime12String(timeStr) {
+                    let [h, m] = timeStr.split(':');
+                    h = parseInt(h, 10);
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    const hour12 = h % 12 || 12;
+                    return `${hour12}:${m} ${ampm}`;
                 }
 
                 function toInputTime12(d) {
@@ -1080,15 +1327,12 @@
                 this.jobModalForm.schedule_to_time12 = toInputTime12(to);
                 this.jobModalForm.schedule_to_time = toInputTime24(to);
 
-                // Остальное — как раньше
-                //const technicianName = this.employees.find(e => e.id === this.selection.technician_id)?.name || '';
                 const tech = this.employees.find(e => e.id === this.sel.emp);
                 if (tech && !this.jobModalForm.employees.some(e => e.id === tech.id)) {
                     this.jobModalForm.employees.push(tech);
                 }
                 this.jobModalForm.employees_query = '';
                 this.menuVisible = false;
-
                 this.clearSelection();
             },
         }
