@@ -12,9 +12,11 @@ class OrderItem extends Model
         'order_id',
         'item_type',
         'item_id',
+        'part_id',
         'quantity',
         'price',
         'total',
+        'is_custom',
     ];
 
     public function order()
@@ -26,5 +28,10 @@ class OrderItem extends Model
     {
         return $this->morphTo(__FUNCTION__, 'item_type', 'item_id');
     }
+
+    /*public function part()
+    {
+        return $this->morphTo(__FUNCTION__, 'part_type', 'part_id');
+    }*/
 
 }

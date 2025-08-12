@@ -163,6 +163,8 @@ class ManagerSchedule extends Component
             'employees.*.tasks' => 'nullable|array',
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|numeric',
+            'items.*.part_id' => 'nullable|integer|exists:parts,id',
+            'items.*.is_custom' => 'required|boolean',
             'items.*.name' => 'nullable|string',
             'items.*.qty' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
@@ -200,18 +202,30 @@ class ManagerSchedule extends Component
             'total'       => floatval($data['total']) ?? 0.00,
         ]);
 
-        foreach ($data['items'] as $item) {
-            OrderItem::create([
-                'order_id'  => $order->id,
-                'item_type' => $item['type'],
-                'item_title' => $item['name'] ?? '',
-                'item_description' => $item['description'] ?? '',
-                'item_id'   => $item['id'],
-                'quantity'  => $item['qty'],
-                'price'     => $item['unit_price'] ?? 0.00,
-                'total'     => $item['total'] ?? 0.00,
-            ]);
-        }
+        DB::transaction(function () use ($order, $data) {
+            foreach ($data['items'] as $item) {
+                $isMaterial = $item['type'] === 'material';
+
+                $payload =[
+                    'order_id'  => $order->id,
+                    'item_type' => $item['type'],
+                    'item_title' => $item['name'] ?? '',
+                    'item_description' => $item['description'] ?? '',
+                    'item_id'   => $isMaterial ? ($item['part_id'] ?? null) : ($item['item_id'] ?? null),
+                    'part_id'   => $isMaterial ? ($item['part_id'] ?? null) : null,
+                    'quantity'  => (int) $item['qty'],
+                    'price'     => (float) $item['unit_price'] ?? 0.00,
+                    'total'     => (float) $item['total'] ?? 0.00,
+                    'is_custom' => $item['is_custom'] ?? false,
+                ];
+
+                if (!empty($item['id'])) {
+                    OrderItem::where('id', $item['id'])->update($payload);
+                } else {
+                    OrderItem::create($payload);
+                }
+            }
+        });
 
         $startTime = $data['schedule_from_date'] . ' ' . $data['schedule_from_time12'];
         $endTime   = $data['schedule_to_date'] . ' ' . $data['schedule_to_time12'];
@@ -296,8 +310,9 @@ class ManagerSchedule extends Component
                 'message' => $task->message,
             ]);
         });
-        //dd(Task::with('technicians')->get());
+        //dd(Task::with('technicians', 'order.items')->get());
         $tasks = $this->tasks;
+        //dd($tasks);
 
         $technicians = Technician::where('manager_id', Auth::id())->get();
         $pivot = DB::table('task_technician')->get();
@@ -323,6 +338,33 @@ class ManagerSchedule extends Component
                 })->values(),
             ];
         });
+    }
+
+    public function searchParts(string $q): array
+    {
+        $q = trim($q);
+        if ($q === '') return [];
+
+        $parts = \App\Models\Part::query()
+            ->when(auth()->user()?->inRole('manager'), fn($qq) => $qq->where('manager_id', auth()->id()))
+            // при необходимости ограничь складами:
+            // ->whereIn('warehouse_id', $this->allowedWarehouseIds())
+            ->where(function($w) use ($q){
+                $w->where('name', 'like', "%{$q}%")
+                    ->orWhere('sku', 'like', "%{$q}%");
+            })
+            ->orderByDesc('updated_at')
+            ->limit(20)
+            ->get(['id','name','sku','quantity','price','image']);
+
+        return $parts->map(fn($p) => [
+            'id'       => $p->id,
+            'name'     => $p->name,
+            'sku'      => $p->sku,
+            'quantity' => $p->quantity,
+            'price'    => (float)$p->price,
+            'image'    => $p->image,
+        ])->values()->toArray();
     }
 
     public function getStartSlotAttribute($start_time)
@@ -353,7 +395,6 @@ class ManagerSchedule extends Component
             return;
         }
 
-        // Создать и сохранить
         $task = Task::create([
             'employee_id' => $employeeId,
             'day'         => $day,

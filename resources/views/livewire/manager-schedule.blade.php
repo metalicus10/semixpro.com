@@ -491,7 +491,77 @@
 
                 <!-- Center Column -->
                 <div class="w-full lg:w-2/3 space-y-6">
-                    <div class="border p-4 rounded">
+                    <div class="border p-4 rounded"
+                        x-data="{
+                            money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
+                            openList(i){ this.jobModalForm.items[i].search.open = true },
+
+                            async autocomplete(i){
+                                    const it = this.jobModalForm.items[i];
+                                    const q = (it.name || '').trim();
+                                    it.search.q = q;
+                                    it.search.loading = true;
+                                    it.search.open = true;
+                                    it.search.hi = -1;
+
+                                    if (q.length < 2) { it.search.results = []; it.search.loading = false; return; }
+
+                                    try {
+                                      const res = await $wire.call('searchParts', q);
+                                      it.search.results = Array.isArray(res) ? res : [];
+                                    } catch(e){
+                                      it.search.results = [];
+                                      console.error(e);
+                                    } finally {
+                                      it.search.loading = false;
+                                    }
+                            },
+
+                            move(i, dir){
+                                const it = this.jobModalForm.items[i];
+                                if (!it.search.open || it.search.results.length===0) return;
+                                const n = it.search.results.length;
+                                it.search.hi = ( (it.search.hi + dir + n) % n );
+                            },
+
+                            choose(i){
+                                const it = this.jobModalForm.items[i];
+                                if (it.search.hi >= 0){
+                                    this.selectPart(i, it.search.results[it.search.hi]);
+                                } else {
+                                    // Enter без выбора — остаётся кастомный материал
+                                    it.part_id = null;
+                                    it.is_custom = true;
+                                    it.search.open = false;
+                                }
+                            },
+
+                            selectPart(i, p){
+                                const it = this.jobModalForm.items[i];
+                                it.name       = p.name;
+                                it.part_id    = p.id;
+                                it.item_id    = p.id;
+                                it.is_custom  = false;
+                                it.unit_price = Number(p.price ?? 0.0);
+                                it.unit_cost  = Number(p.cost ?? 0.0);
+                                // qty — оставляем то, что ввёл пользователь
+                                this.recalcItemsTotal();
+                                it.search.open = false;
+                            },
+
+                            unlinkPart(i){
+                                const it = this.jobModalForm.items[i];
+                                it.part_id   = null;
+                                it.item_id   = null;
+                                it.is_custom = true;
+                                // имя оставляем — пользователь мог его отредактировать
+                                // цену оставляем/обнуляем по твоей политике:
+                                // it.unit_price = 0;
+                                this.recalcItemsTotal();
+                            },
+
+                        }"
+                    >
                         <label class="block text-sm font-medium mb-2">Job items</label>
                         <!-- Services -->
                         <button
@@ -644,6 +714,11 @@
                                                     <div class="relative flex items-center">
                                                         <input x-model="item.name" type="text"
                                                                placeholder="Material name"
+                                                               @input.debounce.300ms="autocomplete(index)"
+                                                               @focus="openList(index)"
+                                                               @keydown.arrow-down.prevent="move(index,1)"
+                                                               @keydown.arrow-up.prevent="move(index,-1)"
+                                                               @keydown.enter.prevent="choose(index)"
                                                                class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
                                                         <label
                                                             class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
@@ -651,6 +726,64 @@
                                                             <input type="checkbox" x-model="item.tax"
                                                                    class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
                                                         </label>
+                                                        <!-- Chip "Linked to part" -->
+                                                        <div x-show="item.part_id"
+                                                             class="mt-1 flex items-center gap-2 text-xs">
+                                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                                                <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5" stroke-width="2"/>
+                                                                                <path d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19" stroke-width="2"/>
+                                                                            </svg>
+                                                                            Linked to part #<span x-text="item.part_id"></span>
+                                                                        </span>
+
+                                                            <button type="button"
+                                                                    @click="unlinkPart(index)"
+                                                                    class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
+                                                                Unlink
+                                                            </button>
+                                                        </div>
+
+                                                        <!-- выпадающий список -->
+                                                        <div x-show="item.search.open"
+                                                             class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
+                                                            <template x-if="item.search.loading">
+                                                                <div class="px-3 py-2 text-sm text-gray-500">Searching…</div>
+                                                            </template>
+
+                                                            <template x-for="(p, idx) in item.search.results" :key="p.id">
+                                                                <div @click="selectPart(idx, p)"
+                                                                     :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
+                                                                    <div class="flex items-center gap-2">
+                                                                        <img :src="p.image || '/images/no-image.png'"
+                                                                             alt=""
+                                                                             class="w-9 h-9 rounded object-cover border">
+
+                                                                        <div class="min-w-0">
+                                                                            <div class="flex items-center gap-2">
+                                                                                <span class="font-medium truncate" x-text="p.name"></span>
+                                                                                <span class="text-xs text-gray-500" x-text="p.sku ?? ''"></span>
+                                                                            </div>
+                                                                            <div class="flex items-center gap-2 text-xs">
+                                                                                <span class="text-gray-600" x-text="money(p.price)"></span>
+                                                                                <!-- бейдж наличия -->
+                                                                                <span
+                                                                                    :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                                                                                    class="px-1.5 py-0.5 rounded">
+                                                                                    <span x-show="p.quantity>0">In stock: <span x-text="p.quantity"></span></span>
+                                                                                    <span x-show="p.quantity<=0">Out of stock</span>
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </template>
+
+                                                            <div x-show="!item.search.loading && item.search.results.length===0"
+                                                                 class="px-3 py-2 text-sm text-gray-500">
+                                                                No matches. Press Enter to keep custom name.
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
 
@@ -1142,11 +1275,12 @@
 
             recalcItemsTotal() {
                 this.jobModalForm.items.forEach(item => {
-                    // учти, если нужен налог (как в taxTotal)
-                    let base = item.qty * item.unit_price;
-                    let tax = item.tax ? base * 0.1 : 0;
-                    item.total = +(base + tax).toFixed(2);
-                    item.taxTotal = +(base * 0.1).toFixed(2);
+                    const qty   = Number(item.qty) || 0;
+                    const price = Number(item.unit_price) || 0;
+                    const base  = qty * price;
+                    const tax   = item.tax ? base * 0.10 : 0;
+                    item.total  = +(base + tax).toFixed(2);
+                    item.taxTotal = +tax.toFixed(2);
                 });
             },
 
@@ -1161,7 +1295,10 @@
                     taxTotal: 0,
                     description: '',
                     type,
-                    total: 0.00
+                    total: 0.00,
+                    part_id: null,
+                    is_custom: false,
+                    search: { open: false, q: '', results: [], hi: -1, loading: false }
                 });
                 this.recalcItemsTotal();
             },
@@ -1261,15 +1398,20 @@
                         id: item.id,
                         type: item.item_type,
                         name: item.item_title ?? '',
-                        qty: item.quantity ?? 1,
-                        unit_price: item.price ?? '',
-                        unit_cost: item.unit_cost ?? '',
+                        qty: Number(item.quantity ?? 1),
+                        unit_price: Number(item.price ?? 0),
+                        unit_cost: Number(item.unit_cost ?? 0),
                         description: item.item_description ?? '',
-                        tax: item.tax ?? false,
-                        total: item.total ?? '',
-                        item_id: item.item_id,
+                        tax: Boolean(item.tax ?? false),
+                        taxTotal: Number(item.taxTotal ?? 0),
+                        total: Number(item.total ?? 0),
+                        item_id: item.item_id ?? null,
+                        part_id: item.part_id ?? null,
+                        is_custom: item.is_custom ?? (!item.part_id),
+                        search: { open: false, q: '', results: [], hi: -1, loading: false }
                     }));
                     this.jobModalForm.message = contextMenu.task.message || '';
+                    this.recalcItemsTotal();
 
                     console.log(this.jobModalForm.message);
                     return;
