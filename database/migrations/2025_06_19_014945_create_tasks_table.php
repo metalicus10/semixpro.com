@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreign('customer_id')->references('id')->on('customers')->nullOnDelete();
             $table->unsignedBigInteger('order_id');
+            $table->foreign('order_id')->references('id')->on('orders')->nullOnDelete();
             $table->date('day');
             $table->string('message')->nullable();
             $table->timestamp('start_time');

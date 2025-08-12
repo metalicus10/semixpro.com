@@ -494,17 +494,16 @@
                     <div class="border p-4 rounded"
                         x-data="{
                             money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
-                            openList(i){ this.jobModalForm.items[i].search.open = true },
+                            openList(it){ it.search.open = true },
 
-                            async autocomplete(i){
-                                    const it = this.jobModalForm.items[i];
-                                    const q = (it.name || '').trim();
-                                    it.search.q = q;
-                                    it.search.loading = true;
-                                    it.search.open = true;
-                                    it.search.hi = -1;
+                            async autocomplete(it){
+                                const q = (it.name || '').trim();
+                                it.search.q = q;
+                                it.search.loading = true;
+                                it.search.open = true;
+                                it.search.hi = -1;
 
-                                    if (q.length < 2) { it.search.results = []; it.search.loading = false; return; }
+                                if (q.length < 2) { it.search.results = []; it.search.loading = false; return; }
 
                                     try {
                                       const res = await $wire.call('searchParts', q);
@@ -517,15 +516,13 @@
                                     }
                             },
 
-                            move(i, dir){
-                                const it = this.jobModalForm.items[i];
-                                if (!it.search.open || it.search.results.length===0) return;
+                            move(it, dir){
+                                if (!it.search.open || it.search.results.length === 0) return;
                                 const n = it.search.results.length;
-                                it.search.hi = ( (it.search.hi + dir + n) % n );
+                                it.search.hi = (it.search.hi + dir + n) % n;
                             },
 
-                            choose(i){
-                                const it = this.jobModalForm.items[i];
+                            choose(it){
                                 if (it.search.hi >= 0){
                                     this.selectPart(i, it.search.results[it.search.hi]);
                                 } else {
@@ -536,8 +533,7 @@
                                 }
                             },
 
-                            selectPart(i, p){
-                                const it = this.jobModalForm.items[i];
+                            selectPart(it, p){
                                 it.name       = p.name;
                                 it.part_id    = p.id;
                                 it.item_id    = p.id;
@@ -549,8 +545,7 @@
                                 it.search.open = false;
                             },
 
-                            unlinkPart(i){
-                                const it = this.jobModalForm.items[i];
+                            unlinkPart(it){
                                 it.part_id   = null;
                                 it.item_id   = null;
                                 it.is_custom = true;
@@ -714,11 +709,11 @@
                                                     <div class="relative flex items-center">
                                                         <input x-model="item.name" type="text"
                                                                placeholder="Material name"
-                                                               @input.debounce.300ms="autocomplete(index)"
-                                                               @focus="openList(index)"
-                                                               @keydown.arrow-down.prevent="move(index,1)"
-                                                               @keydown.arrow-up.prevent="move(index,-1)"
-                                                               @keydown.enter.prevent="choose(index)"
+                                                               @input.debounce.300ms="autocomplete(item)"
+                                                               @focus="openList(item)"
+                                                               @keydown.arrow-down.prevent="move(item,1)"
+                                                               @keydown.arrow-up.prevent="move(item,-1)"
+                                                               @keydown.enter.prevent="choose(item)"
                                                                class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
                                                         <label
                                                             class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
@@ -752,7 +747,7 @@
                                                             </template>
 
                                                             <template x-for="(p, idx) in item.search.results" :key="p.id">
-                                                                <div @click="selectPart(idx, p)"
+                                                                <div @click="selectPart(item, p)"
                                                                      :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
                                                                     <div class="flex items-center gap-2">
                                                                         <img :src="p.image || '/images/no-image.png'"

@@ -298,7 +298,7 @@ class ManagerSchedule extends Component
                 'id'         => $task->id,
                 'technician'=> $tech->id,
                 'employees' => $task->technicians ? $task->technicians->values()->toArray() : [],
-                'day'        => $task->day->toDateString(),
+                'day'        => $task->day?->toDateString(),
                 'start'      => $task->start_time,
                 'end'        => $task->end_time,
                 'client' => $task->customer ? $task->customer->toArray() : [],
