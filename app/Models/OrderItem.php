@@ -29,9 +29,9 @@ class OrderItem extends Model
         return $this->morphTo(__FUNCTION__, 'item_type', 'item_id');
     }
 
-    /*public function part()
+    public function part()
     {
         return $this->morphTo(__FUNCTION__, 'part_type', 'part_id');
-    }*/
+    }
 
 }

@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Task;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -78,33 +79,79 @@ class ManagerSchedule extends Component
         $this->loadTasks();
     }
 
-    public function loadSchedule()
+    public function loadTasksForRange(string $from, string $to)
     {
-        $this->tasks = Task::whereBetween('start_time', [now()->startOfDay(), now()->addDays(7)->endOfDay()])->get();
-        $tasks = $this->tasks;
-        $technicians = Technician::where('manager_id', Auth::id())->get();
-        $pivot = DB::table('task_technician')->get();
+        $data = Validator::make(
+            ['from' => $from, 'to' => $to],
+            [
+                'from' => 'required|date_format:Y-m-d',
+                'to'   => 'required|date_format:Y-m-d|after_or_equal:from',
+            ]
+        )->validate();
 
-        $taskIdsByTechnician = [];
-        foreach ($pivot as $row) {
-            $taskIdsByTechnician[$row->technician_id][] = $row->task_id;
-        }
+        $fromDate = Carbon::createFromFormat('Y-m-d', $data['from'])->startOfDay();
+        $toDate   = Carbon::createFromFormat('Y-m-d', $data['to'])->endOfDay();
 
-        $this->employees = $technicians->map(function ($technician) use ($tasks, $taskIdsByTechnician) {
-            $ids = $taskIdsByTechnician[$technician->id] ?? [];
-            return [
-                'id' => $technician->id,
-                'name' => $technician->name,
-                'tasks' => $tasks->whereIn('id', $ids)->map(function ($task) {
+        $tasks = Task::query()
+            ->with([
+                'customer:id,name,email,phone,address',
+                'order.items',
+                'technicians' => function ($q) {
+                    $q->select('users.id', 'users.name')
+                        ->withPivot('status', 'assigned_at');
+                },
+            ])
+            ->whereBetween('day', [$fromDate->toDateString(), $toDate->toDateString()])
+            ->get();
+
+        $mapped = $tasks->flatMap(function (Task $task) {
+            $items = optional($task->order)->items
+                ? $task->order->items->map(function ($it) {
                     return [
-                        'id' => $task->id,
-                        'title' => $task->title,
-                        'start_time' => $task->start_time,
-                        'end_time' => $task->end_time,
+                        'db_id'       => $it->id,
+                        'type'        => $it->item_type,
+                        'name'        => $it->item_title,
+                        'description' => $it->item_description ?? '',
+                        'item_id'     => $it->item_id,
+                        'part_id'     => $it->part_id,
+                        'qty'         => (int) $it->quantity,
+                        'unit_price'  => (float) $it->price,
+                        'total'       => (float) $it->total,
+                        'is_custom'   => (bool) $it->is_custom,
                     ];
-                })->values(),
-            ];
-        });
+                })->values()->toArray()
+                : [];
+
+            return $task->technicians->map(function ($tech) use ($task, $items) {
+                $assignedAt = $tech->pivot->assigned_at
+                    ? Carbon::parse($tech->pivot->assigned_at)->format('Y-m-d H:i:s')
+                    : null;
+
+                return [
+                    'id'         => $task->id,
+                    'technician' => $tech->id,
+                    'day'        => Carbon::parse($task->day)->toDateString(),
+                    'start'      => $task->start_time,
+                    'end'        => $task->end_time,
+                    'client'     => $task->customer ? [
+                        'id'      => $task->customer->id,
+                        'name'    => $task->customer->name,
+                        'email'   => $task->customer->email,
+                        'phone'   => $task->customer->phone,
+                        'address' => $task->customer->address,
+                    ] : null,
+                    'status'      => $tech->pivot->status,
+                    'assigned_at' => $assignedAt,
+                    'items'       => $items,
+                    'message'     => $task->message,
+                    'order_id'    => $task->order_id,
+                ];
+            });
+        })->values();
+
+        $this->tasks = $mapped;
+
+        return $mapped;
     }
 
     #[On('createCustomer')]
@@ -125,10 +172,10 @@ class ManagerSchedule extends Component
             $customer = Customer::create($validated);
 
             $this->dispatch('customer-created', [
-                'id'      => $customer->id,
-                'name'    => $customer->name,
-                'email'   => $customer->email,
-                'phone'   => $customer->phone,
+                'id' => $customer->id,
+                'name' => $customer->name,
+                'email' => $customer->email,
+                'phone' => $customer->phone,
                 'address' => $customer->address,
             ]);
         } catch (ValidationException $e) {
@@ -153,7 +200,7 @@ class ManagerSchedule extends Component
         //dd($jobModalForm);
         $data = $jobModalForm;
         $data['schedule_from_time12'] = $this->normalizeTimeTo24($jobModalForm['schedule_from_time12'] ?? null);
-        $data['schedule_to_time12']   = $this->normalizeTimeTo24($jobModalForm['schedule_to_time12'] ?? null);
+        $data['schedule_to_time12'] = $this->normalizeTimeTo24($jobModalForm['schedule_to_time12'] ?? null);
         $validator = Validator::make($data, [
             'customer_id' => 'required|integer|exists:customers,id',
             'message' => 'nullable|string',
@@ -162,7 +209,7 @@ class ManagerSchedule extends Component
             'employees.*.name' => 'required|string|max:255',
             'employees.*.tasks' => 'nullable|array',
             'items' => 'required|array|min:1',
-            'items.*.id' => 'required|numeric',
+            'items.*.db_id' => 'nullable|integer|exists:order_items,id',
             'items.*.part_id' => 'nullable|integer|exists:parts,id',
             'items.*.is_custom' => 'required|boolean',
             'items.*.name' => 'nullable|string',
@@ -190,61 +237,94 @@ class ManagerSchedule extends Component
         $data = $validator->validated();
         $customerId = $data['customer_id'] ?? null;
 
-        foreach ($data['items'] as $item){
+        foreach ($data['items'] as $item) {
             //if($item['tax']) { $form['total'] += $item['taxTotal']; }
             $data['total'] += floatval($item['total']) ?? 0.00;
         }
 
-        $order = Order::create([
-            'customer_id' => $customerId,
-            'manager_id'  => auth()->id(),
-            'status'      => 'pending',
-            'total'       => floatval($data['total']) ?? 0.00,
-        ]);
+        if ($jobModalForm['jobModalType'] === 'edit') {
+            $order = Order::findOrFail($jobModalForm['order_id']);
+            $order->update(['total' => (float)$data['total']]);
+        } else {
+            $order = Order::create([
+                'customer_id' => $customerId,
+                'manager_id' => auth()->id(),
+                'status' => 'pending',
+                'total' => floatval($data['total']) ?? 0.00,
+            ]);
+        }
 
-        DB::transaction(function () use ($order, $data) {
-            foreach ($data['items'] as $item) {
-                $isMaterial = $item['type'] === 'material';
+        $rows = collect($data['items'])->map(function ($i) {
+            $isMaterial = ($i['type'] ?? '') === 'material';
 
-                $payload =[
-                    'order_id'  => $order->id,
-                    'item_type' => $item['type'],
-                    'item_title' => $item['name'] ?? '',
-                    'item_description' => $item['description'] ?? '',
-                    'item_id'   => $isMaterial ? ($item['part_id'] ?? null) : ($item['item_id'] ?? null),
-                    'part_id'   => $isMaterial ? ($item['part_id'] ?? null) : null,
-                    'quantity'  => (int) $item['qty'],
-                    'price'     => (float) $item['unit_price'] ?? 0.00,
-                    'total'     => (float) $item['total'] ?? 0.00,
-                    'is_custom' => $item['is_custom'] ?? false,
-                ];
+            return [
+                'id' => $i['db_id'] ?? null,
+                'item_type' => $i['type'] ?? 'service',
+                'item_title' => $i['name'] ?? '',
+                'item_description' => $i['description'] ?? '',
 
-                if (!empty($item['id'])) {
-                    OrderItem::where('id', $item['id'])->update($payload);
+                'item_id' => $isMaterial ? ($i['part_id'] ?? null) : ($i['item_id'] ?? null),
+                'part_id' => $isMaterial ? ($i['part_id'] ?? null) : null,
+
+                'quantity' => (int)($i['qty'] ?? 1),
+                'price' => (float)($i['unit_price'] ?? 0.0),
+                'total' => (float)($i['total'] ?? 0.0),
+                'is_custom' => (bool)($i['is_custom'] ?? false),
+            ];
+        });
+
+        DB::transaction(function () use ($order, $rows) {
+            $keepIds = [];
+
+            foreach ($rows as $row) {
+                $id = $row['id'] ?? null;
+                $payload = Arr::except($row, ['id']);
+
+                if ($id && OrderItem::where('order_id', $order->id)->where('id', $id)->exists()) {
+                    OrderItem::where('order_id', $order->id)->where('id', $id)->update($payload);
+                    $keepIds[] = $id;
                 } else {
-                    OrderItem::create($payload);
+                    $created = OrderItem::create($payload + ['order_id' => $order->id]);
+                    $keepIds[] = $created->id;
                 }
             }
+
+            OrderItem::where('order_id', $order->id)
+                ->whereNotIn('id', $keepIds)
+                ->delete();
         });
 
         $startTime = $data['schedule_from_date'] . ' ' . $data['schedule_from_time12'];
-        $endTime   = $data['schedule_to_date'] . ' ' . $data['schedule_to_time12'];
+        $endTime = $data['schedule_to_date'] . ' ' . $data['schedule_to_time12'];
 
-        $task = Task::create([
-            'day'            => $data['schedule_from_date'],
-            'start_time'     => $startTime,
-            'end_time'       => $endTime,
-            'customer_id'    => $customerId,
-            'order_id'       => $order->id,
-            'message'        => $data['message'] ?? '',
-        ]);
+        if ($jobModalForm['jobModalType'] === 'edit') {
+            $task = Task::findOrFail($jobModalForm['task_id']);
+            $task->update([
+                'day'      => $data['schedule_from_date'],
+                'start_time' => $startTime,
+                'end_time'   => $endTime,
+                'customer_id' => $customerId,
+                'order_id'    => $order->id,
+                'message'     => $data['message'] ?? '',
+            ]);
+            $order->update(['total' => (float)$data['total']]);
+        } else {
+            $task = Task::create([
+                'day' => $data['schedule_from_date'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'customer_id' => $customerId,
+                'order_id' => $order->id,
+                'message' => $data['message'] ?? '',
+            ]);
+        }
 
         $syncData = collect($data['employees'])
             ->pluck('id')
-            ->mapWithKeys(function($techId) {
+            ->mapWithKeys(function ($techId) {
                 return [
                     $techId => [
-                        'status'      => 'new',
+                        'status' => 'new',
                         'assigned_at' => now(),
                     ]
                 ];
@@ -267,13 +347,22 @@ class ManagerSchedule extends Component
 
         // 'H:i:s' -> 'H:i'
         if (preg_match('/^\d{1,2}:\d{2}:\d{2}$/', $t)) {
-            try { return Carbon::createFromFormat('H:i:s', $t)->format('H:i'); } catch (\Throwable $e) {}
+            try {
+                return Carbon::createFromFormat('H:i:s', $t)->format('H:i');
+            } catch (\Throwable $e) {
+            }
         }
 
         // '7:30 PM' / '07:30 PM'
         if (preg_match('/am|pm/i', $t)) {
-            try { return Carbon::createFromFormat('g:i A', strtoupper($t))->format('H:i'); } catch (\Throwable $e) {}
-            try { return Carbon::createFromFormat('h:i A', strtoupper($t))->format('H:i'); } catch (\Throwable $e) {}
+            try {
+                return Carbon::createFromFormat('g:i A', strtoupper($t))->format('H:i');
+            } catch (\Throwable $e) {
+            }
+            try {
+                return Carbon::createFromFormat('h:i A', strtoupper($t))->format('H:i');
+            } catch (\Throwable $e) {
+            }
         }
 
         // Пусть валидатор отловит ошибку формата
@@ -282,7 +371,9 @@ class ManagerSchedule extends Component
 
     public function updateTaskPosition($taskId, $newStart, $newEnd)
     {
-        if($newStart == "0000-00-00 00:00:00" || $newEnd == "0000-00-00 00:00:00") {return;}
+        if ($newStart == "0000-00-00 00:00:00" || $newEnd == "0000-00-00 00:00:00") {
+            return;
+        }
         $task = Task::findOrFail($taskId);
         $task->update([
             'start_time' => $newStart,
@@ -293,16 +384,17 @@ class ManagerSchedule extends Component
 
     protected function loadTasks()
     {
-        $this->tasks = Task::with('technicians', 'order.items')->get()->flatMap(function(Task $task) {
+        $this->tasks = Task::with('technicians', 'order.items', 'order.items.part')->get()->flatMap(function (Task $task) {
             return $task->technicians->map(fn($tech) => [
-                'id'         => $task->id,
-                'technician'=> $tech->id,
+                'id' => $task->id,
+                'order_id' => $task->order->id,
+                'technician' => $tech->id,
                 'employees' => $task->technicians ? $task->technicians->values()->toArray() : [],
-                'day'        => $task->day?->toDateString(),
-                'start'      => $task->start_time,
-                'end'        => $task->end_time,
+                'day' => $task->day?->toDateString(),
+                'start' => $task->start_time,
+                'end' => $task->end_time,
                 'client' => $task->customer ? $task->customer->toArray() : [],
-                'status'     => $tech->pivot->status,
+                'status' => $tech->pivot->status,
                 'items' => $task->order ? $task->order->items->values()->toArray() : [],
                 'assigned_at' => $tech->pivot->assigned_at
                     ? Carbon::parse($tech->pivot->assigned_at)->format('Y-m-d H:i:s')
@@ -312,7 +404,6 @@ class ManagerSchedule extends Component
         });
         //dd(Task::with('technicians', 'order.items')->get());
         $tasks = $this->tasks;
-        //dd($tasks);
 
         $technicians = Technician::where('manager_id', Auth::id())->get();
         $pivot = DB::table('task_technician')->get();
@@ -346,31 +437,54 @@ class ManagerSchedule extends Component
         if ($q === '') return [];
 
         $parts = \App\Models\Part::query()
-            ->when(auth()->user()?->inRole('manager'), fn($qq) => $qq->where('manager_id', auth()->id()))
-            // при необходимости ограничь складами:
-            // ->whereIn('warehouse_id', $this->allowedWarehouseIds())
-            ->where(function($w) use ($q){
-                $w->where('name', 'like', "%{$q}%")
-                    ->orWhere('sku', 'like', "%{$q}%");
+            // обязательно ограничиваем по менеджеру
+            ->where('manager_id', Auth::id())
+
+            // жадно подтягиваем номенклатуру (оставь имя связи, как у тебя в модели)
+            ->with(['nomenclature' => function ($q) {
+                // вернём только нужные поля
+                $q->select('id', 'name', 'image');
+            }])
+
+            // поиск по полям самой запчасти
+            ->where(function ($w) use ($q) {
+                $w->where('name', 'like', "%{$q}%");
+                ///->orWhere('sku',  'like', "%{$q}%");
+            })
+
+            // и по полям номенклатуры
+            ->orWhereHas('nomenclature', function ($w) use ($q) {
+                $w->where('name', 'like', "%{$q}%");
+                //->orWhere('sku',  'like', "%{$q}%");
             })
             ->orderByDesc('updated_at')
             ->limit(20)
-            ->get(['id','name','sku','quantity','price','image']);
+            ->get([
+                'id', 'name', 'quantity', 'price', 'image', 'nomenclature_id', 'manager_id'
+            ]);
 
-        return $parts->map(fn($p) => [
-            'id'       => $p->id,
-            'name'     => $p->name,
-            'sku'      => $p->sku,
-            'quantity' => $p->quantity,
-            'price'    => (float)$p->price,
-            'image'    => $p->image,
-        ])->values()->toArray();
+        return $parts->map(function ($p) {
+            return [
+                'id' => $p->id,
+                'name' => $p->name,
+                //'sku'        => $p->sku,
+                'quantity' => (int)$p->quantity,
+                'price' => (float)$p->price,
+                'image' => $p->image,
+                'nomenclature' => $p->nomenclature ? [
+                    'id' => $p->nomenclature->id,
+                    'name' => $p->nomenclature->name,
+                    'image' => $p->nomenclature->image,
+                ] : null,
+            ];
+        })->values()->toArray();
     }
 
     public function getStartSlotAttribute($start_time)
     {
         return $start_time ? $start_time->format('g:i A') : null;
     }
+
     public function getEndSlotAttribute($end_time)
     {
         return $end_time ? $end_time->format('g:i A') : null;
@@ -379,13 +493,13 @@ class ManagerSchedule extends Component
     public function addTask($employeeId, $day, $startTime, $endTime, $client)
     {
         $start = Carbon::createFromFormat('g:i A', $startTime);
-        $end   = Carbon::createFromFormat('g:i A', $endTime);
+        $end = Carbon::createFromFormat('g:i A', $endTime);
 
         // Валидация на пересечение
         $overlap = Task::where('employee_id', $employeeId)
             ->where('day', $day)
-            ->whereTime('start_time', '<',  $end->format('H:i:s'))
-            ->whereTime('end_time',   '>',  $start->format('H:i:s'))
+            ->whereTime('start_time', '<', $end->format('H:i:s'))
+            ->whereTime('end_time', '>', $start->format('H:i:s'))
             ->exists();
 
         if ($overlap) {
@@ -397,14 +511,14 @@ class ManagerSchedule extends Component
 
         $task = Task::create([
             'employee_id' => $employeeId,
-            'day'         => $day,
-            'start_time'  => $start->format('H:i:s'),
-            'end_time'    => $end->format('H:i:s'),
-            'customer_id'      => $client,
+            'day' => $day,
+            'start_time' => $start->format('H:i:s'),
+            'end_time' => $end->format('H:i:s'),
+            'customer_id' => $client,
         ]);
 
         $task->technicians()->attach($employeeId, [
-            'status'      => 'new',
+            'status' => 'new',
             'assigned_at' => now(),
         ]);
 
@@ -428,9 +542,9 @@ class ManagerSchedule extends Component
             : Carbon::createFromFormat('H:i:s', $task->end_time);
 
         $totalMinutes = $taskStart->hour * 60 + $taskStart->minute;
-        $zeroMinutes  = 6 * 60;
+        $zeroMinutes = 6 * 60;
         $diffMinutes = $totalMinutes - $zeroMinutes;
-        $oldIdx      = intval($diffMinutes / 30);
+        $oldIdx = intval($diffMinutes / 30);
 
         // Если вдруг не нашли — выходим
         if (!$oldIdx) {
@@ -465,7 +579,7 @@ class ManagerSchedule extends Component
         $overlap = Task::where('day', $task->day)
             ->where('id', '!=', $task->id)
             ->whereTime('start_time', '<', $newEnd->format('H:i:s'))
-            ->whereTime('end_time',   '>', $newStart->format('H:i:s'))
+            ->whereTime('end_time', '>', $newStart->format('H:i:s'))
             ->whereHas('technicians', fn($q) => $q->where('technician_id', $techId))
             ->exists();
 
@@ -479,7 +593,7 @@ class ManagerSchedule extends Component
         //Сохраняем в БД в формате H:i:s
         $task->update([
             'start_time' => $newStart->format('H:i:s'),
-            'end_time'   => $newEnd->format('H:i:s'),
+            'end_time' => $newEnd->format('H:i:s'),
         ]);
 
         //Перезагружаем задачи для Alpine

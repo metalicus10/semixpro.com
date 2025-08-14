@@ -342,5 +342,15 @@
 <livewire:components.lightbox/>
 
 @livewireScripts
+<script>
+    window.addEventListener('unhandledrejection', (event) => {
+        const r = event.reason;
+        const isAbort =
+            (r && (r.name === 'AbortError' || r.code === 20)) ||
+            (r instanceof DOMException && r.name === 'AbortError') ||
+            (typeof r === 'object' && r?.message === 'The operation was aborted.');
+        if (isAbort) event.preventDefault();
+    });
+</script>
 </body>
 </html>

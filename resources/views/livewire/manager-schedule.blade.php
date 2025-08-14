@@ -7,6 +7,29 @@
     class="overflow-x-auto bg-white text-gray-800 border pb-[10px]"
     x-init="init()"
 >
+    <div class="flex items-center justify-between px-3 py-2 border-b">
+        <div class="flex items-center gap-2">
+            <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                    @click="moveWeek(-1)">←</button>
+            <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                    @click="goToday()">Today</button>
+            <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
+                    @click="moveWeek(1)">→</button>
+            <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'This week' : ''"></span>
+        </div>
+
+        <!-- Диапазон дат недели -->
+        <div class="text-sm font-medium text-gray-700"
+             x-text="days.length ? (days[0].label + ' — ' + days[6].label) : ''"></div>
+    </div>
+
+    <!-- Заголовок колонок дней -->
+    <div class="grid" :style="`grid-template-columns: 120px repeat(${days.length}, 1fr)`">
+        <div class="border-r bg-gray-50"></div>
+        <template x-for="d in days" :key="d.date">
+            <div class="py-2 text-center text-xs font-medium border-r" x-text="d.label"></div>
+        </template>
+    </div>
     {{-- Заголовок --}}
     <div class="inline-flex items-center border-b">
         {{-- Первая узкая ячейка для таймзоны или иконки --}}
@@ -15,18 +38,17 @@
         </div>
         {{-- Дни недели с часами --}}
         <div class="flex-1 inline-flex">
-            <template x-for="day in days" :key="day">
+            <template x-for="day in days" :key="day.date">
                 <div class="flex flex-col">
                     {{-- Дата --}}
                     <div
                         class="h-5 px-2 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
-                        <span x-text="formatFullDate(day)"></span>
+                        <span x-text="day.label"></span>
                     </div>
                     {{-- Часы --}}
                     <div class="flex">
                         <template x-for="(time, idx) in timeSlots" :key="idx">
-                            <div
-                                class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
+                            <div class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
                                 <span x-text="time"></span>
                             </div>
                         </template>
@@ -51,7 +73,7 @@
 
             {{-- Семь дней --}}
             <div class="flex-1 inline-flex relative">
-                <template x-for="day in days" :key="day">
+                <template x-for="day in days" :key="day.date">
                     <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`"
                          :class="{ 'day-left-border': day !== 0 }" :data-day="day">
                         {{-- Фоновые ячейки часов --}}
@@ -74,20 +96,19 @@
                         <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
                         >
                             <div
-                                 class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
-                                 :class="{
+                                class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
+                                :class="{
                                     'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
-
                                     'cursor-move': !isTaskPast(task)
                                  }"
-                                 @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
-                                 @contextmenu.prevent="
+                                @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                @contextmenu.prevent="
                                     contextMenu.x = $event.clientX;
                                     contextMenu.y = $event.clientY;
                                     contextMenu.task = task;
                                     contextMenu.visible = true;
                                  "
-                                 x-bind:style="
+                                x-bind:style="
                                     drag.task && drag.task.id === task.id
                                         ? `left:${drag.previewX}px; width:${drag.widthPx}px;`
                                         : taskStyle(task)
@@ -95,7 +116,8 @@
                             >
                                 <div class="flex flex-col">
                                     <span class="truncate" x-text="task.client.name"></span>
-                                    <span class="whitespace-wrap" x-text="`${to12Hour(task.start)} – ${to12Hour(task.end)}`"></span>
+                                    <span class="whitespace-wrap"
+                                          x-text="`${to12Hour(task.start)} – ${to12Hour(task.end)}`"></span>
                                 </div>
                             </div>
                         </template>
@@ -492,9 +514,22 @@
                 <!-- Center Column -->
                 <div class="w-full lg:w-2/3 space-y-6">
                     <div class="border p-4 rounded"
-                        x-data="{
+                         x-data="{
                             money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
-                            openList(it){ it.search.open = true },
+                            openList(it){
+                                this.jobModalForm.items.forEach(x => { if (x !== it) x.search.open = false; });
+                                it.search.open = true;
+                            },
+
+                            hideList(it) {
+                                it.search.open = false;
+                                it.search.hi = -1;
+                            },
+
+                            deferClose(it) {
+                                clearTimeout(it.search._t);
+                                it.search._t = setTimeout(() => { it.search.open = false; }, 120);
+                            },
 
                             async autocomplete(it){
                                 const q = (it.name || '').trim();
@@ -503,8 +538,7 @@
                                 it.search.open = true;
                                 it.search.hi = -1;
 
-                                if (q.length < 2) { it.search.results = []; it.search.loading = false; return; }
-
+                                if (q.length < 2) { it.search.results = []; it.search.loading = false; it.search.open = false; return; }
                                     try {
                                       const res = await $wire.call('searchParts', q);
                                       it.search.results = Array.isArray(res) ? res : [];
@@ -540,20 +574,55 @@
                                 it.is_custom  = false;
                                 it.unit_price = Number(p.price ?? 0.0);
                                 it.unit_cost  = Number(p.cost ?? 0.0);
-                                // qty — оставляем то, что ввёл пользователь
+                                it.stock      = Number(p.quantity ?? 0.0);
+                                it.priceLocked = true;
+                                this.enforceQty(it, showMsg=true);
                                 this.recalcItemsTotal();
                                 it.search.open = false;
                             },
 
                             unlinkPart(it){
+                                if (!it.warn) it.warn = { qty: '' };
                                 it.part_id   = null;
                                 it.item_id   = null;
                                 it.is_custom = true;
-                                // имя оставляем — пользователь мог его отредактировать
-                                // цену оставляем/обнуляем по твоей политике:
+                                it.priceLocked = false;
+                                it.stock       = null;
+                                it.warn.qty    = '';
                                 // it.unit_price = 0;
                                 this.recalcItemsTotal();
                             },
+
+                            enforceQty(it, showMsg = true) {
+                                // минимумы/максимумы
+                                const stock = Number(it.stock ?? Infinity);
+                                let   qty   = Math.floor(Number(it.qty || 0));
+
+                                if (!isFinite(stock)) {
+                                    // кастомный материал — просто нормализуем qty
+                                    if (qty < 1) qty = 1;
+                                    it.qty = qty;
+                                    it.warn.qty = '';
+                                    return;
+                                }
+
+                                // материал из склада
+                                    if (stock <= 0) {
+                                    it.qty = 0;
+                                    it.warn.qty = 'Out of stock';
+                                    return;
+                                }
+
+                                if (qty < 1) qty = 1;
+                                if (qty > stock) {
+                                    qty = stock;
+                                    if (showMsg) it.warn.qty = `Макс: ${stock}`;
+                                } else {
+                                    it.warn.qty = '';
+                                }
+
+                                it.qty = qty;
+                            }
 
                         }"
                     >
@@ -682,7 +751,7 @@
                             + Add material
                         </button>
                         <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
-                                  :key="item.id">
+                                  :key="item.key">
                             <div class="mb-4 space-y-2 border-b pb-2">
                                 <!-- Material fields (имя, qty, price и т.д.) -->
                                 <div class="flex flex-row justify-between w-full">
@@ -706,66 +775,129 @@
                                                 <!-- Material Name + Tax -->
                                                 <div class="flex-1 flex flex-col w-3/5">
                                                     <label class="sr-only">Material name</label>
-                                                    <div class="relative flex items-center">
-                                                        <input x-model="item.name" type="text"
-                                                               placeholder="Material name"
-                                                               @input.debounce.300ms="autocomplete(item)"
-                                                               @focus="openList(item)"
-                                                               @keydown.arrow-down.prevent="move(item,1)"
-                                                               @keydown.arrow-up.prevent="move(item,-1)"
-                                                               @keydown.enter.prevent="choose(item)"
-                                                               class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
-                                                        <label
-                                                            class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
-                                                            Tax
-                                                            <input type="checkbox" x-model="item.tax"
-                                                                   class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
-                                                        </label>
+                                                    <div class="relative flex flex-col" @click.outside="hideList(item)">
+                                                        <div class="relative flex flex-row">
+                                                            <input x-model="item.name" type="text"
+                                                                   placeholder="Material name"
+                                                                   @input.debounce.300ms="autocomplete(item)"
+                                                                   @focus="openList(item)"
+                                                                   @blur="deferClose(item)"
+                                                                   @keydown.escape.prevent="hideList(item)"
+                                                                   @keydown.arrow-down.prevent="move(item,1)"
+                                                                   @keydown.arrow-up.prevent="move(item,-1)"
+                                                                   @keydown.enter.prevent="choose(item)"
+                                                                   class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
+                                                            <label
+                                                                class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
+                                                                Tax
+                                                                <input type="checkbox" x-model="item.tax"
+                                                                       class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
+                                                            </label>
+                                                        </div>
                                                         <!-- Chip "Linked to part" -->
                                                         <div x-show="item.part_id"
                                                              class="mt-1 flex items-center gap-2 text-xs">
-                                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                                                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                                                <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5" stroke-width="2"/>
-                                                                                <path d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19" stroke-width="2"/>
-                                                                            </svg>
-                                                                            Linked to part #<span x-text="item.part_id"></span>
-                                                                        </span>
+                                                                            <span
+                                                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                                                                <svg class="w-3.5 h-3.5"
+                                                                                     viewBox="0 0 24 24" fill="none"
+                                                                                     stroke="currentColor">
+                                                                                    <path
+                                                                                        d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5"
+                                                                                        stroke-width="2"/>
+                                                                                    <path
+                                                                                        d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19"
+                                                                                        stroke-width="2"/>
+                                                                                </svg>
+                                                                                Linked to part #<span
+                                                                                    x-text="item.part_id"></span>
+                                                                            </span>
 
                                                             <button type="button"
-                                                                    @click="unlinkPart(index)"
+                                                                    @click="unlinkPart(item)"
                                                                     class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
                                                                 Unlink
                                                             </button>
                                                         </div>
 
                                                         <!-- выпадающий список -->
-                                                        <div x-show="item.search.open"
+                                                        <div x-show="item.search.open" x-transition.opacity @mousedown.prevent
                                                              class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
                                                             <template x-if="item.search.loading">
-                                                                <div class="px-3 py-2 text-sm text-gray-500">Searching…</div>
+                                                                <div class="px-3 py-2 text-sm text-gray-500">
+                                                                    Searching…
+                                                                </div>
                                                             </template>
 
-                                                            <template x-for="(p, idx) in item.search.results" :key="p.id">
+                                                            <template x-for="(p, idx) in item.search.results"
+                                                                      :key="p.id">
                                                                 <div @click="selectPart(item, p)"
                                                                      :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
                                                                     <div class="flex items-center gap-2">
-                                                                        <img :src="p.image || '/images/no-image.png'"
-                                                                             alt=""
-                                                                             class="w-9 h-9 rounded object-cover border">
-
+                                                                        <template x-if="p.image">
+                                                                            <img
+                                                                                :src="'{{ asset('storage') }}' + p.image"
+                                                                                alt="p.name"
+                                                                                class="w-9 h-9 rounded object-cover border">
+                                                                        </template>
+                                                                        <template
+                                                                            x-if="!p.image && p.nomenclature.image">
+                                                                            <img
+                                                                                :src="'{{ asset('storage') }}' + p.nomenclature.image"
+                                                                                :alt="p.name"
+                                                                                class="w-9 h-9 rounded object-cover border">
+                                                                        </template>
+                                                                        <template
+                                                                            x-if="!p.image && !p.nomenclature.image">
+                                                                            <span class="w-[50px] h-[50px]">
+                                                                                <div>
+                                                                                    <svg
+                                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                                        xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                                                        version="1.1" width="56"
+                                                                                        height="56"
+                                                                                        viewBox="0 0 256 256"
+                                                                                        xml:space="preserve">
+                                                                                                     <defs></defs>
+                                                                                        <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
+                                                                                           transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+                                                                                            <path
+                                                                                                d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z"
+                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                transform=" matrix(1 0 0 1 0 0) "
+                                                                                                stroke-linecap="round"/>
+                                                                                            <path
+                                                                                                d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z"
+                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                transform=" matrix(1 0 0 1 0 0) "
+                                                                                                stroke-linecap="round"/>
+                                                                                            <path
+                                                                                                d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z"
+                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                transform=" matrix(1 0 0 1 0 0) "
+                                                                                                stroke-linecap="round"/>
+                                                                                        </g>
+                                                                                    </svg>
+                                                                                </div>
+                                                                            </span>
+                                                                        </template>
                                                                         <div class="min-w-0">
                                                                             <div class="flex items-center gap-2">
-                                                                                <span class="font-medium truncate" x-text="p.name"></span>
-                                                                                <span class="text-xs text-gray-500" x-text="p.sku ?? ''"></span>
+                                                                                <span class="font-medium truncate"
+                                                                                      x-text="p.name"></span>
+                                                                                <span class="text-xs text-gray-500"
+                                                                                      x-text="p.sku ?? ''"></span>
                                                                             </div>
-                                                                            <div class="flex items-center gap-2 text-xs">
-                                                                                <span class="text-gray-600" x-text="money(p.price)"></span>
+                                                                            <div
+                                                                                class="flex items-center gap-2 text-xs">
+                                                                                <span class="text-gray-600"
+                                                                                      x-text="money(p.price)"></span>
                                                                                 <!-- бейдж наличия -->
                                                                                 <span
                                                                                     :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
                                                                                     class="px-1.5 py-0.5 rounded">
-                                                                                    <span x-show="p.quantity>0">In stock: <span x-text="p.quantity"></span></span>
+                                                                                    <span x-show="p.quantity>0">In stock: <span
+                                                                                            x-text="p.quantity"></span></span>
                                                                                     <span x-show="p.quantity<=0">Out of stock</span>
                                                                                 </span>
                                                                             </div>
@@ -774,8 +906,9 @@
                                                                 </div>
                                                             </template>
 
-                                                            <div x-show="!item.search.loading && item.search.results.length===0"
-                                                                 class="px-3 py-2 text-sm text-gray-500">
+                                                            <div
+                                                                x-show="!item.search.loading && item.search.results.length===0"
+                                                                class="px-3 py-2 text-sm text-gray-500">
                                                                 No matches. Press Enter to keep custom name.
                                                             </div>
                                                         </div>
@@ -787,8 +920,13 @@
                                                     <div class="relative flex flex-col w-full">
                                                         <input :id="`qty-${index}`" :name="`name-${index}`"
                                                                x-model="item.qty" type="number" step="1" min="0"
-                                                               placeholder=" " @input="recalcItemsTotal()"
+                                                               placeholder=""
+                                                               @input="enforceQty(item); recalcItemsTotal()"
+                                                               :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
+                                                               :max="item.part_id ? (item.stock ?? 0) : null"
+                                                               @blur="enforceQty(item); recalcItemsTotal()"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                        <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600" x-text="item.warn.qty"></p>
                                                         <label :for="`qty-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                         peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
@@ -800,8 +938,11 @@
                                                     <div class="relative flex flex-col w-full">
                                                         <input :id="`uprice-${index}`" :name="`uprice-${index}`"
                                                                x-model="item.unit_price" type="number"
-                                                               step="0.01"
-                                                               min="0" @input="recalcItemsTotal()"
+                                                               step="0.01" min="0"
+                                                               @input="recalcItemsTotal()"
+                                                               :readonly="item.priceLocked"
+                                                               :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
+                                                               title="Цена берётся из выбранной запчасти"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <label :for="`uprice-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
@@ -915,6 +1056,7 @@
 
     function defaultJobModalForm() {
         return {
+            jobModalType: '',
             schedule_from: '',
             schedule_to: '',
             schedule_from_date: '',
@@ -939,7 +1081,7 @@
             private_notes: '',
             tags: '',
             attachments: [],
-            message: null,
+            message: '',
             new_customer: {
                 name: '',
                 email: '',
@@ -983,6 +1125,7 @@
     function scheduler() {
         return {
             init() {
+                this.setWeek(this.currentNow());
                 window.addEventListener('customer-created', event => {
                     const data = event.detail[0];
                     this.jobModalForm.customer_query = data.name + (data.email ? ' (' + data.email + ')' : '');
@@ -1008,7 +1151,6 @@
             _onDropHandler: null,
 
             employees: @entangle('employees'),
-            days: @entangle('days'),
             timeSlots: @entangle('timeSlots'),
             tasks: @entangle('tasks'),
             now: new Date(),
@@ -1016,7 +1158,7 @@
             sel: {emp: null, day: null, startIdx: null, endIdx: null},
             menuX: 0,
             menuY: 0,
-            jobModalType: null,
+            jobModalType: '',
             showAddCustomerModal: false,
             showCustomerModal: false,
             showEmployeesDropdown: false,
@@ -1032,6 +1174,8 @@
                 task: null,
             },
             jobModalForm: {
+                jobModalType: '',
+                task_id: null,
                 schedule_from: '',
                 schedule_to: '',
                 schedule_from_date: '',
@@ -1055,7 +1199,7 @@
                 private_notes: '',
                 tags: '',
                 attachments: [],
-                message: null,
+                message: '',
                 new_customer: {
                     name: '',
                     email: '',
@@ -1064,36 +1208,103 @@
                 },
             },
 
-            get currentDayIdx() {
-                const today = this.now.toISOString().slice(0, 10); // "YYYY-MM-DD"
-                return this.days.findIndex(d => d === today);
+            // === Week navigation state ===
+            weekStart: null,
+            days: [],
+            firstDay: 1,
+
+            APP_TZ: dayjs.tz.guess(),
+
+            currentNow() {
+                return dayjs.tz ? dayjs.tz(dayjs(), this.APP_TZ) : dayjs()
             },
 
-            get currentSlotIdx() {
-                const h = this.now.getHours();
-                const m = this.now.getMinutes();
-                const hoursFrom6 = Math.max(0, h - 6);
-                // если до 6 утра — блокируем все до первого слота
-                if (h < 6) return 0;
-                // вычисляем номер слота, округляя вверх до следующей получаса
-                const slotNumber = hoursFrom6 * 2 + (m < 30 ? 1 : 2);
-                // не выходим за границу
-                return Math.min(slotNumber, this.timeSlots.length - 1);
+            slotDateTime(dayObj, slotLabel) {
+                const dateStr = typeof dayObj === 'string' ? dayObj : dayObj.date;
+                const fmt = 'YYYY-MM-DD h:mm A';
+                return dayjs.tz
+                    ? dayjs.tz(`${dateStr} ${slotLabel}`, fmt, this.APP_TZ)
+                    : dayjs(`${dateStr} ${slotLabel}`, fmt);
+            },
+
+            get currentDayIdx() {
+                const today = this.currentNow().format('YYYY-MM-DD')
+                return this.days.findIndex(d => (typeof d === 'string' ? d : d.date) === today)
+            },
+
+            currentSlotIdxFor(dayObj) {
+                const gridStartLabel = this.timeSlots[0]
+                const stepMinutes = 30
+                const now = this.currentNow()
+                const gridStart = this.slotDateTime(dayObj, gridStartLabel)
+                let diff = now.diff(gridStart, 'minute')
+                if (diff < 0) return -1
+                const idx = Math.floor(diff / stepMinutes)
+                return Math.min(idx, this.timeSlots.length - 1)
+            },
+
+            setWeek(d) {
+                const base = dayjs.isDayjs(d)
+                    ? d.tz ? d.tz(this.APP_TZ) : d
+                    : dayjs.tz ? dayjs.tz(d, 'YYYY-MM-DD', this.APP_TZ) : dayjs(d);
+
+                let start = base.startOf('week');
+                if (this.firstDay === 1) {
+                    // сдвигаем к понедельнику
+                    const dow = start.day();
+                    const shift = (dow === 0 ? -6 : 1 - dow);
+                    start = start.add(shift, 'day');
+                }
+
+                this.weekStart = start.format('YYYY-MM-DD');
+
+                this.days = Array.from({ length: 7 }, (_, i) => {
+                    const d = start.add(i, 'day');
+                    return {
+                        date: d.format('YYYY-MM-DD'),
+                        label: d.format('ddd, MMM D'),
+                    };
+                });
+
+                if (this.fetchWeek) {
+                    this.fetchWeek(this.days[0].date, this.days[6].date);
+                }
+            },
+
+            moveWeek(delta) {
+                const start = dayjs.tz
+                    ? dayjs.tz(this.weekStart, 'YYYY-MM-DD', this.APP_TZ)
+                    : dayjs(this.weekStart, 'YYYY-MM-DD');
+                this.setWeek(start.add(delta, 'week'));
+            },
+
+            goToday() {
+                this.setWeek(this.currentNow());
+            },
+
+            isCurrentWeek() {
+                const now = this.currentNow();
+                const start = dayjs.tz
+                    ? dayjs.tz(this.weekStart, 'YYYY-MM-DD', this.APP_TZ)
+                    : dayjs(this.weekStart, 'YYYY-MM-DD');
+                const end = start.add(6, 'day').endOf('day');
+                return now.isAfter(start) && now.isBefore(end);
+            },
+
+            async fetchWeek(fromDate, toDate) {
+                await this.$wire.call('loadTasksForRange', fromDate, toDate);
             },
 
             onContextMenu(event, emp, day, idx) {
-                // если щёлкнули вне текущей области — обновляем селекцию
                 if (
                     this.sel.emp !== emp ||
                     this.sel.day !== day ||
                     idx < this.sel.startIdx ||
                     idx > this.sel.endIdx
                 ) {
-                    // начинаем и сразу фиксируем новый односоставный слот
                     this.startSelection(emp, day, idx);
                     this.endSelection();
                 }
-                // теперь показываем ваше меню
                 this.showMenu(event);
             },
 
@@ -1112,19 +1323,23 @@
                 this.sel = {emp: null, day: null, startIdx: null, endIdx: null};
             },
 
-            isPast(day, idx) {
-                const di = this.days.indexOf(day);
-                if (di < this.currentDayIdx) {
-                    return true;
-                }
-                return di === this.currentDayIdx && idx <= this.currentSlotIdx;
+            isPast(dayObj, slotIdx) {
+                const slotLabel  = this.timeSlots[slotIdx];
+                const cellMoment = this.slotDateTime(dayObj, slotLabel);
+                const isEndOfDaySlot = slotIdx === this.timeSlots.length - 1;
+                return isEndOfDaySlot || cellMoment.isBefore(this.currentNow());
             },
 
             isTaskPast(task) {
-                //const dayIdx = this.days.indexOf(task.day);
-                const startIdx = this.timeSlots.indexOf(dayjs(task.start, 'HH:mm:ss').format('h:mm A'));
-                const endIdx = this.timeSlots.indexOf(dayjs(task.end, 'HH:mm:ss').format('h:mm A'));
-                return this.isPast(task.day, startIdx) && this.isPast(task.day, endIdx);
+                const fmtIn = 'HH:mm:ss';
+                const dayObj = {date: task.day};
+                const start = dayjs.tz
+                    ? dayjs.tz(`${task.day} ${task.start}`, `YYYY-MM-DD ${fmtIn}`, this.APP_TZ)
+                    : dayjs(`${task.day} ${task.start}`, `YYYY-MM-DD ${fmtIn}`);
+                const end = dayjs.tz
+                    ? dayjs.tz(`${task.day} ${task.end}`, `YYYY-MM-DD ${fmtIn}`, this.APP_TZ)
+                    : dayjs(`${task.day} ${task.end}`, `YYYY-MM-DD ${fmtIn}`);
+                return end.isBefore(this.currentNow());
             },
 
             dayWidth: function () {
@@ -1141,7 +1356,7 @@
                 });
             },
 
-            updateTime({ field, value }) {
+            updateTime({field, value}) {
                 if (field === 'from') {
                     this.jobModalForm.schedule_from_time12 = value;
                 } else if (field === 'to') {
@@ -1270,11 +1485,11 @@
 
             recalcItemsTotal() {
                 this.jobModalForm.items.forEach(item => {
-                    const qty   = Number(item.qty) || 0;
+                    const qty = Number(item.qty) || 0;
                     const price = Number(item.unit_price) || 0;
-                    const base  = qty * price;
-                    const tax   = item.tax ? base * 0.10 : 0;
-                    item.total  = +(base + tax).toFixed(2);
+                    const base = qty * price;
+                    const tax = item.tax ? base * 0.10 : 0;
+                    item.total = +(base + tax).toFixed(2);
                     item.taxTotal = +tax.toFixed(2);
                 });
             },
@@ -1282,18 +1497,22 @@
             addItem(type) {
                 this.jobModalForm.items.push({
                     id: Date.now() + Math.random(),
+                    db_id: null,
                     name: '',
                     qty: 1,
                     unit_price: 0.00,
                     unit_cost: 0.00,
                     tax: false,
-                    taxTotal: 0,
+                    taxTotal: 0.00,
                     description: '',
                     type,
                     total: 0.00,
                     part_id: null,
+                    stock: null,
+                    priceLocked: false,
                     is_custom: false,
-                    search: { open: false, q: '', results: [], hi: -1, loading: false }
+                    warn: { qty: '' },
+                    search: {open: false, q: '', results: [], hi: -1, loading: false}
                 });
                 this.recalcItemsTotal();
             },
@@ -1330,7 +1549,8 @@
                     this.jobModalForm.results = [];
                     return;
                 }
-                @this.call('searchCustomers', this.jobModalForm.customer_query);
+            @this.call('searchCustomers', this.jobModalForm.customer_query)
+                ;
             },
             selectCustomer(customer) {
                 if (!customer || !customer.id) {
@@ -1354,7 +1574,6 @@
             },
 
             deleteTask(task) {
-                // Можно через Livewire.emit, Livewire.call, fetch/AJAX — как в остальном проекте
                 this.$wire.call('deleteTask', task.id)
                     .then(() => {
                         this.confirmDeleteOpen = false;
@@ -1381,38 +1600,45 @@
                 if (type === 'edit' && contextMenu.task) {
                     deepAssign(this.jobModalForm, defaultJobModalForm());
                     deepAssign(this.jobModalForm, contextMenu.task);
-                    for(customer in this.jobModalForm.results){
+                    for (customer in this.jobModalForm.results) {
                         this.jobModalForm.customer_id = customer;
                     }
                     this.selectCustomer(contextMenu.task.client);
                     this.jobModalForm.schedule_from_date = contextMenu.task.day || '';
-                    this.jobModalForm.schedule_to_date   = contextMenu.task.day || '';
+                    this.jobModalForm.schedule_to_date = contextMenu.task.day || '';
                     this.jobModalForm.schedule_from_time12 = toTime12String(contextMenu.task.start);
-                    this.jobModalForm.schedule_to_time12   = toTime12String(contextMenu.task.end);
+                    this.jobModalForm.schedule_to_time12 = toTime12String(contextMenu.task.end);
                     this.jobModalForm.items = (contextMenu.task.items || []).map(item => ({
-                        id: item.id,
+                        key: `${Date.now()}-${item.id}`,
+                        db_id: item.id ?? null,
                         type: item.item_type,
                         name: item.item_title ?? '',
                         qty: Number(item.quantity ?? 1),
-                        unit_price: Number(item.price ?? 0),
-                        unit_cost: Number(item.unit_cost ?? 0),
+                        unit_price: Number(item.price ?? 0.0),
+                        unit_cost: Number(item.unit_cost ?? 0.0),
                         description: item.item_description ?? '',
                         tax: Boolean(item.tax ?? false),
-                        taxTotal: Number(item.taxTotal ?? 0),
-                        total: Number(item.total ?? 0),
+                        taxTotal: Number(item.taxTotal ?? 0.0),
+                        total: Number(item.total ?? 0.0),
                         item_id: item.item_id ?? null,
                         part_id: item.part_id ?? null,
                         is_custom: item.is_custom ?? (!item.part_id),
-                        search: { open: false, q: '', results: [], hi: -1, loading: false }
+                        stock: item.part ? Number(item.part.quantity ?? 0.0) : null,
+                        priceLocked: !!item.part_id,
+                        warn: { qty: '' },
+                        search: {open: false, q: '', results: [], hi: -1, loading: false}
                     }));
                     this.jobModalForm.message = contextMenu.task.message || '';
+                    this.jobModalForm.jobModalType = 'edit';
+                    this.jobModalForm.task_id = contextMenu.task.id;
                     this.recalcItemsTotal();
 
-                    console.log(this.jobModalForm.message);
+                    console.log(this.jobModalForm);
                     return;
-                }else{
+                } else {
                     deepAssign(this.jobModalForm, defaultJobModalForm());
                 }
+                this.jobModalForm.jobModalType = 'new';
                 const slotDuration = 30;
                 const slotsPerDay = 32;
                 const minHour = 6;
