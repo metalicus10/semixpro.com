@@ -97,8 +97,7 @@ class ManagerSchedule extends Component
                 'customer:id,name,email,phone,address',
                 'order.items',
                 'technicians' => function ($q) {
-                    $q->select('users.id', 'users.name')
-                        ->withPivot('status', 'assigned_at');
+                    $q->withPivot(['status', 'assigned_at']);
                 },
             ])
             ->whereBetween('day', [$fromDate->toDateString(), $toDate->toDateString()])
@@ -525,19 +524,36 @@ class ManagerSchedule extends Component
         $this->loadTasks();
     }
 
-    public function moveTask(int $id, int $newIdx)
+    public function moveTask(int $taskId, string $day, string $slot, int $empId): void
     {
-        $task = Task::find($id);
-        if (!$task) {
-            return;
+        $task = Task::with('technicians')->findOrFail($taskId);
+        if (!$task) { return; }
+
+        $duration = Carbon::createFromFormat('H:i:s', $task->end_time)
+            ->diffInMinutes(Carbon::createFromFormat('H:i:s', $task->start_time));
+        $newStart = Carbon::createFromFormat('Y-m-d H:i:s', "{$day} {$slot}");
+
+        $task->day        = $newStart->toDateString();
+        $task->start_time = $newStart->format('H:i:s');
+        $task->end_time   = $newStart->clone()->addMinutes($duration)->format('H:i:s');
+
+        if ($empId && $task->technicians->doesntContain('id', $empId)) {
+            // задача теперь у нового теха (логика на ваш кейс)
+            $task->technicians()->syncWithPivotValues([$empId], [
+                'status'     => 'new',
+                'assigned_at'=> now(),
+            ]);
         }
 
-        $timeString = $task->start_time instanceof \Carbon\Carbon
+        $task->save();
+        $this->loadTasksForRange($task->start_time, $task->end_time);
+
+        /*$timeString = $task->start_time instanceof \Carbon\Carbon
             ? $task->start_time->format('H:i:s')
             : $task->start_time;
-        $taskStart = Carbon::createFromFormat('H:i:s', $timeString);
+        $taskStart = Carbon::createFromFormat('H:i:s', $timeString);*/
 
-        $taskEnd = $task->end_time instanceof \Carbon\Carbon
+        /*$taskEnd = $task->end_time instanceof \Carbon\Carbon
             ? $task->end_time->copy()
             : Carbon::createFromFormat('H:i:s', $task->end_time);
 
@@ -597,7 +613,7 @@ class ManagerSchedule extends Component
         ]);
 
         //Перезагружаем задачи для Alpine
-        $this->loadTasks();
+        $this->loadTasks();*/
     }
 
     public function deleteTask($taskId)

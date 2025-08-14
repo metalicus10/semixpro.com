@@ -4,17 +4,20 @@
     @mouseup.window="$event.button === 0 && endSelection()"
     @unique-slot-error.window="alert($event.detail[0].message)"
     @interval-overlap-error.window="alert($event.detail[0].message)"
-    class="overflow-x-auto bg-white text-gray-800 border pb-[10px]"
-    x-init="init()"
+    class="overflow-x-auto bg-white text-gray-800 border"
+
 >
-    <div class="flex items-center justify-between px-3 py-2 border-b">
+    <div class="sticky top-0 z-30 flex items-center justify-between px-3 py-2 border-b">
         <div class="flex items-center gap-2">
             <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
-                    @click="moveWeek(-1)">←</button>
+                    @click="moveWeek(-1)">←
+            </button>
             <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
-                    @click="goToday()">Today</button>
+                    @click="goToday()">Today
+            </button>
             <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
-                    @click="moveWeek(1)">→</button>
+                    @click="moveWeek(1)">→
+            </button>
             <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'This week' : ''"></span>
         </div>
 
@@ -23,109 +26,103 @@
              x-text="days.length ? (days[0].label + ' — ' + days[6].label) : ''"></div>
     </div>
 
-    <!-- Заголовок колонок дней -->
-    <div class="grid" :style="`grid-template-columns: 120px repeat(${days.length}, 1fr)`">
-        <div class="border-r bg-gray-50"></div>
-        <template x-for="d in days" :key="d.date">
-            <div class="py-2 text-center text-xs font-medium border-r" x-text="d.label"></div>
-        </template>
-    </div>
-    {{-- Заголовок --}}
-    <div class="inline-flex items-center border-b">
-        {{-- Первая узкая ячейка для таймзоны или иконки --}}
-        <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
-            GMT -04
-        </div>
-        {{-- Дни недели с часами --}}
-        <div class="flex-1 inline-flex">
-            <template x-for="day in days" :key="day.date">
-                <div class="flex flex-col">
-                    {{-- Дата --}}
-                    <div
-                        class="h-5 px-2 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
-                        <span x-text="day.label"></span>
-                    </div>
-                    {{-- Часы --}}
-                    <div class="flex">
-                        <template x-for="(time, idx) in timeSlots" :key="idx">
-                            <div class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
-                                <span x-text="time"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </template>
-        </div>
-    </div>
-
-    {{-- Строки сотрудников --}}
-    <template x-for="employee in employees" :key="employee.id">
-        <div class="inline-flex items-start border-b group" :data-emp="employee.id">
-            {{-- Колонка с аватаром и именем --}}
-            <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
-                <img
-                    :src="employee.avatar"
-                    alt=""
-                    class="w-8 h-8 rounded-full object-cover"
-                />
-                <span class="text-sm font-medium truncate" x-text="employee.name"></span>
+    <div class="overflow-x-auto pb-[10px]">
+        {{-- Заголовок --}}
+        <div class="inline-flex items-center border-b">
+            {{-- Первая узкая ячейка для таймзоны или иконки --}}
+            <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
+                GMT -04
             </div>
-
-            {{-- Семь дней --}}
-            <div class="flex-1 inline-flex relative">
+            {{-- Дни недели с часами --}}
+            <div class="flex-1 inline-flex">
                 <template x-for="day in days" :key="day.date">
-                    <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`"
-                         :class="{ 'day-left-border': day !== 0 }" :data-day="day">
-                        {{-- Фоновые ячейки часов --}}
+                    <div class="flex flex-col">
+                        {{-- Дата --}}
+                        <div
+                            class="h-5 px-2 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
+                            <span x-text="day.label"></span>
+                        </div>
+                        {{-- Часы --}}
                         <div class="flex">
-                            <template x-for="(_, idx) in timeSlots" :key="idx">
+                            <template x-for="(slotLabel, idx) in timeSlots" :key="slotLabel">
                                 <div
-                                    class="w-[30px] h-16 flex-shrink-0 border-r border-r-gray-300"
-                                    :class="{
-                                        'bg-blue-100': isSelected(employee.id, day, idx),
-                                        'bg-gray-200 pointer-events-none': isPast(day, idx)
-                                    }"
-                                    @mousedown.prevent="$event.button === 0  && !isPast(day, idx) && startSelection(employee.id, day, idx)"
-                                    @mouseenter.prevent="$event.buttons === 1  && !isPast(day, idx) && dragSelection(employee.id, day, idx)"
-                                    @contextmenu.prevent="onContextMenu($event, employee.id, day, idx)"
-                                ></div>
+                                    class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
+                                    <span x-text="slotLabel"></span>
+                                </div>
                             </template>
                         </div>
-
-                        {{-- Задачи --}}
-                        <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
-                        >
-                            <div
-                                class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
-                                :class="{
-                                    'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
-                                    'cursor-move': !isTaskPast(task)
-                                 }"
-                                @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
-                                @contextmenu.prevent="
-                                    contextMenu.x = $event.clientX;
-                                    contextMenu.y = $event.clientY;
-                                    contextMenu.task = task;
-                                    contextMenu.visible = true;
-                                 "
-                                x-bind:style="
-                                    drag.task && drag.task.id === task.id
-                                        ? `left:${drag.previewX}px; width:${drag.widthPx}px;`
-                                        : taskStyle(task)
-                                "
-                            >
-                                <div class="flex flex-col">
-                                    <span class="truncate" x-text="task.client.name"></span>
-                                    <span class="whitespace-wrap"
-                                          x-text="`${to12Hour(task.start)} – ${to12Hour(task.end)}`"></span>
-                                </div>
-                            </div>
-                        </template>
                     </div>
                 </template>
             </div>
         </div>
-    </template>
+
+        {{-- Строки сотрудников --}}
+        <template x-for="employee in employees" :key="employee.id">
+            <div class="inline-flex items-start border-b group" :data-emp="employee.id">
+                {{-- Колонка с аватаром и именем --}}
+                <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
+                    <img
+                        :src="employee.avatar"
+                        alt=""
+                        class="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span class="text-sm font-medium truncate" x-text="employee.name"></span>
+                </div>
+
+                {{-- Семь дней --}}
+                <div class="flex-1 inline-flex relative">
+                    <template x-for="day in days" :key="day.date">
+                        <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`"
+                             :class="{ 'day-left-border': day !== 0 }" :data-day="day">
+                            {{-- Фоновые ячейки часов --}}
+                            <div class="flex">
+                                <template x-for="(_, idx) in timeSlots" :key="idx">
+                                    <div
+                                        class="w-[30px] h-16 flex-shrink-0 border-r border-r-gray-300"
+                                        :class="{
+                                        'bg-blue-100': isSelected(employee.id, day, idx),
+                                        'bg-gray-200 pointer-events-none': isPast(day, idx)
+                                    }"
+                                        @mousedown.prevent="$event.button === 0  && !isPast(day, idx) && startSelection(employee.id, day, idx)"
+                                        @mouseenter.prevent="$event.buttons === 1  && !isPast(day, idx) && dragSelection(employee.id, day, idx)"
+                                        @contextmenu.prevent="onContextMenu($event, employee.id, day, idx)"
+                                    ></div>
+                                </template>
+                            </div>
+
+                            {{-- Задачи --}}
+                            <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
+                            >
+                                <div x-init="console.log(task);"
+                                    class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
+                                    :class="{
+                                        'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
+                                        'cursor-move': !isTaskPast(task)
+                                    }"
+                                    @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                    @contextmenu.prevent="
+                                        contextMenu.x = $event.clientX;
+                                        contextMenu.y = $event.clientY;
+                                        contextMenu.task = task;
+                                        contextMenu.visible = true;
+                                    "
+                                     :style="drag.task && drag.task.id === task.id
+                                        ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65;`
+                                        : taskStyle(task)"
+                                >
+                                    <div class="flex flex-col">
+                                        <span class="truncate" x-text="task.client.name"></span>
+                                        <span class="whitespace-wrap"
+                                              x-text="`${to12Hour(task.start)} – ${to12Hour(task.end)}`"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </template>
+    </div>
 
     <!-- Контекстное меню таймлайна -->
     <div
@@ -821,7 +818,8 @@
                                                         </div>
 
                                                         <!-- выпадающий список -->
-                                                        <div x-show="item.search.open" x-transition.opacity @mousedown.prevent
+                                                        <div x-show="item.search.open" x-transition.opacity
+                                                             @mousedown.prevent
                                                              class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
                                                             <template x-if="item.search.loading">
                                                                 <div class="px-3 py-2 text-sm text-gray-500">
@@ -926,7 +924,8 @@
                                                                :max="item.part_id ? (item.stock ?? 0) : null"
                                                                @blur="enforceQty(item); recalcItemsTotal()"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600" x-text="item.warn.qty"></p>
+                                                        <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
+                                                           x-text="item.warn.qty"></p>
                                                         <label :for="`qty-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                         peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
@@ -1125,6 +1124,8 @@
     function scheduler() {
         return {
             init() {
+                this.stopClock();
+                this.startClock();
                 this.setWeek(this.currentNow());
                 window.addEventListener('customer-created', event => {
                     const data = event.detail[0];
@@ -1214,9 +1215,23 @@
             firstDay: 1,
 
             APP_TZ: dayjs.tz.guess(),
+            nowTs: null,
+            clockId: null,
 
             currentNow() {
                 return dayjs.tz ? dayjs.tz(dayjs(), this.APP_TZ) : dayjs()
+            },
+
+            startClock() {
+                this.bumpNow();
+                this.clockId = setInterval(() => this.bumpNow(), 30_000);
+            },
+
+            stopClock() { if (this.clockId) clearInterval(this.clockId); },
+
+            bumpNow() {
+                this.nowTs = Date.now();
+                // this.$dispatch('time-tick', { now: this.nowTs });
             },
 
             slotDateTime(dayObj, slotLabel) {
@@ -1245,20 +1260,18 @@
 
             setWeek(d) {
                 const base = dayjs.isDayjs(d)
-                    ? d.tz ? d.tz(this.APP_TZ) : d
-                    : dayjs.tz ? dayjs.tz(d, 'YYYY-MM-DD', this.APP_TZ) : dayjs(d);
+                    ? (d.tz ? d.tz(this.APP_TZ) : d)
+                    : (dayjs.tz ? dayjs.tz(d, 'YYYY-MM-DD', this.APP_TZ) : dayjs(d));
 
                 let start = base.startOf('week');
+
                 if (this.firstDay === 1) {
-                    // сдвигаем к понедельнику
-                    const dow = start.day();
-                    const shift = (dow === 0 ? -6 : 1 - dow);
-                    start = start.add(shift, 'day');
+                    start = start.add(1, 'day');
                 }
 
                 this.weekStart = start.format('YYYY-MM-DD');
 
-                this.days = Array.from({ length: 7 }, (_, i) => {
+                this.days = Array.from({length: 7}, (_, i) => {
                     const d = start.add(i, 'day');
                     return {
                         date: d.format('YYYY-MM-DD'),
@@ -1324,7 +1337,8 @@
             },
 
             isPast(dayObj, slotIdx) {
-                const slotLabel  = this.timeSlots[slotIdx];
+                if (slotIdx === this.timeSlots.length - 1) return true;
+                const slotLabel = this.timeSlots[slotIdx];
                 const cellMoment = this.slotDateTime(dayObj, slotLabel);
                 const isEndOfDaySlot = slotIdx === this.timeSlots.length - 1;
                 return isEndOfDaySlot || cellMoment.isBefore(this.currentNow());
@@ -1364,18 +1378,25 @@
                 }
             },
 
+            parseDbTime(s) {
+                return dayjs(s, [
+                    'YYYY-MM-DD HH:mm:ss',
+                    'YYYY-MM-DD HH:mm',
+                    'HH:mm:ss',
+                    'HH:mm'
+                ], true);
+            },
+
             to12Hour(time24) {
-                // time24: "19:30:00" или "08:05:00"
-                let [h, m, s] = time24.split(':');
-                h = parseInt(h, 10);
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                h = h % 12 || 12;
-                return `${h}:${m} ${ampm}`;
+                const d = this.parseDbTime(time24);
+                return d.isValid() ? d.format('h:mm A') : '';
             },
 
             // Получить задачи сотрудника на конкретный день
             dayTasks(empId, day) {
-                return this.tasks.filter(t => t.technician === empId && t.day === day);
+                const d = (typeof day === 'string') ? day : (day && day.date ? day.date : null);
+                if (!d) return [];
+                return this.tasks.filter(t => String(t.technician) === String(empId) && String(t.day) === String(d));
             },
 
             // Разметка при выделении для создания задачи
@@ -1406,10 +1427,10 @@
                 this.drag.moved = false;
                 this.drag.startX = evt.clientX;
                 this.drag.cell = evt.currentTarget.closest('div[data-day]');
-                const startIx = this.timeSlots.indexOf(task.start);
-                const endIx = this.timeSlots.indexOf(task.end);
-                this.drag.previewX = startIx * this.slotWidth;
-                this.drag.widthPx = (endIx - startIx) * this.slotWidth;
+                const startIdx = this.timeSlots.indexOf(task.start);
+                const endIdx = this.timeSlots.indexOf(task.end);
+                this.drag.previewX = startIdx * this.slotWidth;
+                this.drag.widthPx = Math.max(1, endIdx - startIdx) * this.slotWidth;
 
                 this._onDragHandler = this.onDrag.bind(this);
                 this._onDropHandler = this.onDrop.bind(this);
@@ -1430,8 +1451,11 @@
                     let slotCount = this.timeSlots.length;
                     let slotWidth = this.slotWidth;
                     let x = evt.clientX - rect.left - this.drag.offsetX;
-                    let idx = Math.max(0, Math.min(slotCount - 1, Math.floor(x / slotWidth)));
+                    const maxX = rect.width - slotWidth;
+                    x = Math.max(0, Math.min(maxX, x));
+                    const idx = Math.floor(x / slotWidth);
                     this.drag.previewX = idx * slotWidth;
+
                     let start = dayjs(this.drag.task.start, 'HH:mm:ss');
                     let end = dayjs(this.drag.task.end, 'HH:mm:ss');
                     let durationSlots = Math.max(1, Math.round((end.diff(start, 'minute')) / 30));
@@ -1442,27 +1466,55 @@
                 document.removeEventListener('mousemove', this._onDragHandler);
                 document.removeEventListener('mouseup', this._onDropHandler);
                 const cell = this.drag.cell;
-                if (cell && this.drag.cell && this.drag.task && this.drag.moved) {
-                    const rect = cell.getBoundingClientRect();
-                    const idx = Math.floor(this.drag.previewX / this.slotWidth);
-                    const safeIdx = Math.max(0, Math.min(this.timeSlots.length - 1, idx));
-                    const newStart = this.timeSlots[safeIdx];
-                    this.$wire.moveTask(this.drag.task.id, safeIdx);
+                if (!(cell && this.drag.task && this.drag.moved)) {
+                    this.drag.task = this.drag.cell = null;
+                    this.drag.previewX = 0;
+                    return;
                 }
-                this.drag.task = null;
-                this.drag.cell = null;
-                this.drag.previewX = null;
+                const rect      = cell.getBoundingClientRect();
+                const x         = Math.max(0, Math.min(rect.width - this.slotWidth, this.drag.previewX));
+                const slotCount = this.timeSlots.length;
+                const idx       = Math.max(0, Math.min(slotCount - 1, Math.floor(x / this.slotWidth)));
+                const slot      = this.timeSlots[idx] || null;            // <-- здесь может быть null, если idx невалиден
+
+                if (!slot) {
+                    console.warn('moveTask: invalid slot index', { idx, slotCount, previewX: this.drag.previewX });
+                    this.drag.task = this.drag.cell = null;
+                    this.drag.previewX = 0;
+                    return;                                                 // не отправляем null на сервер
+                }
+
+                const day   = cell.dataset.day;                           // YYYY-MM-DD
+                const empId = +cell.closest('[data-emp]').dataset.emp;    // id сотрудника
+
+                // Время в формате HH:mm:ss обязательно
+                const slotStr = slot.length === 5 ? `${slot}:00` : slot;
+
+                this.$wire.moveTask(this.drag.task.id, day, slotStr, empId);
+
+                this.drag.task     = null;
+                this.drag.cell     = null;
+                this.drag.previewX = 0;
+                this.drag.moved    = false;
             },
 
-            // Стиль задачи: позиционирование и ширина в px
             taskStyle(task) {
-                let startStr = dayjs(task.start, 'HH:mm:ss').format('h:mm A');
-                let endStr = dayjs(task.end, 'HH:mm:ss').format('h:mm A');
-                const startIx = this.timeSlots.indexOf(startStr);
-                const endIx = this.timeSlots.indexOf(endStr);
-                const leftPx = startIx * this.slotWidth;
-                const wPx = (endIx - startIx) * this.slotWidth;
-                return `left:${leftPx}px; width:${wPx}px;`;
+                const s = this.parseDbTime(task.start);
+                const e = this.parseDbTime(task.end);
+                if (!s.isValid() || !e.isValid()) return '';
+
+                const base = dayjs(this.timeSlots[0], 'h:mm A');
+                const slotMin = this.slotWidth;
+
+                const startIdx = Math.max(0, Math.round(s.diff(base, 'minute') / slotMin));
+                const endIdx   = Math.max(startIdx + 1,
+                    Math.min(this.timeSlots.length,
+                        Math.round(e.diff(base, 'minute') / slotMin)));
+
+                const leftPx  = startIdx * this.slotWidth;
+                const widthPx = (endIdx - startIdx) * this.slotWidth;
+
+                return `left:${leftPx}px; width:${widthPx}px;`;
             },
 
             subtotal() {
@@ -1511,7 +1563,7 @@
                     stock: null,
                     priceLocked: false,
                     is_custom: false,
-                    warn: { qty: '' },
+                    warn: {qty: ''},
                     search: {open: false, q: '', results: [], hi: -1, loading: false}
                 });
                 this.recalcItemsTotal();
@@ -1594,9 +1646,18 @@
                 this.jobModalForm.new_customer = {name: '', email: '', phone: '', address: ''};
             },
 
+            toTime12String(timeStr) {
+                let [h, m] = timeStr.split(':');
+                h = parseInt(h, 10);
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                const hour12 = h % 12 || 12;
+                return `${hour12}:${m} ${ampm}`;
+            },
+
             openJobModal(type = null, sel, contextMenu = null) {
                 if (type) this.jobModalType = type;
                 this.jobModalOpen = true;
+                console.log(contextMenu.task.items);
                 if (type === 'edit' && contextMenu.task) {
                     deepAssign(this.jobModalForm, defaultJobModalForm());
                     deepAssign(this.jobModalForm, contextMenu.task);
@@ -1606,15 +1667,15 @@
                     this.selectCustomer(contextMenu.task.client);
                     this.jobModalForm.schedule_from_date = contextMenu.task.day || '';
                     this.jobModalForm.schedule_to_date = contextMenu.task.day || '';
-                    this.jobModalForm.schedule_from_time12 = toTime12String(contextMenu.task.start);
-                    this.jobModalForm.schedule_to_time12 = toTime12String(contextMenu.task.end);
+                    this.jobModalForm.schedule_from_time12 = this.to12Hour(contextMenu.task.start);
+                    this.jobModalForm.schedule_to_time12 = this.to12Hour(contextMenu.task.end);
                     this.jobModalForm.items = (contextMenu.task.items || []).map(item => ({
-                        key: `${Date.now()}-${item.id}`,
-                        db_id: item.id ?? null,
-                        type: item.item_type,
-                        name: item.item_title ?? '',
-                        qty: Number(item.quantity ?? 1),
-                        unit_price: Number(item.price ?? 0.0),
+                        key: Date.now() + Math.random(),
+                        db_id: item.db_id ?? null,
+                        type: item.type,
+                        name: item.name ?? '',
+                        qty: Number(item.qty ?? 1),
+                        unit_price: Number(item.unit_price ?? 0.0),
                         unit_cost: Number(item.unit_cost ?? 0.0),
                         description: item.item_description ?? '',
                         tax: Boolean(item.tax ?? false),
@@ -1623,9 +1684,9 @@
                         item_id: item.item_id ?? null,
                         part_id: item.part_id ?? null,
                         is_custom: item.is_custom ?? (!item.part_id),
-                        stock: item.part ? Number(item.part.quantity ?? 0.0) : null,
+                        stock: item.part ? Number(item.part.qty ?? 0.0) : null,
                         priceLocked: !!item.part_id,
-                        warn: { qty: '' },
+                        warn: {qty: ''},
                         search: {open: false, q: '', results: [], hi: -1, loading: false}
                     }));
                     this.jobModalForm.message = contextMenu.task.message || '';
@@ -1633,66 +1694,51 @@
                     this.jobModalForm.task_id = contextMenu.task.id;
                     this.recalcItemsTotal();
 
-                    console.log(this.jobModalForm);
+                    //console.log(this.jobModalForm.items);
                     return;
                 } else {
                     deepAssign(this.jobModalForm, defaultJobModalForm());
-                }
-                this.jobModalForm.jobModalType = 'new';
-                const slotDuration = 30;
-                const slotsPerDay = 32;
-                const minHour = 6;
-                const baseDate = dayjs(sel.day, 'YYYY.MM.DD').startOf('day').toDate();
-                const startSlot = Math.min(sel.startIdx, slotsPerDay - 1);
-                const endSlot = Math.min(sel.endIdx, slotsPerDay - 1);
-                const startMinutes = minHour * 60 + startSlot * slotDuration;
-                const endMinutes = minHour * 60 + (endSlot + 1) * slotDuration;
-                const from = new Date(baseDate);
-                from.setMinutes(startMinutes);
-                const to = new Date(baseDate);
-                to.setMinutes(endMinutes);
-                if (to.getDate() !== from.getDate()) {
-                    to.setDate(from.getDate());
-                    to.setHours(23, 59, 0, 0);
-                }
+                    this.jobModalForm.jobModalType = 'new';
 
-                function toInputDate(d) {
-                    return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-                }
+                    const SLOT_MIN = 30;
+                    const FIRST_HOUR = 6;
+                    const SLOTS_PER_DAY = 32;
 
-                function toTime12String(timeStr) {
-                    let [h, m] = timeStr.split(':');
-                    h = parseInt(h, 10);
-                    const ampm = h >= 12 ? 'PM' : 'AM';
-                    const hour12 = h % 12 || 12;
-                    return `${hour12}:${m} ${ampm}`;
-                }
+                    // 1) Правильно парсим день из селекции
+                    const day = dayjs(sel.day.date, 'YYYY-MM-DD');
 
-                function toInputTime12(d) {
-                    let h = d.getHours();
-                    const m = d.getMinutes().toString().padStart(2, '0');
-                    const ampm = h >= 12 ? 'PM' : 'AM';
-                    h = h % 12 || 12;
-                    return `${h}:${m} ${ampm}`;
-                }
+                    // 2) Границы слотов
+                    const startSlot = Math.max(0, Math.min(sel.startIdx ?? 0, SLOTS_PER_DAY - 1));
+                    const endSlot = Math.max(startSlot, Math.min((sel.endIdx ?? startSlot), SLOTS_PER_DAY - 1));
 
-                function toInputTime24(d) {
-                    let h = d.getHours().toString().padStart(2, '0');
-                    let m = d.getMinutes().toString().padStart(2, '0');
-                    return `${h}:${m}`;
-                }
+                    // 3) Считаем from/to как dayjs
+                    let from = day.startOf('day').add(FIRST_HOUR, 'hour').add(startSlot * SLOT_MIN, 'minute');
+                    let to = day.startOf('day').add(FIRST_HOUR, 'hour').add((endSlot + 1) * SLOT_MIN, 'minute');
+                    console.log('from: '+from+' | to: '+to);
 
-                this.jobModalForm.schedule_from_date = toInputDate(from);
-                this.jobModalForm.schedule_from_time12 = toInputTime12(from);
-                this.jobModalForm.schedule_from_time = toInputTime24(from);
+                    // Если «to» убежал на следующий день — режем по границе
+                    if (!to.isSame(from, 'day')) {
+                        // можно ограничить до 21:59 того же дня, либо до 23:59 — на ваше усмотрение
+                        to = from.endOf('day');                 // 23:59:59
+                        // или, например:
+                        // to = from.hour(21).minute(59).second(0).millisecond(0);
+                    }
 
-                this.jobModalForm.schedule_to_date = toInputDate(to);
-                this.jobModalForm.schedule_to_time12 = toInputTime12(to);
-                this.jobModalForm.schedule_to_time = toInputTime24(to);
+                    // 4) Заполняем форму (и 12-часовой, и 24-часовой формат сразу)
+                    this.jobModalForm.schedule_from_date = from.format('YYYY-MM-DD');
+                    this.jobModalForm.schedule_to_date = to.format('YYYY-MM-DD');
 
-                const tech = this.employees.find(e => e.id === this.sel.emp);
-                if (tech && !this.jobModalForm.employees.some(e => e.id === tech.id)) {
-                    this.jobModalForm.employees.push(tech);
+                    this.jobModalForm.schedule_from_time12 = from.format('h:mm A');
+                    this.jobModalForm.schedule_to_time12 = to.format('h:mm A');
+
+                    this.jobModalForm.schedule_from_time = from.format('HH:mm');
+                    this.jobModalForm.schedule_to_time = to.format('HH:mm');
+
+                    // 5) Подставляем выбранного сотрудника из селекции
+                    const tech = this.employees.find(e => e.id === this.sel.emp);
+                    if (tech && !this.jobModalForm.employees.some(e => e.id === tech.id)) {
+                        this.jobModalForm.employees.push(tech);
+                    }
                 }
                 this.jobModalForm.employees_query = '';
                 this.menuVisible = false;
