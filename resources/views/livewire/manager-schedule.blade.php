@@ -93,7 +93,7 @@
                             {{-- Задачи --}}
                             <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
                             >
-                                <div x-init="console.log(task);"
+                                <div
                                     class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
                                     :class="{
                                         'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
@@ -514,7 +514,9 @@
                          x-data="{
                             money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
                             openList(it){
-                                this.jobModalForm.items.forEach(x => { if (x !== it) x.search.open = false; });
+                                if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
+                                this.sel.id = it.id;
+                                this.jobModalForm.items.forEach(x => { if (x.search) x.search.open = (x === it); });
                                 it.search.open = true;
                             },
 
@@ -529,6 +531,9 @@
                             },
 
                             async autocomplete(it){
+                                if (!it) it = this.getSelItem();
+                                if (!it) return;
+                                if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
                                 const q = (it.name || '').trim();
                                 it.search.q = q;
                                 it.search.loading = true;
@@ -536,15 +541,15 @@
                                 it.search.hi = -1;
 
                                 if (q.length < 2) { it.search.results = []; it.search.loading = false; it.search.open = false; return; }
-                                    try {
-                                      const res = await $wire.call('searchParts', q);
-                                      it.search.results = Array.isArray(res) ? res : [];
-                                    } catch(e){
-                                      it.search.results = [];
-                                      console.error(e);
-                                    } finally {
-                                      it.search.loading = false;
-                                    }
+                                try {
+                                    const res = await $wire.call('searchParts', q);
+                                    it.search.results = Array.isArray(res) ? res : [];
+                                } catch(e){
+                                    it.search.results = [];
+                                    console.error(e);
+                                } finally {
+                                    it.search.loading = false;
+                                }
                             },
 
                             move(it, dir){
@@ -553,15 +558,45 @@
                                 it.search.hi = (it.search.hi + dir + n) % n;
                             },
 
-                            choose(it){
-                                if (it.search.hi >= 0){
-                                    this.selectPart(i, it.search.results[it.search.hi]);
+                            choose(index){
+                                const p = this.jobModalForm.items[index].search.results[index];
+                                const it = this.jobModalForm.items[index];
+                                console.log(it);
+
+                                it.name       = p.name;
+                                it.part_id    = p.id;
+                                it.unit_price = Number(p.price) || 0;
+                                it.is_custom  = false;
+                                it.priceLocked = true;
+
+                                it.stock = {
+                                    total:      p.quantity,
+                                    reserved:   p.reserved,
+                                    available:  p.available
+                                };
+
+                                if (it.qty > it.stock.available) {
+                                    it.qty = Math.max(0, it.stock.available);
+                                    it.warn.qty = `Only ${it.stock.available} available (reserved: ${it.stock.reserved}).`;
                                 } else {
-                                    // Enter без выбора — остаётся кастомный материал
-                                    it.part_id = null;
-                                    it.is_custom = true;
-                                    it.search.open = false;
+                                    it.warn.qty = '';
                                 }
+
+                                this.hideList(it);
+                                this.recalcItemsTotal();
+                            },
+
+                            onQtyInput(it) {
+                                const q = Number(it.qty) || 0;
+                                const max = it.stock?.available ?? Infinity;
+
+                                if (q > max) {
+                                    it.qty = max;
+                                    it.warn.qty = `Only ${max} available.`;
+                                } else {
+                                    it.warn.qty = '';
+                                }
+                                this.recalcItemsTotal();
                             },
 
                             selectPart(it, p){
@@ -782,7 +817,7 @@
                                                                    @keydown.escape.prevent="hideList(item)"
                                                                    @keydown.arrow-down.prevent="move(item,1)"
                                                                    @keydown.arrow-up.prevent="move(item,-1)"
-                                                                   @keydown.enter.prevent="choose(item)"
+                                                                   @keydown.enter.prevent="choose(index)"
                                                                    class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
                                                             <label
                                                                 class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
@@ -828,8 +863,8 @@
                                                             </template>
 
                                                             <template x-for="(p, idx) in item.search.results"
-                                                                      :key="p.id">
-                                                                <div @click="selectPart(item, p)"
+                                                                      :key="p.id" x-init="console.log(item.search.results);">
+                                                                <div @click="choose(idx)"
                                                                      :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
                                                                     <div class="flex items-center gap-2">
                                                                         <template x-if="p.image">
@@ -879,7 +914,7 @@
                                                                                 </div>
                                                                             </span>
                                                                         </template>
-                                                                        <div class="min-w-0">
+                                                                        <div class="min-w-0" x-init="console.log(p);">
                                                                             <div class="flex items-center gap-2">
                                                                                 <span class="font-medium truncate"
                                                                                       x-text="p.name"></span>
@@ -895,9 +930,14 @@
                                                                                     :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
                                                                                     class="px-1.5 py-0.5 rounded">
                                                                                     <span x-show="p.quantity>0">In stock: <span
-                                                                                            x-text="p.quantity"></span></span>
+                                                                                            x-text="p.available"></span></span>
                                                                                     <span x-show="p.quantity<=0">Out of stock</span>
                                                                                 </span>
+                                                                                <template x-if="p.reserved > 0">
+                                                                                    <span class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
+                                                                                        Reserved <span class="ml-1" x-text="p.reserved"></span>
+                                                                                    </span>
+                                                                                </template>
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -919,10 +959,10 @@
                                                         <input :id="`qty-${index}`" :name="`name-${index}`"
                                                                x-model="item.qty" type="number" step="1" min="0"
                                                                placeholder=""
-                                                               @input="enforceQty(item); recalcItemsTotal()"
+                                                               @input="onQtyInput(item); recalcItemsTotal()"
                                                                :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
                                                                :max="item.part_id ? (item.stock ?? 0) : null"
-                                                               @blur="enforceQty(item); recalcItemsTotal()"
+                                                               @blur="onQtyInput(item); recalcItemsTotal()"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
                                                            x-text="item.warn.qty"></p>
@@ -1156,7 +1196,7 @@
             tasks: @entangle('tasks'),
             now: new Date(),
             slotWidth: 30,
-            sel: {emp: null, day: null, startIdx: null, endIdx: null},
+            sel: {idx: null, emp: null, day: null, startIdx: null, endIdx: null},
             menuX: 0,
             menuY: 0,
             jobModalType: '',
@@ -1471,11 +1511,12 @@
                     this.drag.previewX = 0;
                     return;
                 }
+                console.log(this.timeSlots);
                 const rect      = cell.getBoundingClientRect();
                 const x         = Math.max(0, Math.min(rect.width - this.slotWidth, this.drag.previewX));
                 const slotCount = this.timeSlots.length;
                 const idx       = Math.max(0, Math.min(slotCount - 1, Math.floor(x / this.slotWidth)));
-                const slot      = this.timeSlots[idx] || null;            // <-- здесь может быть null, если idx невалиден
+                const slot      = this.timeSlots[idx] || null;
 
                 if (!slot) {
                     console.warn('moveTask: invalid slot index', { idx, slotCount, previewX: this.drag.previewX });
@@ -1494,7 +1535,6 @@
 
                 this.drag.task     = null;
                 this.drag.cell     = null;
-                this.drag.previewX = 0;
                 this.drag.moved    = false;
             },
 
@@ -1657,7 +1697,6 @@
             openJobModal(type = null, sel, contextMenu = null) {
                 if (type) this.jobModalType = type;
                 this.jobModalOpen = true;
-                console.log(contextMenu.task.items);
                 if (type === 'edit' && contextMenu.task) {
                     deepAssign(this.jobModalForm, defaultJobModalForm());
                     deepAssign(this.jobModalForm, contextMenu.task);
@@ -1677,7 +1716,7 @@
                         qty: Number(item.qty ?? 1),
                         unit_price: Number(item.unit_price ?? 0.0),
                         unit_cost: Number(item.unit_cost ?? 0.0),
-                        description: item.item_description ?? '',
+                        description: item.description ?? '',
                         tax: Boolean(item.tax ?? false),
                         taxTotal: Number(item.taxTotal ?? 0.0),
                         total: Number(item.total ?? 0.0),
@@ -1714,13 +1753,12 @@
                     // 3) Считаем from/to как dayjs
                     let from = day.startOf('day').add(FIRST_HOUR, 'hour').add(startSlot * SLOT_MIN, 'minute');
                     let to = day.startOf('day').add(FIRST_HOUR, 'hour').add((endSlot + 1) * SLOT_MIN, 'minute');
-                    console.log('from: '+from+' | to: '+to);
+                    //console.log('from: '+from+' | to: '+to);
 
                     // Если «to» убежал на следующий день — режем по границе
                     if (!to.isSame(from, 'day')) {
                         // можно ограничить до 21:59 того же дня, либо до 23:59 — на ваше усмотрение
-                        to = from.endOf('day');                 // 23:59:59
-                        // или, например:
+                        to = from.hour(22).minute(0).second(0).millisecond(0);
                         // to = from.hour(21).minute(59).second(0).millisecond(0);
                     }
 

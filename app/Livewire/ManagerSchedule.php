@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\Customer;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Part;
 use App\Models\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -237,6 +238,15 @@ class ManagerSchedule extends Component
         $customerId = $data['customer_id'] ?? null;
 
         foreach ($data['items'] as $item) {
+            /*$available = Part::query()
+                ->where('id', $item->part_id)
+                ->selectRaw('quantity - ( ... тот же subselect, что выше ... ) as available')
+                ->value('available');
+            if ($item->qty > max($available, 0)) {
+                throw ValidationException::withMessages([
+                    "items.$item.qty" => "Only $available available for this part.",
+                ]);
+            }*/
             //if($item['tax']) { $form['total'] += $item['taxTotal']; }
             $data['total'] += floatval($item['total']) ?? 0.00;
         }
@@ -435,11 +445,13 @@ class ManagerSchedule extends Component
         $q = trim($q);
         if ($q === '') return [];
 
+        $today = now()->toDateString();
+
         $parts = \App\Models\Part::query()
             // обязательно ограничиваем по менеджеру
             ->where('manager_id', Auth::id())
 
-            // жадно подтягиваем номенклатуру (оставь имя связи, как у тебя в модели)
+            // жадно подтягиваем номенклатуру
             ->with(['nomenclature' => function ($q) {
                 // вернём только нужные поля
                 $q->select('id', 'name', 'image');
@@ -447,27 +459,51 @@ class ManagerSchedule extends Component
 
             // поиск по полям самой запчасти
             ->where(function ($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%");
-                ///->orWhere('sku',  'like', "%{$q}%");
+                $w->where('name', 'like', "%{$q}%")
+                ->orWhere('sku',  'like', "%{$q}%");
             })
-
-            // и по полям номенклатуры
             ->orWhereHas('nomenclature', function ($w) use ($q) {
-                $w->where('name', 'like', "%{$q}%");
-                //->orWhere('sku',  'like', "%{$q}%");
+                $w->where('name', 'like', "%{$q}%")
+                ->orWhere('nn',  'like', "%{$q}%");
             })
+            ->select([
+                'id', 'name', 'quantity', 'price', 'image', 'nomenclature_id', 'manager_id'
+            ])
+            ->selectRaw(
+                '(select coalesce(sum(oi.quantity),0)
+                from order_items oi
+                join orders o on o.id = oi.order_id
+                join tasks  t on t.order_id = o.id
+                where oi.part_id = parts.id
+                 and oi.item_type = "material"
+                 and oi.part_id is not null
+                 and date(t.day) >= ?
+                 and (o.status is null or o.status <> "canceled")
+                ) as reserved',
+                [$today]
+            )
+            ->selectRaw('greatest(quantity - (select coalesce(sum(oi2.quantity),0)
+                from order_items oi2
+                join orders o2 on o2.id = oi2.order_id
+                join tasks  t2 on t2.order_id = o2.id
+                where oi2.part_id = parts.id
+                 and oi2.item_type = "material"
+                 and oi2.part_id is not null
+                 and date(t2.day) >= ?
+                 and (o2.status is null or o2.status <> "canceled")
+                ), 0) as available', [$today])
             ->orderByDesc('updated_at')
             ->limit(20)
-            ->get([
-                'id', 'name', 'quantity', 'price', 'image', 'nomenclature_id', 'manager_id'
-            ]);
+            ->get();
 
         return $parts->map(function ($p) {
             return [
                 'id' => $p->id,
                 'name' => $p->name,
-                //'sku'        => $p->sku,
+                'sku' => $p->sku,
                 'quantity' => (int)$p->quantity,
+                'reserved'  => (int)($p->reserved ?? 0),
+                'available' => (int) ($p->available ?? max($p->quantity - (int)$p->reserved, 0)),
                 'price' => (float)$p->price,
                 'image' => $p->image,
                 'nomenclature' => $p->nomenclature ? [
@@ -524,18 +560,28 @@ class ManagerSchedule extends Component
         $this->loadTasks();
     }
 
-    public function moveTask(int $taskId, string $day, string $slot, int $empId): void
+    public function moveTask(int $taskId, string $day, string $slot, ?int $empId = null): void
     {
+        if (strlen($slot) === 5) {
+            $slot .= ':00';
+        }
+
+        try {
+            $start = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', "{$day} {$slot}");
+        } catch (\Exception $e) {
+            abort(422, 'Invalid slot time: ' . $slot);
+        }
+
         $task = Task::with('technicians')->findOrFail($taskId);
         if (!$task) { return; }
 
-        $duration = Carbon::createFromFormat('H:i:s', $task->end_time)
-            ->diffInMinutes(Carbon::createFromFormat('H:i:s', $task->start_time));
+        $duration = \Carbon\Carbon::createFromFormat('H:i:s', $task->end_time)
+            ->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i:s', $task->start_time));
         $newStart = Carbon::createFromFormat('Y-m-d H:i:s', "{$day} {$slot}");
 
-        $task->day        = $newStart->toDateString();
-        $task->start_time = $newStart->format('H:i:s');
-        $task->end_time   = $newStart->clone()->addMinutes($duration)->format('H:i:s');
+        $task->day        = $start->toDateString();
+        $task->start_time = $start->format('H:i:s');
+        $task->end_time   = $start->clone()->addMinutes($duration)->format('H:i:s');
 
         if ($empId && $task->technicians->doesntContain('id', $empId)) {
             // задача теперь у нового теха (логика на ваш кейс)
