@@ -73,7 +73,7 @@
                 <div class="flex-1 inline-flex relative">
                     <template x-for="day in days" :key="day.date">
                         <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`"
-                             :class="{ 'day-left-border': day !== 0 }" :data-day="day">
+                             :class="{ 'day-left-border': day !== 0 }" :data-day="day.date" :data-emp="employee.id">
                             {{-- Фоновые ячейки часов --}}
                             <div class="flex">
                                 <template x-for="(_, idx) in timeSlots" :key="idx">
@@ -85,7 +85,7 @@
                                     }"
                                         @mousedown.prevent="$event.button === 0  && !isPast(day, idx) && startSelection(employee.id, day, idx)"
                                         @mouseenter.prevent="$event.buttons === 1  && !isPast(day, idx) && dragSelection(employee.id, day, idx)"
-                                        @contextmenu.prevent="onContextMenu($event, employee.id, day, idx)"
+                                        @contextmenu.prevent="onContextMenu($event, employee, day, idx)"
                                     ></div>
                                 </template>
                             </div>
@@ -104,6 +104,12 @@
                                         contextMenu.x = $event.clientX;
                                         contextMenu.y = $event.clientY;
                                         contextMenu.task = task;
+
+                                        const col = $event.currentTarget.closest('[data-day]');
+                                        sel.day = col ? col.dataset.day : null;
+                                        const row = $event.currentTarget.closest('[data-emp]');
+                                        sel.emp = row ? +row.dataset.emp : null;
+
                                         contextMenu.visible = true;
                                     "
                                      :style="drag.task && drag.task.id === task.id
@@ -113,7 +119,7 @@
                                     <div class="flex flex-col">
                                         <span class="truncate" x-text="task.client.name"></span>
                                         <span class="whitespace-wrap"
-                                              x-text="`${to12Hour(task.start)} – ${to12Hour(task.end)}`"></span>
+                                              x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
                                     </div>
                                 </div>
                             </template>
@@ -561,7 +567,6 @@
                             choose(index){
                                 const p = this.jobModalForm.items[index].search.results[index];
                                 const it = this.jobModalForm.items[index];
-                                console.log(it);
 
                                 it.name       = p.name;
                                 it.part_id    = p.id;
@@ -570,9 +575,9 @@
                                 it.priceLocked = true;
 
                                 it.stock = {
-                                    total:      p.quantity,
-                                    reserved:   p.reserved,
-                                    available:  p.available
+                                    available: Number(p.available ?? 0),
+                                    reserved:  Number(p.reserved ?? 0),
+                                    quantity:  Number(p.quantity ?? 0),
                                 };
 
                                 if (it.qty > it.stock.available) {
@@ -582,13 +587,18 @@
                                     it.warn.qty = '';
                                 }
 
+                                if (typeof it.stock.available === 'number') {
+                                    if (Number(it.qty) > it.stock.available) it.qty = it.stock.available;
+                                }
+
+                                this.onQtyInput(it);
                                 this.hideList(it);
                                 this.recalcItemsTotal();
                             },
 
                             onQtyInput(it) {
-                                const q = Number(it.qty) || 0;
-                                const max = it.stock?.available ?? Infinity;
+                                let q   = Number(it.qty) || 0;
+                                const max = Number(it.stock?.available ?? Infinity);
 
                                 if (q > max) {
                                     it.qty = max;
@@ -596,6 +606,7 @@
                                 } else {
                                     it.warn.qty = '';
                                 }
+                                it.qty = q;
                                 this.recalcItemsTotal();
                             },
 
@@ -624,38 +635,6 @@
                                 // it.unit_price = 0;
                                 this.recalcItemsTotal();
                             },
-
-                            enforceQty(it, showMsg = true) {
-                                // минимумы/максимумы
-                                const stock = Number(it.stock ?? Infinity);
-                                let   qty   = Math.floor(Number(it.qty || 0));
-
-                                if (!isFinite(stock)) {
-                                    // кастомный материал — просто нормализуем qty
-                                    if (qty < 1) qty = 1;
-                                    it.qty = qty;
-                                    it.warn.qty = '';
-                                    return;
-                                }
-
-                                // материал из склада
-                                    if (stock <= 0) {
-                                    it.qty = 0;
-                                    it.warn.qty = 'Out of stock';
-                                    return;
-                                }
-
-                                if (qty < 1) qty = 1;
-                                if (qty > stock) {
-                                    qty = stock;
-                                    if (showMsg) it.warn.qty = `Макс: ${stock}`;
-                                } else {
-                                    it.warn.qty = '';
-                                }
-
-                                it.qty = qty;
-                            }
-
                         }"
                     >
                         <label class="block text-sm font-medium mb-2">Job items</label>
@@ -863,7 +842,7 @@
                                                             </template>
 
                                                             <template x-for="(p, idx) in item.search.results"
-                                                                      :key="p.id" x-init="console.log(item.search.results);">
+                                                                      :key="p.id">
                                                                 <div @click="choose(idx)"
                                                                      :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
                                                                     <div class="flex items-center gap-2">
@@ -914,7 +893,7 @@
                                                                                 </div>
                                                                             </span>
                                                                         </template>
-                                                                        <div class="min-w-0" x-init="console.log(p);">
+                                                                        <div class="min-w-0">
                                                                             <div class="flex items-center gap-2">
                                                                                 <span class="font-medium truncate"
                                                                                       x-text="p.name"></span>
@@ -929,9 +908,9 @@
                                                                                 <span
                                                                                     :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
                                                                                     class="px-1.5 py-0.5 rounded">
-                                                                                    <span x-show="p.quantity>0">In stock: <span
+                                                                                    <span x-show="p.available>0">In stock: <span
                                                                                             x-text="p.available"></span></span>
-                                                                                    <span x-show="p.quantity<=0">Out of stock</span>
+                                                                                    <span x-show="p.available<=0">Out of stock</span>
                                                                                 </span>
                                                                                 <template x-if="p.reserved > 0">
                                                                                     <span class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
@@ -1061,7 +1040,7 @@
 
             <div class="flex justify-end mt-6">
                 <button @click="onSubmit(jobModalForm); jobModalOpen = false"
-                        :disabled="!validateJobModalForm(jobModalForm)"
+                        :disabled="!validateJobModalForm(jobModalForm) || hasQtyErrors()"
                         class="disabled:opacity-50 bg-blue-600 text-white px-6 py-2 rounded">Save job
                 </button>
             </div>
@@ -1072,7 +1051,6 @@
 
 <script>
     function validateJobModalForm(form) {
-        //console.log(form.schedule_from_time12);
         if (
             !form.customer_id ||
             !Array.isArray(form.employees) ||
@@ -1185,6 +1163,12 @@
                     this.jobModalForm.customer_query = event.detail.name + (event.detail.email ? ' (' + event.detail.email + ')' : '');
                     this.jobModalForm.customer_id = event.detail.id;
                     this.showCustomerModal = false;
+                });
+
+                window.addEventListener('tasks-refetch', () => {
+                    const from = this.days[0].date;
+                    const to   = this.days[6].date;
+                    this.fetchWeek(from, to);
                 });
             },
 
@@ -1350,12 +1334,12 @@
 
             onContextMenu(event, emp, day, idx) {
                 if (
-                    this.sel.emp !== emp ||
+                    this.sel.emp !== emp.id ||
                     this.sel.day !== day ||
                     idx < this.sel.startIdx ||
                     idx > this.sel.endIdx
                 ) {
-                    this.startSelection(emp, day, idx);
+                    this.startSelection(emp.id, day, idx);
                     this.endSelection();
                 }
                 this.showMenu(event);
@@ -1373,7 +1357,7 @@
             },
 
             clearSelection() {
-                this.sel = {emp: null, day: null, startIdx: null, endIdx: null};
+                this.sel = {idx: null, emp: null, day: null, startIdx: null, endIdx: null};
             },
 
             isPast(dayObj, slotIdx) {
@@ -1427,9 +1411,11 @@
                 ], true);
             },
 
-            to12Hour(time24) {
-                const d = this.parseDbTime(time24);
-                return d.isValid() ? d.format('h:mm A') : '';
+            to12Hour(time24, dayStr) {
+                if (!time24 || !dayStr) return '';
+                // time24: 'HH:mm:ss', dayStr: 'YYYY-MM-DD'
+                return dayjs.tz(`${dayStr} ${time24}`, 'YYYY-MM-DD HH:mm:ss', this.APP_TZ)
+                    .format('h:mm A');
             },
 
             // Получить задачи сотрудника на конкретный день
@@ -1502,7 +1488,7 @@
                     this.drag.widthPx = durationSlots * slotWidth;
                 }
             },
-            onDrop() {
+            async onDrop() {
                 document.removeEventListener('mousemove', this._onDragHandler);
                 document.removeEventListener('mouseup', this._onDropHandler);
                 const cell = this.drag.cell;
@@ -1511,31 +1497,33 @@
                     this.drag.previewX = 0;
                     return;
                 }
-                console.log(this.timeSlots);
-                const rect      = cell.getBoundingClientRect();
-                const x         = Math.max(0, Math.min(rect.width - this.slotWidth, this.drag.previewX));
-                const slotCount = this.timeSlots.length;
-                const idx       = Math.max(0, Math.min(slotCount - 1, Math.floor(x / this.slotWidth)));
-                const slot      = this.timeSlots[idx] || null;
+                const to24 = (s) => dayjs(s, 'h:mm A').format('HH:mm:ss');
 
-                if (!slot) {
-                    console.warn('moveTask: invalid slot index', { idx, slotCount, previewX: this.drag.previewX });
+                const slotCount = this.timeSlots.length;
+                const dayStr = cell.getAttribute('data-day');
+                const empId = Number(cell.getAttribute('data-emp'));
+
+                const idx = Math.max(0, Math.min(this.timeSlots.length - 1, Math.floor(this.drag.previewX / this.slotWidth)));
+                const slotLabel = this.timeSlots[idx];                // '2:30 PM'
+                const slot = dayjs(slotLabel, 'h:mm A').format('HH:mm:ss');
+
+                if (!slotLabel) {
+                    console.warn('moveTask: invalid slot index', {idx, slotCount, previewX: this.drag.previewX});
                     this.drag.task = this.drag.cell = null;
                     this.drag.previewX = 0;
-                    return;                                                 // не отправляем null на сервер
+                    return;
                 }
 
-                const day   = cell.dataset.day;                           // YYYY-MM-DD
-                const empId = +cell.closest('[data-emp]').dataset.emp;    // id сотрудника
-
-                // Время в формате HH:mm:ss обязательно
-                const slotStr = slot.length === 5 ? `${slot}:00` : slot;
-
-                this.$wire.moveTask(this.drag.task.id, day, slotStr, empId);
-
-                this.drag.task     = null;
-                this.drag.cell     = null;
-                this.drag.moved    = false;
+                try {
+                    await this.$wire.call('moveTask', this.drag.task.id, dayStr, slot, empId);
+                    await this.fetchWeek(this.days[0].date, this.days[6].date);
+                } finally {
+                    // сброс драг-состояния
+                    this.drag.task = null;
+                    this.drag.cell = null;
+                    this.drag.previewX = null;
+                    this.drag.moved = false;
+                }
             },
 
             taskStyle(task) {
@@ -1694,21 +1682,64 @@
                 return `${hour12}:${m} ${ampm}`;
             },
 
-            openJobModal(type = null, sel, contextMenu = null) {
+            /*updateItemStock(it) {
+                if (!it.part_id) { it.stock = null; return; }
+
+                const base = this.partsStock?.[it.part_id] || { quantity: Infinity };
+
+                // сколько уже зарезервировано в текущем модальном окне (кроме текущей строки)
+                const reservedByForm = this.jobModalForm.items
+                    .filter(x => x !== it && x.part_id === it.part_id)
+                    .reduce((s, x) => s + (Number(x.qty) || 0), 0);
+
+                const available = Math.max(0, (Number(base.quantity) || 0) - reservedByForm);
+
+                it.stock = {
+                    reserved: reservedByForm,
+                    available,
+                };
+            },*/
+
+            qtyErrorsText() {
+                const over = (this.jobModalForm.items || []).filter(it => it.type === 'material' && (Number(it.qty)||0) > (it.stock?.available ?? Infinity));
+                if (!over.length) return '';
+                if (over.length === 1) {
+                    const it = over[0]; const max = it.stock?.available ?? 0;
+                    return `“${it.name || 'Material'}”: only ${max} available.`;
+                }
+                return `${over.length} item(s) exceed available stock.`;
+            },
+
+            hasQtyErrors() {
+                return (this.jobModalForm.items || []).some(it => {
+                    if (it.type !== 'material') return false;
+                    const max = it.stock?.available ?? Infinity;
+                    const q   = Number(it.qty) || 0;
+                    return q > max;
+                });
+            },
+
+            async openJobModal(type = null, sel, contextMenu = null) {
                 if (type) this.jobModalType = type;
                 this.jobModalOpen = true;
+
+                const SLOT_MIN = 30;
+                const FIRST_HOUR = 6;
+                const SLOTS_PER_DAY = 32;
+
                 if (type === 'edit' && contextMenu.task) {
+                    const t = contextMenu.task;
                     deepAssign(this.jobModalForm, defaultJobModalForm());
-                    deepAssign(this.jobModalForm, contextMenu.task);
+                    deepAssign(this.jobModalForm, t);
                     for (customer in this.jobModalForm.results) {
                         this.jobModalForm.customer_id = customer;
                     }
-                    this.selectCustomer(contextMenu.task.client);
-                    this.jobModalForm.schedule_from_date = contextMenu.task.day || '';
-                    this.jobModalForm.schedule_to_date = contextMenu.task.day || '';
-                    this.jobModalForm.schedule_from_time12 = this.to12Hour(contextMenu.task.start);
-                    this.jobModalForm.schedule_to_time12 = this.to12Hour(contextMenu.task.end);
-                    this.jobModalForm.items = (contextMenu.task.items || []).map(item => ({
+                    this.selectCustomer(t.client);
+                    this.jobModalForm.schedule_from_date = t.day || '';
+                    this.jobModalForm.schedule_to_date = t.day || '';
+                    this.jobModalForm.schedule_from_time12 = this.to12Hour(t.start, t.day || '');
+                    this.jobModalForm.schedule_to_time12 = this.to12Hour(t.end, t.day || '');
+                    this.jobModalForm.items = (t.items || []).map(item => ({
                         key: Date.now() + Math.random(),
                         db_id: item.db_id ?? null,
                         type: item.type,
@@ -1723,25 +1754,50 @@
                         item_id: item.item_id ?? null,
                         part_id: item.part_id ?? null,
                         is_custom: item.is_custom ?? (!item.part_id),
-                        stock: item.part ? Number(item.part.qty ?? 0.0) : null,
+                        stock: item.part ? Number(item.part.qty ?? 0) : null,
                         priceLocked: !!item.part_id,
                         warn: {qty: ''},
                         search: {open: false, q: '', results: [], hi: -1, loading: false}
                     }));
-                    this.jobModalForm.message = contextMenu.task.message || '';
-                    this.jobModalForm.jobModalType = 'edit';
-                    this.jobModalForm.task_id = contextMenu.task.id;
-                    this.recalcItemsTotal();
 
-                    //console.log(this.jobModalForm.items);
+                    const ids = this.jobModalForm.items
+                        .filter(x => x.part_id)
+                        .map(x => x.part_id);
+
+                    if (ids.length) {
+                        try {
+                            const stockMap = await this.$wire.call('partsStockByIds', ids);
+                            this.jobModalForm.items.forEach(it => {
+                                if (it.part_id && stockMap[it.part_id]) {
+                                    it.stock = {
+                                        available: Number(stockMap[it.part_id].available ?? 0),
+                                        reserved: Number(stockMap[it.part_id].reserved ?? 0),
+                                        quantity: Number(stockMap[it.part_id].quantity ?? 0),
+                                    };
+                                    // ограничим qty, если нужно
+                                    if (typeof it.stock.available === 'number' && it.qty > it.stock.available) {
+                                        it.qty = it.stock.available;
+                                    }
+                                }
+                            });
+                        } catch (e) {
+                            console.error('partsStockByIds failed', e);
+                        }
+                    }
+
+                    const tech = this.employees.find(e => e.id === this.sel.emp);
+                    if (tech && !this.jobModalForm.employees.some(e => e.id === tech.id)) {
+                        this.jobModalForm.employees.push(tech);
+                    }
+
+                    this.jobModalForm.message = t.message || '';
+                    this.jobModalForm.jobModalType = 'edit';
+                    this.jobModalForm.task_id = t.id;
+                    this.recalcItemsTotal();
                     return;
                 } else {
                     deepAssign(this.jobModalForm, defaultJobModalForm());
                     this.jobModalForm.jobModalType = 'new';
-
-                    const SLOT_MIN = 30;
-                    const FIRST_HOUR = 6;
-                    const SLOTS_PER_DAY = 32;
 
                     // 1) Правильно парсим день из селекции
                     const day = dayjs(sel.day.date, 'YYYY-MM-DD');
@@ -1753,7 +1809,6 @@
                     // 3) Считаем from/to как dayjs
                     let from = day.startOf('day').add(FIRST_HOUR, 'hour').add(startSlot * SLOT_MIN, 'minute');
                     let to = day.startOf('day').add(FIRST_HOUR, 'hour').add((endSlot + 1) * SLOT_MIN, 'minute');
-                    //console.log('from: '+from+' | to: '+to);
 
                     // Если «to» убежал на следующий день — режем по границе
                     if (!to.isSame(from, 'day')) {

@@ -213,7 +213,6 @@ class ManagerSchedule extends Component
             'items.*.part_id' => 'nullable|integer|exists:parts,id',
             'items.*.is_custom' => 'required|boolean',
             'items.*.name' => 'nullable|string',
-            'items.*.qty' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.unit_cost' => 'nullable|numeric|min:0',
             'items.*.tax' => 'required|boolean',
@@ -226,6 +225,29 @@ class ManagerSchedule extends Component
             'schedule_to_date' => 'required|date',
             'schedule_from_time12' => 'required|date_format:H:i',
             'schedule_to_time12' => 'required|date_format:H:i',
+            'items.*.qty' => ['required','integer','min:1',
+                function ($attribute, $value, $fail) use ($data) {
+                    $index = (int) explode('.', $attribute)[1];     // items.3.qty -> 3
+                    $item  = $data['items'][$index] ?? null;
+
+                    if (($item['type'] ?? '') !== 'material') return;
+
+                    // id запчасти: если редактируем линк – берите part_id, иначе id
+                    $partId = $item['id'] ?? $item['part_id'] ?? null;
+                    if (!$partId) return;
+
+                    // дата заказа (возьмите начало периода)
+                    $day = $data['schedule_from_date'] ?? $data['schedule_to_date'] ?? null;
+
+                    // функция, считающая "available" так же, как в searchParts
+                    $available = Part::availableForDay($partId, $day, $data['manager_id'] ?? auth()->id());
+
+                    if ((int)$value > (int)$available) {
+                        $name = $item['name'] ?? 'Material';
+                        $fail("Only {$available} left for {$name} on {$day}.");
+                    }
+                }
+            ],
         ]);
 
         if ($validator->fails()) {
@@ -238,16 +260,6 @@ class ManagerSchedule extends Component
         $customerId = $data['customer_id'] ?? null;
 
         foreach ($data['items'] as $item) {
-            /*$available = Part::query()
-                ->where('id', $item->part_id)
-                ->selectRaw('quantity - ( ... тот же subselect, что выше ... ) as available')
-                ->value('available');
-            if ($item->qty > max($available, 0)) {
-                throw ValidationException::withMessages([
-                    "items.$item.qty" => "Only $available available for this part.",
-                ]);
-            }*/
-            //if($item['tax']) { $form['total'] += $item['taxTotal']; }
             $data['total'] += floatval($item['total']) ?? 0.00;
         }
 
@@ -342,6 +354,7 @@ class ManagerSchedule extends Component
 
         $task->technicians()->sync($syncData);
         $this->loadTasks();
+        $this->dispatch('tasks-refetch');
     }
 
     private function normalizeTimeTo24(?string $time): ?string
@@ -515,6 +528,60 @@ class ManagerSchedule extends Component
         })->values()->toArray();
     }
 
+    public function partsStockByIds(array $ids): array
+    {
+        if (empty($ids)) return [];
+
+        $today = now()->toDateString();
+
+        $parts = \App\Models\Part::query()
+            ->where('manager_id', Auth::id())
+            ->whereIn('id', $ids)
+            ->with(['nomenclature' => function ($q) {
+                $q->select('id','name','image');
+            }])
+            ->select('id','name','sku','quantity','price','nomenclature_id')
+            ->selectRaw(
+                '(select coalesce(sum(oi.quantity),0)
+              from order_items oi
+              join orders o on o.id = oi.order_id
+              join tasks t on t.order_id = o.id
+             where oi.part_id = parts.id
+               and oi.item_type = "material"
+               and oi.part_id is not null
+               and date(t.day) >= ?
+               and (o.status is null or o.status <> "canceled")
+            ) as reserved', [$today]
+            )
+            ->selectRaw(
+                'greatest(quantity - (select coalesce(sum(oi2.quantity),0)
+              from order_items oi2
+              join orders o2 on o2.id = oi2.order_id
+              join tasks t2 on t2.order_id = o2.id
+             where oi2.part_id = parts.id
+               and oi2.item_type = "material"
+               and oi2.part_id is not null
+               and date(t2.day) >= ?
+               and (o2.status is null or o2.status <> "canceled")
+            ), 0) as available', [$today]
+            )
+            ->get();
+
+        // вернём карту: id => данные
+        return $parts->mapWithKeys(function ($p) {
+            return [
+                $p->id => [
+                    'available' => (int)($p->available ?? 0),
+                    'reserved'  => (int)($p->reserved ?? 0),
+                    'quantity'  => (int)$p->quantity,
+                    'price'     => (float)$p->price,
+                    'name'      => $p->name,
+                    'sku'       => $p->sku,
+                ],
+            ];
+        })->toArray();
+    }
+
     public function getStartSlotAttribute($start_time)
     {
         return $start_time ? $start_time->format('g:i A') : null;
@@ -560,31 +627,32 @@ class ManagerSchedule extends Component
         $this->loadTasks();
     }
 
+    private function minutes(string $t): int
+    {
+        [$h, $m] = array_map('intval', explode(':', substr($t, 0, 5)));
+        return $h * 60 + $m;
+    }
+    private function hhmm(int $mins): string
+    {
+        $mins = ($mins % (24 * 60) + (24 * 60)) % (24 * 60); // защита от отрицательных
+        return sprintf('%02d:%02d:00', intdiv($mins, 60), $mins % 60);
+    }
+
     public function moveTask(int $taskId, string $day, string $slot, ?int $empId = null): void
     {
-        if (strlen($slot) === 5) {
-            $slot .= ':00';
-        }
-
-        try {
-            $start = \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', "{$day} {$slot}");
-        } catch (\Exception $e) {
-            abort(422, 'Invalid slot time: ' . $slot);
-        }
+        if (strlen($slot) === 5) $slot .= ':00';
 
         $task = Task::with('technicians')->findOrFail($taskId);
         if (!$task) { return; }
 
-        $duration = \Carbon\Carbon::createFromFormat('H:i:s', $task->end_time)
-            ->diffInMinutes(\Carbon\Carbon::createFromFormat('H:i:s', $task->start_time));
-        $newStart = Carbon::createFromFormat('Y-m-d H:i:s', "{$day} {$slot}");
+        $duration = $this->minutes($task->end_time) - $this->minutes($task->start_time);
+        if ($duration <= 0) $duration = 30;
 
-        $task->day        = $start->toDateString();
-        $task->start_time = $start->format('H:i:s');
-        $task->end_time   = $start->clone()->addMinutes($duration)->format('H:i:s');
+        $task->day = $day;
+        $task->start_time = $slot;
+        $task->end_time = $this->hhmm($this->minutes($slot) + $duration);
 
         if ($empId && $task->technicians->doesntContain('id', $empId)) {
-            // задача теперь у нового теха (логика на ваш кейс)
             $task->technicians()->syncWithPivotValues([$empId], [
                 'status'     => 'new',
                 'assigned_at'=> now(),
@@ -593,73 +661,6 @@ class ManagerSchedule extends Component
 
         $task->save();
         $this->loadTasksForRange($task->start_time, $task->end_time);
-
-        /*$timeString = $task->start_time instanceof \Carbon\Carbon
-            ? $task->start_time->format('H:i:s')
-            : $task->start_time;
-        $taskStart = Carbon::createFromFormat('H:i:s', $timeString);*/
-
-        /*$taskEnd = $task->end_time instanceof \Carbon\Carbon
-            ? $task->end_time->copy()
-            : Carbon::createFromFormat('H:i:s', $task->end_time);
-
-        $totalMinutes = $taskStart->hour * 60 + $taskStart->minute;
-        $zeroMinutes = 6 * 60;
-        $diffMinutes = $totalMinutes - $zeroMinutes;
-        $oldIdx = intval($diffMinutes / 30);
-
-        // Если вдруг не нашли — выходим
-        if (!$oldIdx) {
-            $this->dispatch('unique-slot-error', [
-                'message' => 'Ошибка: не удалось определить начальный слот.'
-            ]);
-            return;
-        }
-
-        $maxIdx = count($this->timeSlots) - 1;
-        if ($newIdx > $maxIdx) {
-            $newIdx = $maxIdx;
-        }
-
-        $delta = $newIdx - $oldIdx;
-        $newStart = $taskStart->copy()->addMinutes($delta * 30);
-        $newEnd = $taskEnd->copy()->addMinutes($delta * 30);
-        $maxStart = Carbon::createFromTimeString('21:30:00');
-        $maxEnd = Carbon::createFromTimeString('22:00:00');
-
-        // Проверяем, не ушли ли за пределы дня
-        if ($newStart->greaterThan($maxStart) || $newEnd->greaterThan($maxEnd)) {
-            $this->dispatch('interval-overlap-error', [
-                'message' => 'Задача не может начинаться позже 21:30 или заканчиваться позже 22:00.',
-            ]);
-            return;
-        }
-
-        //Проверка пересечений (ваша существующая логика,
-        //но с whereHas('technicians') и без Carbon::parse)
-        $techId = $task->technicians->first()->id;
-        $overlap = Task::where('day', $task->day)
-            ->where('id', '!=', $task->id)
-            ->whereTime('start_time', '<', $newEnd->format('H:i:s'))
-            ->whereTime('end_time', '>', $newStart->format('H:i:s'))
-            ->whereHas('technicians', fn($q) => $q->where('technician_id', $techId))
-            ->exists();
-
-        if ($overlap) {
-            $this->dispatch('interval-overlap-error', [
-                'message' => 'Ошибка: новый интервал пересекается с другой задачей.'
-            ]);
-            return;
-        }
-
-        //Сохраняем в БД в формате H:i:s
-        $task->update([
-            'start_time' => $newStart->format('H:i:s'),
-            'end_time' => $newEnd->format('H:i:s'),
-        ]);
-
-        //Перезагружаем задачи для Alpine
-        $this->loadTasks();*/
     }
 
     public function deleteTask($taskId)

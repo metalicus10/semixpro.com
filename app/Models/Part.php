@@ -101,4 +101,28 @@ class Part extends Model
         return $this->hasMany(OrderItem::class, 'item_id')->where('item_type', 'part');
     }
 
+    public static function availableForDay(int $partId, ?string $day, int $managerId): int
+    {
+        // quantity – общее количество, reserved – сумма qty по order_items (material) в будущих тасках
+        $p = static::query()
+            ->where('id', $partId)
+            ->where('manager_id', $managerId)
+            ->selectRaw('quantity,
+            (select coalesce(sum(oi.quantity),0)
+             from order_items oi
+             join orders o on o.id=oi.order_id
+             join tasks t on t.order_id=o.id
+            where oi.part_id = parts.id
+              and oi.item_type = "material"
+              and oi.part_id is not null
+              and date(t.day) >= ?
+              and (o.status is null or o.status <> "canceled")
+            ) as reserved', [$day])
+            ->first();
+
+        $reserved  = (int)($p->reserved ?? 0);
+        $quantity  = (int)($p->quantity ?? 0);
+        return max(0, $quantity - $reserved);
+    }
+
 }
