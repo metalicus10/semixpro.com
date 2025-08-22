@@ -16,9 +16,13 @@ return new class extends Migration
             $table->foreignId('part_id')->constrained('parts'); // ID запчасти
             $table->foreignId('from_warehouse_id')->constrained('warehouses'); // Откуда
             $table->foreignId('to_warehouse_id')->constrained('warehouses'); // Куда
-            $table->integer('quantity'); // Количество
+            $table->foreignId('quantity'); // Количество
             $table->foreignId('technician_id')->constrained('users');
             $table->foreignId('manager_id')->constrained('users');
+            $table->index(['part_id']);
+            $table->index(['technician_id']);
+            $table->index(['from_warehouse_id', 'to_warehouse_id']);
+            $table->index(['manager_id']);
             $table->timestamps();
         });
     }

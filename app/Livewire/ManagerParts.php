@@ -15,6 +15,7 @@ use App\Models\Warehouse;
 use App\Models\TechnicianPart;
 use App\Models\TechnicianPartUsage;
 use App\Models\User;
+use App\Services\InventoryService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -444,7 +445,7 @@ class ManagerParts extends Component
         }
     }
 
-    public function sendParts()
+    public function sendParts(InventoryService $inventory)
     {
         $technicianIds = $this->selectedTechnicians;
 
@@ -453,7 +454,72 @@ class ManagerParts extends Component
             return;
         }
 
-        foreach ($this->selectedTechnicians as $technicianId) {
+        DB::transaction(function () use ($inventory) {
+            foreach ($this->selectedTechnicians as $technicianId) {
+
+                $technician = Technician::find($technicianId);
+                if (!$technician) {
+                    $this->dispatch('showNotification', 'error', "Техник с ID {$technicianId} не найден");
+                    continue;
+                }
+
+                $movedPartsNames = [];
+                $movedPartsIds   = [];
+
+                foreach ($this->partQuantities as $partId => $qty) {
+                    if ($qty <= 0) continue;
+
+                    $part = Part::find($partId);
+                    if (!$part) {
+                        $this->dispatch('showNotification', 'error', "Запчасть с ID {$partId} не найдена");
+                        continue;
+                    }
+
+                    // передача через сервис — тут все проверки, блокировки и лог движения
+                    $beforeQty = $part->quantity;  // чтобы понять, реально ли ушло
+                    $inventory->transferToTechnician($part, $technician, (int)$qty, $part->warehouse_id, null);
+
+                    if ($part->fresh()->quantity < $beforeQty) {
+                        $movedPartsNames[] = $part->name;
+                        $movedPartsIds[]   = $part->id;
+
+                        // уведомление о минимальном остатке — оставляем
+                        $min = Auth::user()->default_min_quantity;
+                        if ($part->fresh()->quantity <= $min) {
+                            \App\Models\Notification::create([
+                                'user_id' => auth()->id(),
+                                'type' => 'low_stock',
+                                'message' => "Осталось мало запчастей '{$part->name}' на складе!",
+                                'payload' => [
+                                    'part_ids' => [$part->id],
+                                    'warehouse_id' => $part->warehouse_id,
+                                ],
+                            ]);
+                        }
+                    }
+                }
+
+                if ($movedPartsIds) {
+                    \App\Models\Notification::create([
+                        'user_id' => $technician->user_id,
+                        'type'    => 'parts_received',
+                        'message' => "Вам переданы запчасти: '".implode(', ', $movedPartsNames)."'",
+                        'payload' => ['part_ids' => $movedPartsIds],
+                    ]);
+
+                    \App\Models\Notification::create([
+                        'user_id' => auth()->id(),
+                        'type'    => 'parts_moved',
+                        'message' => "Запчасти '".implode(', ', $movedPartsNames)."' были перемещены.",
+                        'payload' => ['part_ids' => $movedPartsIds],
+                    ]);
+
+                    $this->dispatch('notificationAdded')->to('global-notification');
+                }
+            }
+        });
+
+        /*foreach ($this->selectedTechnicians as $technicianId) {
             // Находим техника по идентификатору
             $technician = Technician::find($technicianId);
 
@@ -465,7 +531,6 @@ class ManagerParts extends Component
             $movedPartsNames = [];
             $movedPartsIds = [];
 
-            // Проверяем, есть ли выбранные запчасти с указанными количествами
             foreach ($this->partQuantities as $partId => $quantity) {
                 $part = Part::find($partId);
 
@@ -475,8 +540,6 @@ class ManagerParts extends Component
                 }
 
                 $quantity = $this->partQuantities[$partId] ?? 0;
-
-                // Убедимся, что запрашиваемое количество не превышает количество на складе
                 if ($quantity > $part->quantity) {
                     $quantity = $part->quantity;
                 }
@@ -485,18 +548,15 @@ class ManagerParts extends Component
                     continue;
                 }
 
-                // Уменьшаем количество запчастей на складе
                 $part->update(['quantity' => $part->quantity - $quantity]);
                 $movedPartsNames[] = $part->name;
                 $movedPartsIds[] = $part->id;
 
-                // Проверяем, есть ли у техника уже эта запчасть
                 $technicianPart = TechnicianPart::where('technician_id', $technician->user_id)
                     ->where('part_id', $part->id)
                     ->first();
 
                 if ($technicianPart) {
-                    // Увеличиваем количество запчастей у техника и общее количество переданных
                     $technicianPart->increment('quantity', $quantity);
                     $technicianPart->increment('total_transferred', $quantity);
                 } else {
@@ -527,7 +587,6 @@ class ManagerParts extends Component
                 }
             }
             if (count($movedPartsIds)) {
-                // Записать уведомление технику
                 \App\Models\Notification::create([
                     'user_id' => $technician->user_id,
                     'type'    => 'parts_received',
@@ -548,9 +607,7 @@ class ManagerParts extends Component
                 ]);
                 $this->dispatch('notificationAdded')->to('global-notification');
             }
-        }
-
-        // Закрываем модальное окно и сбрасываем выбранные значения
+        }*/
         $this->dispatch('modal-close');
         $this->dispatch('showNotification', 'success', 'Запчасти успешно переданы выбранным техникам');
         $this->reset(['selectedTechnicians', 'partQuantities', 'selectedPartId']);

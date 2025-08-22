@@ -18,9 +18,10 @@ return new class extends Migration
             $table->foreignId('part_id')->constrained('parts');
             $table->foreignId('nomenclature_id')->constrained('nomenclatures');
             $table->foreignId('warehouse_id')->constrained('warehouses');
-
             $table->integer('quantity');
             $table->integer('total_transferred')->default(0);
+            $table->unique(['technician_id', 'part_id']);
+            $table->index(['technician_id']);
             $table->timestamps();
         });
     }

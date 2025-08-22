@@ -1577,6 +1577,7 @@
             addItem(type) {
                 this.jobModalForm.items.push({
                     id: Date.now() + Math.random(),
+                    key: Date.now() + Math.random(),
                     db_id: null,
                     name: '',
                     qty: 1,

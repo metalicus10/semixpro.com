@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('message')->nullable();
             $table->timestamp('start_time');
             $table->timestamp('end_time');
+            $table->string('customer_signature_path')->nullable();
+            $table->timestamp('closed_at')->nullable();
             $table->timestamps();
         });
     }
