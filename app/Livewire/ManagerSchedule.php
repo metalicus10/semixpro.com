@@ -10,8 +10,9 @@ use App\Models\Task;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
@@ -25,8 +26,14 @@ class ManagerSchedule extends Component
     public $customerResults = [];
 
     public $tasks;
+    public $weekTasks;
     public array $days = [];
     public array $timeSlots = [];
+    public array $defaultTimeSlots = [];
+    public int $timeSlotsBaseCount = 0;
+    public bool $isLoading = false;
+    public string $dayStart = '06:00';
+    public string $dayEnd   = '22:00';
 
     public $jobModalForm = [
         'schedule_from' => '',
@@ -73,6 +80,7 @@ class ManagerSchedule extends Component
         $end = Carbon::createFromTimeString('22:00');
         while ($start < $end) {
             $this->timeSlots[] = $start->format('g:i A');
+            $this->defaultTimeSlots[] = $start->format('g:i A');
             $start->addMinutes(30);
         }
         $this->timeSlots[] = $end->format('g:i A');
@@ -95,7 +103,7 @@ class ManagerSchedule extends Component
 
         $tasks = Task::query()
             ->with([
-                'customer:id,name,email,phone,address',
+                'customer:id,name,email,phone,address,address_formatted,address_place_id,address_lat,address_lng',
                 'order.items',
                 'technicians' => function ($q) {
                     $q->withPivot(['status', 'assigned_at']);
@@ -138,7 +146,9 @@ class ManagerSchedule extends Component
                         'name'    => $task->customer->name,
                         'email'   => $task->customer->email,
                         'phone'   => $task->customer->phone,
-                        'address' => $task->customer->address,
+                        'address' => $task->customer->address_formatted,
+                        'lat'     => $task->customer->address_lat,
+                        'lng'     => $task->customer->address_lng,
                     ] : null,
                     'status'      => $tech->pivot->status,
                     'assigned_at' => $assignedAt,
@@ -154,34 +164,95 @@ class ManagerSchedule extends Component
         return $mapped;
     }
 
+    /**
+     * Поиск адресов: возвращаем массив {id, label, lat, lng}
+     */
+    public function searchAddress(string $query): array
+    {
+        $q = trim($query);
+        if (mb_strlen($q) < 4) return [];
+
+        $cacheKey = 'nom:'.$q;
+
+        return Cache::remember($cacheKey, now()->addMinutes(10), function () use ($q) {
+            $resp = Http::withHeaders([
+                'User-Agent' => config('app.name').' ('.config('mail.from.address').')',
+            ])->get('https://nominatim.openstreetmap.org/search', [
+                'q'               => $q,
+                'format'          => 'jsonv2',
+                'limit'           => 7,
+                'addressdetails'  => 1,
+            ]);
+
+            if (!$resp->ok()) return [];
+
+            return collect($resp->json())->map(function ($i) {
+                return [
+                    'id'    => (string)($i['place_id'] ?? ''),
+                    'label' => (string)($i['display_name'] ?? ''),
+                    'lat'   => isset($i['lat']) ? (float)$i['lat'] : null,
+                    'lng'   => isset($i['lon']) ? (float)$i['lon'] : null,
+                ];
+            })->filter(fn($x) => $x['id'] && $x['lat'] && $x['lng'])->values()->all();
+        });
+    }
+
     #[On('createCustomer')]
-    public function createCustomer($data)
+    public function createCustomer(array $data)
     {
         try {
             $validated = Validator::make($data, [
-                'name' => 'required|string|max:191',
-                'email' => 'nullable|email|max:191|unique:customers,email',
-                'phone' => 'required|string|max:25|unique:customers,phone',
-                'address' => 'nullable|string|max:191',
+                'name'                => ['required','string','max:191'],
+                'email'               => ['required','email','max:191','unique:customers,email'],
+                'phone'               => ['required','string','max:25','unique:customers,phone'],
+                'address_formatted'   => ['nullable','string','max:191'],
+                'address_place_id'    => ['nullable','string','max:191'],
+                'address_lat'         => ['nullable','numeric','between:-90,90'],
+                'address_lng'         => ['nullable','numeric','between:-180,180'],
             ])->after(function ($validator) use ($data) {
-                if (empty($data['phone'])) {
+                /*if (empty($data['phone'])) {
                     $validator->errors()->add('contact', 'Phone is required.');
+                }*/
+                $hasAnyAddress = !empty($data['address_formatted']) ||
+                    !empty($data['address_place_id']) ||
+                    !empty($data['address_lat']) ||
+                    !empty($data['address_lng']);
+                if ($hasAnyAddress) {
+                    if (empty($data['address_place_id']) ||
+                        empty($data['address_lat']) ||
+                        empty($data['address_lng'])) {
+                        $validator->errors()->add('address', 'Выберите адрес из выпадающего списка.');
+                    }
                 }
             })->validate();
 
-            $customer = Customer::create($validated);
+            $customer = Customer::create([
+                'name'               => $validated['name'],
+                'email'              => $validated['email'] ?? null,
+                'phone'              => $validated['phone'],
+                'address'            => $validated['address'] ?? null,
+                'address_formatted'  => $validated['address_formatted'] ?? null,
+                'address_place_id'   => $validated['address_place_id'] ?? null,
+                'address_lat'        => $validated['address_lat'] ?? null,
+                'address_lng'        => $validated['address_lng'] ?? null,
+            ]);
 
             $this->dispatch('customer-created', [
                 'id' => $customer->id,
                 'name' => $customer->name,
                 'email' => $customer->email,
                 'phone' => $customer->phone,
-                'address' => $customer->address,
+                'address' => $customer->address_formatted,
+                'lat' => $customer->address_lat,
+                'lng' => $customer->address_lng,
             ]);
         } catch (ValidationException $e) {
-            $this->dispatch('customer-validation-error', [
-                'errors' => $e->errors(),
-            ]);
+            $errorsString = '<ul class="list-disc list-inside">';
+            foreach ($e->errors() as $error){
+                $errorsString .= '<li>' . $error[0] . '</li>';
+            }
+            $errorsString .= '</ul>';
+            $this->dispatch('showNotification', 'error', $errorsString);
         }
     }
 
@@ -225,29 +296,30 @@ class ManagerSchedule extends Component
             'schedule_to_date' => 'required|date',
             'schedule_from_time12' => 'required|date_format:H:i',
             'schedule_to_time12' => 'required|date_format:H:i',
-            'items.*.qty' => ['required','integer','min:1',
-                function ($attribute, $value, $fail) use ($data) {
-                    $index = (int) explode('.', $attribute)[1];     // items.3.qty -> 3
-                    $item  = $data['items'][$index] ?? null;
+            'items.*.qty' => ['required','integer','min:1', function($attribute, $value, $fail) use ($data) {
+                $index  = (int) explode('.', $attribute)[1];
+                $item   = $data['items'][$index] ?? null;
 
-                    if (($item['type'] ?? '') !== 'material') return;
+                if (($item['type'] ?? '') !== 'material') return;
 
-                    // id запчасти: если редактируем линк – берите part_id, иначе id
-                    $partId = $item['id'] ?? $item['part_id'] ?? null;
-                    if (!$partId) return;
+                $partId = (int) ($item['part_id'] ?? $item['id'] ?? 0);
+                if (!$partId) return; // отсутствует ID – пропускаем, чтобы не валиться
 
-                    // дата заказа (возьмите начало периода)
-                    $day = $data['schedule_from_date'] ?? $data['schedule_to_date'] ?? null;
+                // Дата начала периода – то, что уходит в БД как t.day
+                $day = \Carbon\Carbon::parse(
+                    $data['schedule_from_date'] ?? $data['schedule_to_date'] ?? now()
+                )->toDateString();
 
-                    // функция, считающая "available" так же, как в searchParts
-                    $available = Part::availableForDay($partId, $day, $data['manager_id'] ?? auth()->id());
+                $managerId = (int) ($data['manager_id'] ?? auth()->id());
+                $excludeOrderId = !empty($data['order_id']) ? (int)$data['order_id'] : null;
 
-                    if ((int)$value > (int)$available) {
-                        $name = $item['name'] ?? 'Material';
-                        $fail("Only {$available} left for {$name} on {$day}.");
-                    }
+                $available = Part::availableForDay($partId, $day, $managerId, $excludeOrderId);
+
+                if ((int)$value > $available) {
+                    $name = $item['name'] ?? 'Material';
+                    $fail("Only {$available} left for {$name} on {$day}.");
                 }
-            ],
+            }],
         ]);
 
         if ($validator->fails()) {
@@ -406,7 +478,7 @@ class ManagerSchedule extends Component
 
     protected function loadTasks()
     {
-        $this->tasks = Task::with('technicians', 'order.items', 'order.items.part')->get()->flatMap(function (Task $task) {
+        $this->tasks = Task::with('technicians', 'order.items', 'order.items.part', 'customer')->get()->flatMap(function (Task $task) {
             return $task->technicians->map(fn($tech) => [
                 'id' => $task->id,
                 'order_id' => $task->order->id,
@@ -451,6 +523,79 @@ class ManagerSchedule extends Component
                 })->values(),
             ];
         });
+        $maxLanes = 1;
+        foreach ($this->employees as $emp) {
+            $lanes = $this->computeLanesCount($emp['tasks']->toArray());
+            if ($lanes > $maxLanes) {
+                $maxLanes = $lanes;
+            }
+        }
+        $this->timeSlots = $this->buildTimeSlots($this->dayStart, $this->dayEnd, 30, $maxLanes);
+    }
+
+    /**
+     * Жадное раскладывание интервалов по дорожкам (как в вашем JS buildLanes)
+     * @param array<int, array{start_time:string,end_time:string}> $tasks
+     */
+    protected function computeLanesCount(array $tasks): int
+    {
+        // Сортируем по началу
+        usort($tasks, function ($a, $b) {
+            return strcmp($a['start_time'], $b['start_time']);
+        });
+
+        // В lanes храним «время окончания» последней задачи в каждой дорожке
+        $lanesEnd = [];
+
+        foreach ($tasks as $t) {
+            $start = Carbon::createFromTimeString($t['start_time']);
+            $end   = Carbon::createFromTimeString($t['end_time']);
+
+            $placed = false;
+            foreach ($lanesEnd as $i => $endTime) {
+                if ($endTime->lte($start)) {
+                    // кладём в существующую дорожку
+                    $lanesEnd[$i] = $end;
+                    $placed = true;
+                    break;
+                }
+            }
+            if (!$placed) {
+                // создаём новую дорожку
+                $lanesEnd[] = $end;
+            }
+        }
+
+        return max(1, count($lanesEnd));
+    }
+
+    /**
+     * Строим слоты: шаг 30 минут, минимум 32 * lanesCount
+     */
+    protected function buildTimeSlots(string $startHm, string $endHm, int $stepMin, int $lanesCount): array
+    {
+        $start = Carbon::createFromTimeString($startHm);
+        $end   = Carbon::createFromTimeString($endHm);
+
+        $slots = [];
+        $cursor = $start->copy();
+        while ($cursor < $end) {
+            $slots[] = $cursor->format('g:i A'); // 6:00 AM, 6:15 AM, ...
+            $cursor->addMinutes($stepMin);
+        }
+        // при желании можете оставить финальную метку конца дня:
+        // $slots[] = $end->format('g:i A');
+
+        $minPerLane = 32;
+        $minTotal = $minPerLane * max(1, $lanesCount);
+
+        $base = $slots;
+        $this->timeSlotsBaseCount = count($base);
+        for ($i = count($slots); $i < $minTotal; $i++) {
+            $slots[] = $base[$i % $this->timeSlotsBaseCount];
+        }
+
+        return $slots;
     }
 
     public function searchParts(string $q): array
@@ -460,7 +605,7 @@ class ManagerSchedule extends Component
 
         $today = now()->toDateString();
 
-        $parts = \App\Models\Part::query()
+        $parts = Part::query()
             // обязательно ограничиваем по менеджеру
             ->where('manager_id', Auth::id())
 

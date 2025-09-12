@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Part extends Model
 {
@@ -101,10 +103,39 @@ class Part extends Model
         return $this->hasMany(OrderItem::class, 'item_id')->where('item_type', 'part');
     }
 
-    public static function availableForDay(int $partId, ?string $day, int $managerId): int
+    public static function availableForDay(int $partId, string|\DateTimeInterface $day, int $managerId, ?int $excludeOrderId = null): int
     {
+        $day = Carbon::parse($day)->toDateString();
+
+        $stock = (int) static::query()
+            ->where('id', $partId)
+            ->where('manager_id', $managerId)
+            ->value('quantity');
+
+        $reservedQ = DB::table('order_items as oi')
+            ->join('orders as o', 'o.id', '=', 'oi.order_id')
+            ->join('tasks  as t', 't.order_id', '=', 'o.id')
+            ->where('oi.item_type', 'material')
+            ->where('oi.part_id', $partId)
+            ->whereDate('t.day', '>=', $day);
+
+        if ($excludeOrderId) {
+            $reservedQ->where('oi.order_id', '!=', $excludeOrderId);
+        }
+
+        $reserved = (int) $reservedQ->sum('oi.quantity');
+
+        /*Log::debug('availableForDay', [
+            'partId'    => $partId,
+            'managerId' => $managerId,
+            'day'       => $day,
+            'stock'     => $stock,
+            'reserved'  => $reserved,
+            'exclude'   => $excludeOrderId,
+        ]);*/
+
         // quantity – общее количество, reserved – сумма qty по order_items (material) в будущих тасках
-        $p = static::query()
+        /*$p = static::query()
             ->where('id', $partId)
             ->where('manager_id', $managerId)
             ->selectRaw('quantity,
@@ -121,8 +152,9 @@ class Part extends Model
             ->first();
 
         $reserved  = (int)($p->reserved ?? 0);
-        $quantity  = (int)($p->quantity ?? 0);
-        return max(0, $quantity - $reserved);
+        $quantity  = (int)($p->quantity ?? 0);*/
+        //return max(0, $quantity - $reserved);
+        return max(0, $stock - $reserved);
     }
 
 }

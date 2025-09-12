@@ -7,7 +7,7 @@
     class="overflow-x-auto bg-white text-gray-800 border"
 
 >
-    <div class="sticky top-0 z-30 flex items-center justify-between px-3 py-2 border-b">
+    <div class="sticky top-0 z-5 flex items-center justify-between px-3 py-2 border-b">
         <div class="flex items-center gap-2">
             <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
                     @click="moveWeek(-1)">←
@@ -21,113 +21,163 @@
             <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'This week' : ''"></span>
         </div>
 
-        <!-- Диапазон дат недели -->
-        <div class="text-sm font-medium text-gray-700"
-             x-text="days.length ? (days[0].label + ' — ' + days[6].label) : ''"></div>
-    </div>
-
-    <div class="overflow-x-auto pb-[10px]">
-        {{-- Заголовок --}}
-        <div class="inline-flex items-center border-b">
-            {{-- Первая узкая ячейка для таймзоны или иконки --}}
-            <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
-                GMT -04
-            </div>
-            {{-- Дни недели с часами --}}
-            <div class="flex-1 inline-flex">
-                <template x-for="day in days" :key="day.date">
-                    <div class="flex flex-col">
-                        {{-- Дата --}}
-                        <div
-                            class="h-5 px-2 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
-                            <span x-text="day.label"></span>
-                        </div>
-                        {{-- Часы --}}
-                        <div class="flex">
-                            <template x-for="(slotLabel, idx) in timeSlots" :key="slotLabel">
-                                <div
-                                    class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
-                                    <span x-text="slotLabel"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-                </template>
-            </div>
+        <div class="flex items-center gap-2 mb-2">
+            <button @click="showCalendar"
+                    x-bind:class="mode === 'schedule' ? 'bg-blue-600 text-white' : 'bg-gray-100'"
+                    class="px-3 py-1 rounded"
+            >
+                <span class="ms-2">Calendar</span>
+            </button>
+            <button @click="showMap"
+                    x-bind:class="mode === 'map' ? 'bg-blue-600 text-white' : 'bg-gray-100'"
+                    class="px-3 py-1 rounded"
+            >
+                <span class="ms-2">Map</span>
+            </button>
         </div>
 
-        {{-- Строки сотрудников --}}
-        <template x-for="employee in employees" :key="employee.id">
-            <div class="inline-flex items-start border-b group" :data-emp="employee.id">
-                {{-- Колонка с аватаром и именем --}}
-                <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
-                    <img
-                        :src="employee.avatar"
-                        alt=""
-                        class="w-8 h-8 rounded-full object-cover"
-                    />
-                    <span class="text-sm font-medium truncate" x-text="employee.name"></span>
-                </div>
+        <!-- Диапазон дат недели -->
+        <div class="text-sm font-medium text-gray-700"
+             x-text="days.length ? (days[0].label + ' — ' + days[6].label) : ''">
+        </div>
+    </div>
 
-                {{-- Семь дней --}}
-                <div class="flex-1 inline-flex relative">
+    <div x-show="mode==='schedule'">
+        <div class="overflow-x-auto pb-[10px]">
+            <!-- Глобальный оверлей спиннера -->
+            <div x-show="isLoading"
+                 x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"
+                     aria-label="Saving..."></div>
+            </div>
+            {{-- Заголовок --}}
+            <div class="inline-flex items-center border-b border-b-gray-400">
+                {{-- Первая узкая ячейка для таймзоны или иконки --}}
+                <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
+                    GMT -04
+                </div>
+                {{-- Дни недели с часами --}}
+                <div class="flex-1 inline-flex border-l-2 border-l-gray-400">
                     <template x-for="day in days" :key="day.date">
-                        <div class="relative flex-shrink-0" :style="`width:${dayWidth}px`"
-                             :class="{ 'day-left-border': day !== 0 }" :data-day="day.date" :data-emp="employee.id">
-                            {{-- Фоновые ячейки часов --}}
+                        <div class="flex flex-col">
+                            {{-- Дата --}}
+                            <div
+                                class="h-5 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
+                                <span x-text="day.label"></span>
+                            </div>
+                            {{-- Часы --}}
                             <div class="flex">
-                                <template x-for="(_, idx) in timeSlots" :key="idx">
+                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx">
                                     <div
-                                        class="w-[30px] h-16 flex-shrink-0 border-r border-r-gray-300"
-                                        :class="{
-                                        'bg-blue-100': isSelected(employee.id, day, idx),
-                                        'bg-gray-200 pointer-events-none': isPast(day, idx)
-                                    }"
-                                        @mousedown.prevent="$event.button === 0  && !isPast(day, idx) && startSelection(employee.id, day, idx)"
-                                        @mouseenter.prevent="$event.buttons === 1  && !isPast(day, idx) && dragSelection(employee.id, day, idx)"
-                                        @contextmenu.prevent="onContextMenu($event, employee, day, idx)"
-                                    ></div>
+                                        class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
+                                        <span x-text="slotLabel"></span>
+                                    </div>
                                 </template>
                             </div>
-
-                            {{-- Задачи --}}
-                            <template x-for="task in dayTasks(employee.id, day)" :key="task.id"
-                            >
-                                <div
-                                    class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
-                                    :class="{
-                                        'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
-                                        'cursor-move': !isTaskPast(task)
-                                    }"
-                                    @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
-                                    @contextmenu.prevent="
-                                        contextMenu.x = $event.clientX;
-                                        contextMenu.y = $event.clientY;
-                                        contextMenu.task = task;
-
-                                        const col = $event.currentTarget.closest('[data-day]');
-                                        sel.day = col ? col.dataset.day : null;
-                                        const row = $event.currentTarget.closest('[data-emp]');
-                                        sel.emp = row ? +row.dataset.emp : null;
-
-                                        contextMenu.visible = true;
-                                    "
-                                     :style="drag.task && drag.task.id === task.id
-                                        ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65;`
-                                        : taskStyle(task)"
-                                >
-                                    <div class="flex flex-col">
-                                        <span class="truncate" x-text="task.client.name"></span>
-                                        <span class="whitespace-wrap"
-                                              x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
-                                    </div>
-                                </div>
-                            </template>
                         </div>
                     </template>
                 </div>
             </div>
-        </template>
+
+            {{-- Строки сотрудников --}}
+            <template x-for="employee in employees" :key="employee.id">
+                <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
+                    {{-- Колонка с аватаром и именем --}}
+                    <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
+                        <img
+                            :src="employee.avatar"
+                            alt=""
+                            class="w-8 h-8 rounded-full object-cover"
+                        />
+                        <span class="text-sm font-medium truncate" x-text="employee.name"></span>
+                    </div>
+
+                    {{-- Семь дней --}}
+                    <div class="flex-1 inline-flex relative" wire:ignore>
+                        <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
+                            <div class="relative flex-shrink-0"
+                                 :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
+                                 :class="{ 'day-left-border': day !== 0 }" :data-day="day.date" :data-emp="employee.id">
+                                {{-- Фоновые ячейки часов --}}
+                                <div class="grid"
+                                     :style="`grid-template-columns: repeat(${wrapCols}, ${slotWidthPx}px);`">
+                                    <template x-for="(slotIdx, i) in flatSlots(employee.id, day)"
+                                              :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`">
+                                        <div x-data="{ slotIdx: slotIdx }"
+                                             :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`"
+                                             wire:key="cell-${employee.id}-${day.date}-${i}-${lanesVersion}"
+                                             class="h-15 border-r border-r-gray-300"
+                                             :class="{
+                                                  'bg-blue-100': isSelected(employee.id, day, slotIdx),
+                                                  'bg-gray-100 pointer-events-none': isPast(day, slotIdx),
+                                                }"
+                                             @mousedown.prevent="$event.button === 0
+                                                  && !isPast(day, slotIdx)
+                                                  && startSelection(employee.id, day, slotIdx)"
+                                             @mouseenter.prevent="$event.buttons === 1
+                                                  && !isPast(day, slotIdx)
+                                                  && !dragSelection(employee.id, day, slotIdx)"
+                                             @contextmenu.prevent="onContextMenu($event, employee, day, slotIdx)">
+                                        </div>
+                                    </template>
+                                </div>
+
+                                {{-- Задачи --}}
+                                <template x-for="task in dayTasks(employee.id, day)" :key="task.id">
+                                    <div
+                                        class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
+                                        :class="{
+                                                'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
+                                                'cursor-pointer': !isTaskPast(task)
+                                            }"
+                                        @click.stop="onTaskClick(task, $event)"
+                                        @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                        @contextmenu.prevent.stop="
+                                            suppressTaskClick = true;
+                                                contextMenu.x = $event.clientX;
+                                                contextMenu.y = $event.clientY;
+                                                contextMenu.task = task;
+
+                                                const col = $event.currentTarget.closest('[data-day]');
+                                                sel.day = col ? col.dataset.day : null;
+                                                const row = $event.currentTarget.closest('[data-emp]');
+                                                sel.emp = row ? +row.dataset.emp : null;
+
+                                                contextMenu.visible = true;
+                                        "
+                                        :style="drag.task && drag.task.id === task.id
+                                                ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65; top:${drag.previewY}px; height:${rowHeightPx}px;`
+                                                : taskStyle(task)"
+                                    >
+                                        <div class="flex flex-col">
+                                            <span class="truncate" x-text="task.client.name"></span>
+                                            <span class="whitespace-wrap"
+                                                  x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <div x-show="mode === 'map'" class="h-full rounded border overflow-hidden"
+         x-init="$watch('mode', v => { if (v === 'map') $nextTick(() => window.dispatchEvent(new Event('map:shown'))) })" id="jobsMap">
+        <div class="relative h-screen">
+            {{-- Спиннер --}}
+            <div x-show="isLoading"
+                 x-cloak
+                 class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                <div class="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
+            </div>
+
+            {{-- Карта --}}
+            <div wire:ignore class="h-screen rounded border" id="jobsMap" x-transition></div>
+        </div>
     </div>
 
     <!-- Контекстное меню таймлайна -->
@@ -169,18 +219,18 @@
         <button
             class="block w-full px-4 py-2 hover:bg-gray-100 text-left"
             @click="
-                contextMenu.visible = false;
-                openJobModal('edit', sel, contextMenu);
-            "
+                        contextMenu.visible = false;
+                        openJobModal('edit', sel, contextMenu);
+                    "
         >Изменить
         </button>
         <button
             class="block w-full px-4 py-2 hover:bg-gray-100 text-left text-red-600"
             @click="
-                contextMenu.visible = false;
-                taskToDelete = contextMenu.task;
-                confirmDeleteOpen = true;
-            "
+                        contextMenu.visible = false;
+                        taskToDelete = contextMenu.task;
+                        confirmDeleteOpen = true;
+                    "
         >Удалить
         </button>
     </div>
@@ -203,11 +253,11 @@
     </div>
 
     <!-- AddCustomerModal -->
-    <div
-        x-show="showAddCustomerModal"
-        x-transition
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-        style="display: none;"
+    <div x-data="addCustomer()" x-on:customer-validation-error.window="onErrors($event.detail.errors)"
+         x-show="showAddCustomerModal"
+         x-transition
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+         style="display: none;"
     >
         <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
              @click.away="showAddCustomerModal = false">
@@ -217,39 +267,65 @@
                         class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;
                 </button>
             </div>
-            <form @submit.prevent="saveNewCustomer">
-                <template x-if="customerError">
-                    <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
-                </template>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Name*</label>
-                    <input type="text" x-model="jobModalForm.new_customer.name" required
-                           class="w-full border rounded px-3 py-2 text-sm">
+            <template x-if="customerError">
+                <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
+            </template>
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Name*</label>
+                <input type="text" x-model="name" required
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Email</label>
+                <input type="email" x-model="email" required
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Phone</label>
+                <input type="text" x-model="phone" required
+                       class="w-full border rounded px-3 py-2 text-sm">
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-medium mb-1">Address</label>
+                <div class="relative">
+                    <input type="text"
+                           class="w-full border rounded px-3 py-2 text-sm"
+                           placeholder="Start typing address…"
+                           x-model="query"
+                           @input.debounce.400ms="findSuggestions"
+                           @focus="open = true"
+                           @keydown.escape="open = false; resetSelection()"
+                           @blur="setTimeout(()=>open=false,150)">
+
+                    <!-- dropdown -->
+                    <template x-if="open && suggestions.length">
+                        <ul class="absolute z-20 left-0 right-0 bg-white border mt-1 rounded shadow max-h-60 overflow-auto">
+                            <template x-for="(s, i) in suggestions" :key="s.id">
+                                <li @mousedown.prevent="selectSuggestion(s)"
+                                    class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                    x-text="s.label"></li>
+                            </template>
+                        </ul>
+                    </template>
                 </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Email</label>
-                    <input type="email" x-model="jobModalForm.new_customer.email"
-                           class="w-full border rounded px-3 py-2 text-sm">
-                </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Phone</label>
-                    <input type="text" x-model="jobModalForm.new_customer.phone"
-                           class="w-full border rounded px-3 py-2 text-sm">
-                </div>
-                <div class="mb-3">
-                    <label class="block text-sm font-medium mb-1">Address</label>
-                    <input type="text" x-model="jobModalForm.new_customer.address"
-                           class="w-full border rounded px-3 py-2 text-sm">
-                </div>
-                <div class="flex justify-end gap-2 mt-4">
-                    <button type="button" @click="showAddCustomerModal = false"
-                            class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
-                    </button>
-                    <button type="submit" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                        Add
-                    </button>
-                </div>
-            </form>
+
+                <!-- скрытые поля, которые пойдут в createCustomer -->
+                <input type="hidden" x-model="selected.id">
+                <input type="hidden" x-model="selected.name">
+                <input type="hidden" x-model="selected.email">
+                <input type="hidden" x-model="selected.phone">
+                <input type="hidden" x-model="selected.lat">
+                <input type="hidden" x-model="selected.lng">
+            </div>
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" @click="showAddCustomerModal = false"
+                        class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
+                </button>
+                <button type="button" @click="submit"
+                        class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Add
+                </button>
+            </div>
         </div>
     </div>
 
@@ -312,28 +388,28 @@
                                            class="border rounded px-2 py-1">
                                     <div
                                         x-data="{
-                                                show: false,
-                                                hour: 9,
-                                                minute: '00',
-                                                ampm: 'AM',
-                                                get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
-                                                setValue(h, m, a) {
-                                                    this.hour = h;
-                                                    this.minute = m;
-                                                    this.ampm = a;
-                                                    this.show = false;
-                                                    $dispatch('time-changed', { field: 'from', value: this.value });
-                                                },
-                                                setFromExternal(val) {
-                                                    if (!val) return;
-                                                    let [time, ampm] = val.split(' ');
-                                                    let [h, m] = time.split(':');
-                                                    this.hour = parseInt(h);
-                                                    this.minute = m;
-                                                    this.ampm = ampm || 'AM';
-                                                }
-                                            }"
-                                        x-init="setFromExternal(jobModalForm.schedule_from_time12)"
+                                                        show: false,
+                                                        hour: 9,
+                                                        minute: '00',
+                                                        ampm: 'AM',
+                                                        get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                        setValue(h, m, a) {
+                                                            this.hour = h;
+                                                            this.minute = m;
+                                                            this.ampm = a;
+                                                            this.show = false;
+                                                            $dispatch('time-changed', { field: 'from', value: this.value });
+                                                        },
+                                                        setFromExternal(val) {
+                                                            if (!val) return;
+                                                            let [time, ampm] = val.split(' ');
+                                                            let [h, m] = time.split(':');
+                                                            this.hour = parseInt(h);
+                                                            this.minute = m;
+                                                            this.ampm = ampm || 'AM';
+                                                        }
+                                                    }"
+
                                         x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
                                         @time-changed.window="updateTime($event.detail)"
                                         class="relative w-36"
@@ -393,29 +469,29 @@
                                            class="border rounded px-2 py-1">
                                     <div
                                         x-data="{
-                                                show: false,
-                                                hour: 9,
-                                                minute: '00',
-                                                ampm: 'AM',
-                                                get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
-                                                setValue(h, m, a) {
-                                                    this.hour = h;
-                                                    this.minute = m;
-                                                    this.ampm = a;
-                                                    this.show = false;
-                                                    // Если нужна двусторонняя связь с jobModalForm:
-                                                    $dispatch('time-changed', { field: 'to', value: this.value });
-                                                },
-                                                setFromExternal(val) {
-                                                    if (!val) return;
-                                                    let [time, ampm] = val.split(' ');
-                                                    let [h, m] = time.split(':');
-                                                    this.hour = parseInt(h);
-                                                    this.minute = m;
-                                                    this.ampm = ampm || 'AM';
-                                                }
-                                            }"
-                                        x-init="setFromExternal(jobModalForm.schedule_to_time12)"
+                                                        show: false,
+                                                        hour: 9,
+                                                        minute: '00',
+                                                        ampm: 'AM',
+                                                        get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                        setValue(h, m, a) {
+                                                            this.hour = h;
+                                                            this.minute = m;
+                                                            this.ampm = a;
+                                                            this.show = false;
+                                                            // Если нужна двусторонняя связь с jobModalForm:
+                                                            $dispatch('time-changed', { field: 'to', value: this.value });
+                                                        },
+                                                        setFromExternal(val) {
+                                                            if (!val) return;
+                                                            let [time, ampm] = val.split(' ');
+                                                            let [h, m] = time.split(':');
+                                                            this.hour = parseInt(h);
+                                                            this.minute = m;
+                                                            this.ampm = ampm || 'AM';
+                                                        }
+                                                    }"
+
                                         x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
                                         @time-changed.window="updateTime($event.detail)"
                                         class="relative w-36"
@@ -518,124 +594,124 @@
                 <div class="w-full lg:w-2/3 space-y-6">
                     <div class="border p-4 rounded"
                          x-data="{
-                            money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
-                            openList(it){
-                                if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
-                                this.sel.id = it.id;
-                                this.jobModalForm.items.forEach(x => { if (x.search) x.search.open = (x === it); });
-                                it.search.open = true;
-                            },
+                                    money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
+                                    openList(it){
+                                        if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
+                                        this.sel.id = it.id;
+                                        this.jobModalForm.items.forEach(x => { if (x.search) x.search.open = (x === it); });
+                                        it.search.open = true;
+                                    },
 
-                            hideList(it) {
-                                it.search.open = false;
-                                it.search.hi = -1;
-                            },
+                                    hideList(it) {
+                                        it.search.open = false;
+                                        it.search.hi = -1;
+                                    },
 
-                            deferClose(it) {
-                                clearTimeout(it.search._t);
-                                it.search._t = setTimeout(() => { it.search.open = false; }, 120);
-                            },
+                                    deferClose(it) {
+                                        clearTimeout(it.search._t);
+                                        it.search._t = setTimeout(() => { it.search.open = false; }, 120);
+                                    },
 
-                            async autocomplete(it){
-                                if (!it) it = this.getSelItem();
-                                if (!it) return;
-                                if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
-                                const q = (it.name || '').trim();
-                                it.search.q = q;
-                                it.search.loading = true;
-                                it.search.open = true;
-                                it.search.hi = -1;
+                                    async autocomplete(it){
+                                        if (!it) it = this.getSelItem();
+                                        if (!it) return;
+                                        if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
+                                        const q = (it.name || '').trim();
+                                        it.search.q = q;
+                                        it.search.loading = true;
+                                        it.search.open = true;
+                                        it.search.hi = -1;
 
-                                if (q.length < 2) { it.search.results = []; it.search.loading = false; it.search.open = false; return; }
-                                try {
-                                    const res = await $wire.call('searchParts', q);
-                                    it.search.results = Array.isArray(res) ? res : [];
-                                } catch(e){
-                                    it.search.results = [];
-                                    console.error(e);
-                                } finally {
-                                    it.search.loading = false;
-                                }
-                            },
+                                        if (q.length < 2) { it.search.results = []; it.search.loading = false; it.search.open = false; return; }
+                                        try {
+                                            const res = await $wire.call('searchParts', q);
+                                            it.search.results = Array.isArray(res) ? res : [];
+                                        } catch(e){
+                                            it.search.results = [];
+                                            console.error(e);
+                                        } finally {
+                                            it.search.loading = false;
+                                        }
+                                    },
 
-                            move(it, dir){
-                                if (!it.search.open || it.search.results.length === 0) return;
-                                const n = it.search.results.length;
-                                it.search.hi = (it.search.hi + dir + n) % n;
-                            },
+                                    move(it, dir){
+                                        if (!it.search.open || it.search.results.length === 0) return;
+                                        const n = it.search.results.length;
+                                        it.search.hi = (it.search.hi + dir + n) % n;
+                                    },
 
-                            choose(index){
-                                const p = this.jobModalForm.items[index].search.results[index];
-                                const it = this.jobModalForm.items[index];
+                                    choose(index){
+                                        const p = this.jobModalForm.items[index].search.results[index];
+                                        const it = this.jobModalForm.items[index];
 
-                                it.name       = p.name;
-                                it.part_id    = p.id;
-                                it.unit_price = Number(p.price) || 0;
-                                it.is_custom  = false;
-                                it.priceLocked = true;
+                                        it.name       = p.name;
+                                        it.part_id    = p.id;
+                                        it.unit_price = Number(p.price) || 0;
+                                        it.is_custom  = false;
+                                        it.priceLocked = true;
 
-                                it.stock = {
-                                    available: Number(p.available ?? 0),
-                                    reserved:  Number(p.reserved ?? 0),
-                                    quantity:  Number(p.quantity ?? 0),
-                                };
+                                        it.stock = {
+                                            available: Number(p.available ?? 0),
+                                            reserved:  Number(p.reserved ?? 0),
+                                            quantity:  Number(p.quantity ?? 0),
+                                        };
 
-                                if (it.qty > it.stock.available) {
-                                    it.qty = Math.max(0, it.stock.available);
-                                    it.warn.qty = `Only ${it.stock.available} available (reserved: ${it.stock.reserved}).`;
-                                } else {
-                                    it.warn.qty = '';
-                                }
+                                        if (it.qty > it.stock.available) {
+                                            it.qty = Math.max(0, it.stock.available);
+                                            it.warn.qty = `Only ${it.stock.available} available (reserved: ${it.stock.reserved}).`;
+                                        } else {
+                                            it.warn.qty = '';
+                                        }
 
-                                if (typeof it.stock.available === 'number') {
-                                    if (Number(it.qty) > it.stock.available) it.qty = it.stock.available;
-                                }
+                                        if (typeof it.stock.available === 'number') {
+                                            if (Number(it.qty) > it.stock.available) it.qty = it.stock.available;
+                                        }
 
-                                this.onQtyInput(it);
-                                this.hideList(it);
-                                this.recalcItemsTotal();
-                            },
+                                        this.onQtyInput(it);
+                                        this.hideList(it);
+                                        this.recalcItemsTotal();
+                                    },
 
-                            onQtyInput(it) {
-                                let q   = Number(it.qty) || 0;
-                                const max = Number(it.stock?.available ?? Infinity);
+                                    onQtyInput(it) {
+                                        const q = Math.max(0, Number.parseInt(it.qty ?? 0, 10) || 0);
+                                        const max = Number.isFinite(it?.stock?.available) ? Number(it.stock.available) : Infinity;
 
-                                if (q > max) {
-                                    it.qty = max;
-                                    it.warn.qty = `Only ${max} available.`;
-                                } else {
-                                    it.warn.qty = '';
-                                }
-                                it.qty = q;
-                                this.recalcItemsTotal();
-                            },
+                                        if (q > max) {
+                                            it.qty = max;
+                                            it.warn = `Only ${max} available.`;
+                                        } else {
+                                            it.qty = q;
+                                            it.warn = '';
+                                        }
+                                        this.recalcItemsTotal();
+                                    },
 
-                            selectPart(it, p){
-                                it.name       = p.name;
-                                it.part_id    = p.id;
-                                it.item_id    = p.id;
-                                it.is_custom  = false;
-                                it.unit_price = Number(p.price ?? 0.0);
-                                it.unit_cost  = Number(p.cost ?? 0.0);
-                                it.stock      = Number(p.quantity ?? 0.0);
-                                it.priceLocked = true;
-                                this.enforceQty(it, showMsg=true);
-                                this.recalcItemsTotal();
-                                it.search.open = false;
-                            },
+                                    selectPart(it, p){
+                                        it.name       = p.name;
+                                        it.part_id    = p.id;
+                                        it.item_id    = p.id;
+                                        it.is_custom  = false;
+                                        it.unit_price = Number(p.price ?? 0.0);
+                                        it.unit_cost  = Number(p.cost ?? 0.0);
+                                        it.stock      = Number(p.quantity ?? 0.0);
+                                        it.priceLocked = true;
+                                        this.enforceQty(it, showMsg=true);
+                                        this.recalcItemsTotal();
+                                        it.search.open = false;
+                                    },
 
-                            unlinkPart(it){
-                                if (!it.warn) it.warn = { qty: '' };
-                                it.part_id   = null;
-                                it.item_id   = null;
-                                it.is_custom = true;
-                                it.priceLocked = false;
-                                it.stock       = null;
-                                it.warn.qty    = '';
-                                // it.unit_price = 0;
-                                this.recalcItemsTotal();
-                            },
-                        }"
+                                    unlinkPart(it){
+                                        if (!it.warn) it.warn = { qty: '' };
+                                        it.part_id   = null;
+                                        it.item_id   = null;
+                                        it.is_custom = true;
+                                        it.priceLocked = false;
+                                        it.stock       = null;
+                                        it.warn.qty    = '';
+                                        // it.unit_price = 0;
+                                        this.recalcItemsTotal();
+                                    },
+                                }"
                     >
                         <label class="block text-sm font-medium mb-2">Job items</label>
                         <!-- Services -->
@@ -693,7 +769,7 @@
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <label :for="`qty-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
                                                             Qty
                                                         </label>
                                                     </div>
@@ -707,7 +783,7 @@
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <label :for="`uprice-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
                                                             Unit price
                                                         </label>
                                                     </div>
@@ -716,9 +792,9 @@
                                             <!-- Вторая строка: Описание и Unit Cost -->
                                             <div class="flex gap-2 w-full">
                                                 <div class="flex-1 w-3/5">
-                                                        <textarea x-model="item.description"
-                                                                  placeholder="Description (optional)" rows="1"
-                                                                  class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
+                                                                <textarea x-model="item.description"
+                                                                          placeholder="Description (optional)" rows="1"
+                                                                          class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
                                                 </div>
                                                 <div class="relative flex flex-col w-2/5">
                                                     <input :id="`ucost-${index}`" x-model="item.unit_cost"
@@ -727,7 +803,7 @@
                                                            class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                     <label :for="`ucost-${index}`"
                                                            class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
                                                         Unit cost
                                                     </label>
                                                 </div>
@@ -808,21 +884,22 @@
                                                         <!-- Chip "Linked to part" -->
                                                         <div x-show="item.part_id"
                                                              class="mt-1 flex items-center gap-2 text-xs">
-                                                                            <span
-                                                                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                                                                <svg class="w-3.5 h-3.5"
-                                                                                     viewBox="0 0 24 24" fill="none"
-                                                                                     stroke="currentColor">
-                                                                                    <path
-                                                                                        d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5"
-                                                                                        stroke-width="2"/>
-                                                                                    <path
-                                                                                        d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19"
-                                                                                        stroke-width="2"/>
-                                                                                </svg>
-                                                                                Linked to part #<span
-                                                                                    x-text="item.part_id"></span>
-                                                                            </span>
+                                                                                    <span
+                                                                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                                                                        <svg class="w-3.5 h-3.5"
+                                                                                             viewBox="0 0 24 24"
+                                                                                             fill="none"
+                                                                                             stroke="currentColor">
+                                                                                            <path
+                                                                                                d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5"
+                                                                                                stroke-width="2"/>
+                                                                                            <path
+                                                                                                d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19"
+                                                                                                stroke-width="2"/>
+                                                                                        </svg>
+                                                                                        Linked to part #<span
+                                                                                            x-text="item.part_id"></span>
+                                                                                    </span>
 
                                                             <button type="button"
                                                                     @click="unlinkPart(item)"
@@ -861,61 +938,67 @@
                                                                         </template>
                                                                         <template
                                                                             x-if="!p.image && !p.nomenclature.image">
-                                                                            <span class="w-[50px] h-[50px]">
-                                                                                <div>
-                                                                                    <svg
-                                                                                        xmlns="http://www.w3.org/2000/svg"
-                                                                                        xmlns:xlink="http://www.w3.org/1999/xlink"
-                                                                                        version="1.1" width="56"
-                                                                                        height="56"
-                                                                                        viewBox="0 0 256 256"
-                                                                                        xml:space="preserve">
-                                                                                                     <defs></defs>
-                                                                                        <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
-                                                                                           transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
-                                                                                            <path
-                                                                                                d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z"
-                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                                transform=" matrix(1 0 0 1 0 0) "
-                                                                                                stroke-linecap="round"/>
-                                                                                            <path
-                                                                                                d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z"
-                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                                transform=" matrix(1 0 0 1 0 0) "
-                                                                                                stroke-linecap="round"/>
-                                                                                            <path
-                                                                                                d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z"
-                                                                                                style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                                transform=" matrix(1 0 0 1 0 0) "
-                                                                                                stroke-linecap="round"/>
-                                                                                        </g>
-                                                                                    </svg>
-                                                                                </div>
-                                                                            </span>
+                                                                                    <span class="w-[50px] h-[50px]">
+                                                                                        <div>
+                                                                                            <svg
+                                                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                                                xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                                                                version="1.1" width="56"
+                                                                                                height="56"
+                                                                                                viewBox="0 0 256 256"
+                                                                                                xml:space="preserve">
+                                                                                                             <defs></defs>
+                                                                                                <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
+                                                                                                   transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+                                                                                                    <path
+                                                                                                        d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z"
+                                                                                                        style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                        transform=" matrix(1 0 0 1 0 0) "
+                                                                                                        stroke-linecap="round"/>
+                                                                                                    <path
+                                                                                                        d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z"
+                                                                                                        style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                        transform=" matrix(1 0 0 1 0 0) "
+                                                                                                        stroke-linecap="round"/>
+                                                                                                    <path
+                                                                                                        d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z"
+                                                                                                        style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                        transform=" matrix(1 0 0 1 0 0) "
+                                                                                                        stroke-linecap="round"/>
+                                                                                                </g>
+                                                                                            </svg>
+                                                                                        </div>
+                                                                                    </span>
                                                                         </template>
                                                                         <div class="min-w-0">
                                                                             <div class="flex items-center gap-2">
-                                                                                <span class="font-medium truncate"
-                                                                                      x-text="p.name"></span>
+                                                                                        <span
+                                                                                            class="font-medium truncate"
+                                                                                            x-text="p.name"></span>
                                                                                 <span class="text-xs text-gray-500"
                                                                                       x-text="p.sku ?? ''"></span>
                                                                             </div>
                                                                             <div
                                                                                 class="flex items-center gap-2 text-xs">
-                                                                                <span class="text-gray-600"
-                                                                                      x-text="money(p.price)"></span>
+                                                                                        <span class="text-gray-600"
+                                                                                              x-text="money(p.price)"></span>
                                                                                 <!-- бейдж наличия -->
                                                                                 <span
                                                                                     :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
                                                                                     class="px-1.5 py-0.5 rounded">
-                                                                                    <span x-show="p.available>0">In stock: <span
-                                                                                            x-text="p.available"></span></span>
-                                                                                    <span x-show="p.available<=0">Out of stock</span>
-                                                                                </span>
+                                                                                            <span
+                                                                                                x-show="p.available>0">In stock: <span
+                                                                                                    x-text="p.available"></span></span>
+                                                                                            <span
+                                                                                                x-show="p.available<=0">Out of stock</span>
+                                                                                        </span>
                                                                                 <template x-if="p.reserved > 0">
-                                                                                    <span class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
-                                                                                        Reserved <span class="ml-1" x-text="p.reserved"></span>
-                                                                                    </span>
+                                                                                            <span
+                                                                                                class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
+                                                                                                Reserved <span
+                                                                                                    class="ml-1"
+                                                                                                    x-text="p.reserved"></span>
+                                                                                            </span>
                                                                                 </template>
                                                                             </div>
                                                                         </div>
@@ -947,7 +1030,7 @@
                                                            x-text="item.warn.qty"></p>
                                                         <label :for="`qty-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
                                                             Qty
                                                         </label>
                                                     </div>
@@ -964,7 +1047,7 @@
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                         <label :for="`uprice-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
                                                             Unit price
                                                         </label>
                                                     </div>
@@ -973,9 +1056,9 @@
                                             <!-- Вторая строка: Описание и Unit Cost -->
                                             <div class="flex gap-2 w-full">
                                                 <div class="flex-1 w-3/5">
-                                                        <textarea x-model="item.description"
-                                                                  placeholder="Description (optional)" rows="1"
-                                                                  class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
+                                                                <textarea x-model="item.description"
+                                                                          placeholder="Description (optional)" rows="1"
+                                                                          class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
                                                 </div>
                                                 <div class="relative flex flex-col w-2/5">
                                                     <input :id="`ucost-${index}`" x-model="item.unit_cost"
@@ -984,7 +1067,7 @@
                                                            class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
                                                     <label :for="`ucost-${index}`"
                                                            class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
                                                         Unit cost
                                                     </label>
                                                 </div>
@@ -1030,9 +1113,9 @@
                         <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
                         </button>
                         <template x-if="jobModalForm.message !== null">
-                            <textarea x-model="jobModalForm.message"
-                                      class="w-full border rounded mt-2 px-3 py-2 text-sm"
-                                      placeholder="Add a message..."></textarea>
+                                    <textarea x-model="jobModalForm.message"
+                                              class="w-full border rounded mt-2 px-3 py-2 text-sm"
+                                              placeholder="Add a message..."></textarea>
                         </template>
                     </div>
                 </div>
@@ -1040,16 +1123,102 @@
 
             <div class="flex justify-end mt-6">
                 <button @click="onSubmit(jobModalForm); jobModalOpen = false"
-                        :disabled="!validateJobModalForm(jobModalForm) || hasQtyErrors()"
-                        class="disabled:opacity-50 bg-blue-600 text-white px-6 py-2 rounded">Save job
+                        :disabled="saving || !validateJobModalForm(jobModalForm) || hasQtyErrors"
+                        :class="{'opacity-50 pointer-events-none': saving || !validateJobModalForm(jobModalForm) || hasQtyErrors}">
+                    <span x-show="!saving">Save job</span>
+                    <span x-show="saving">Saving…</span>
                 </button>
             </div>
         </div>
     </div>
 
-</div>
+    <!-- Overlay для клика вне -->
+    <div
+        x-show="popover.open"
+        x-transition.opacity
+        @click="closePopover()"
+        class="fixed inset-0 z-40"
+    ></div>
 
+    <!-- Сам попап -->
+    <div
+        x-show="popover.open"
+        x-transition
+        @keydown.escape.window="closePopover()"
+        @click.outside="closePopover()"
+        class="fixed z-50 w-[360px] max-w-[90vw] bg-white rounded-xl shadow-2xl border border-gray-200"
+        :style="`left:${popover.x}px; top:${popover.y}px`"
+    >
+        <div class="p-4 space-y-3">
+            <!-- Заголовок -->
+            <div class="flex items-start gap-2">
+                <div class="shrink-0 mt-0.5">
+                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                        <path d="M5 7h14M5 12h14M5 17h8" stroke="currentColor" stroke-width="1.5"
+                              stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
+                    <div class="text-[10px] text-gray-500" x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
+                </div>
+            </div>
+
+            <!-- Описание -->
+            <div class="flex items-start gap-2" x-show="popover.job?.description">
+                <div class="shrink-0 mt-0.5" title="Job description">
+                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                        <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.5"
+                              stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="text-sm text-gray-700 whitespace-pre-wrap" x-text="popover.job?.description"></div>
+            </div>
+
+            <!-- Цена -->
+            <div class="flex items-center gap-2">
+                <div class="shrink-0" title="Price">
+                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
+                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
+            </div>
+
+            <!-- Клиент -->
+            <div class="flex items-start gap-2">
+                <div class="shrink-0 mt-0.5" title="Customer">
+                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                        <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
+                              stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="text-sm text-gray-700 leading-5">
+                    <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
+                    <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
+                    <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
+                </div>
+            </div>
+
+            <!-- Техник -->
+            <div class="flex items-center gap-2">
+                <div class="shrink-0" title="Technician">
+                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
+                              stroke="currentColor" stroke-width="1.5"/>
+                    </svg>
+                </div>
+                <div class="text-sm text-gray-700">
+                    <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <script>
+    window.GEOAPIFY_KEY = "{{ config('services.geoapify.key') }}";
     function validateJobModalForm(form) {
         if (
             !form.customer_id ||
@@ -1142,9 +1311,13 @@
     function scheduler() {
         return {
             init() {
+                this.invalidateLanes = () => {
+                    this._lanesCache = {};
+                };
                 this.stopClock();
                 this.startClock();
                 this.setWeek(this.currentNow());
+                this.$watch('tasks', () => this.invalidateLanes());
                 window.addEventListener('customer-created', event => {
                     const data = event.detail[0];
                     this.jobModalForm.customer_query = data.name + (data.email ? ' (' + data.email + ')' : '');
@@ -1167,7 +1340,7 @@
 
                 window.addEventListener('tasks-refetch', () => {
                     const from = this.days[0].date;
-                    const to   = this.days[6].date;
+                    const to = this.days[6].date;
                     this.fetchWeek(from, to);
                 });
             },
@@ -1177,12 +1350,17 @@
 
             employees: @entangle('employees'),
             timeSlots: @entangle('timeSlots'),
+            defaultTimeSlots: @entangle('defaultTimeSlots'),
+            baseCount: @entangle('timeSlotsBaseCount'),
             tasks: @entangle('tasks'),
             now: new Date(),
-            slotWidth: 30,
+            slotWidthPx: 30,
+            rowHeightPx: 60,
+            wrapCols: 32,
             sel: {idx: null, emp: null, day: null, startIdx: null, endIdx: null},
             menuX: 0,
             menuY: 0,
+            suppressTaskClick: false,
             jobModalType: '',
             showAddCustomerModal: false,
             showCustomerModal: false,
@@ -1191,6 +1369,11 @@
             confirmDeleteOpen: false,
             taskToDelete: null,
             menuVisible: false,
+            saving: false,
+            isLoading: false,
+            _lanesCache: {},
+            _empMaxLanesCache: {},
+            lanesVersion: 0,
             customerError: '',
             contextMenu: {
                 visible: false,
@@ -1233,7 +1416,6 @@
                 },
             },
 
-            // === Week navigation state ===
             weekStart: null,
             days: [],
             firstDay: 1,
@@ -1241,6 +1423,13 @@
             APP_TZ: dayjs.tz.guess(),
             nowTs: null,
             clockId: null,
+
+            resetLaneCaches() {
+                this._lanesCache = {};
+                this._empMaxLanesCache = {};
+                this.lanesVersion++;
+                this.isLoading = false;
+            },
 
             currentNow() {
                 return dayjs.tz ? dayjs.tz(dayjs(), this.APP_TZ) : dayjs()
@@ -1251,7 +1440,9 @@
                 this.clockId = setInterval(() => this.bumpNow(), 30_000);
             },
 
-            stopClock() { if (this.clockId) clearInterval(this.clockId); },
+            stopClock() {
+                if (this.clockId) clearInterval(this.clockId);
+            },
 
             bumpNow() {
                 this.nowTs = Date.now();
@@ -1282,6 +1473,10 @@
                 return Math.min(idx, this.timeSlots.length - 1)
             },
 
+            dayKey(d) {
+                return typeof d === 'string' ? d : d?.date;
+            },
+
             setWeek(d) {
                 const base = dayjs.isDayjs(d)
                     ? (d.tz ? d.tz(this.APP_TZ) : d)
@@ -1306,6 +1501,8 @@
                 if (this.fetchWeek) {
                     this.fetchWeek(this.days[0].date, this.days[6].date);
                 }
+
+                this.resetLaneCaches();
             },
 
             moveWeek(delta) {
@@ -1317,6 +1514,7 @@
 
             goToday() {
                 this.setWeek(this.currentNow());
+                this.invalidateLanes()
             },
 
             isCurrentWeek() {
@@ -1329,7 +1527,12 @@
             },
 
             async fetchWeek(fromDate, toDate) {
-                await this.$wire.call('loadTasksForRange', fromDate, toDate);
+                this.isLoading = true;
+                //await this.$wire.call('loadTasksForRange', fromDate, toDate);
+                await this.$wire.call('loadTasksForRange', fromDate, toDate).then(tasks => {
+                    this.tasks = tasks;
+                    this.resetLaneCaches();
+                });
             },
 
             onContextMenu(event, emp, day, idx) {
@@ -1362,6 +1565,9 @@
 
             isPast(dayObj, slotIdx) {
                 if (slotIdx === this.timeSlots.length - 1) return true;
+                if (this.baseCount > 0 && (slotIdx % this.baseCount) === (this.baseCount - 1)) {
+                    return true;
+                }
                 const slotLabel = this.timeSlots[slotIdx];
                 const cellMoment = this.slotDateTime(dayObj, slotLabel);
                 const isEndOfDaySlot = slotIdx === this.timeSlots.length - 1;
@@ -1381,7 +1587,7 @@
             },
 
             dayWidth: function () {
-                return this.slotWidth * this.timeSlots.length;
+                return this.slotWidthPx * this.timeSlots.length;
             },
 
             // Формат "Jul 13 Fri"
@@ -1415,7 +1621,7 @@
                 if (!time24 || !dayStr) return '';
                 // time24: 'HH:mm:ss', dayStr: 'YYYY-MM-DD'
                 return dayjs.tz(`${dayStr} ${time24}`, 'YYYY-MM-DD HH:mm:ss', this.APP_TZ)
-                    .format('h:mm A');
+                    .format('h:mmA');
             },
 
             // Получить задачи сотрудника на конкретный день
@@ -1445,22 +1651,107 @@
                 return idx >= min && idx < max + 1;
             },
 
+            popover: {open: false, job: null, x: 0, y: 0, placement: 'right',},
+            onTaskClick(task, evt) {
+                if (this.suppressTaskClick) {
+                    this.suppressTaskClick = false;
+                    return;
+                }
+
+                // защита: если только что был drag — не показываем
+                if (this.drag?.moved) {
+                    this.drag.moved = false;
+                    return;
+                }
+
+                // Собираем расширенную информацию о задаче.
+                //const client = this.clients?.find(c => c.id === task.customer_id) ?? {};
+                const tech = this.employees?.find(e => e.id === task.technician) ?? {};
+                const totalSum = task.items.reduce((sum, item) => sum + (item.total ?? 0.0), 0);
+                const taskMessage = (task.message === '') ? '---' : task.message;
+
+                this.popover.job = {
+                    id: task.id,
+                    title: `Job #${task.id}`,
+                    description: taskMessage,
+                    price: totalSum,
+                    start: task.start,
+                    end: task.end,
+                    day: task.day,
+                    client: {
+                        name: task.client.name ?? '',
+                        phone: task.client.phone ?? '',
+                        address: [task.client.address].filter(Boolean).join(', ')
+                    },
+                    technician: {id: tech.id, name: tech.name ?? ''}
+                };
+
+                // Позиционируем у курсора
+                const {clientX, clientY} = evt;
+                this.placePopover(clientX, clientY);
+
+                this.popover.open = true;
+            },
+
+            placePopover(x, y) {
+                // Простейшее позиционирование с учётом края экрана
+                const gap = 12;
+                const vw = window.innerWidth, vh = window.innerHeight;
+                const w = 360, h = 280;
+                let px = x + gap, py = y + gap, placement = 'right';
+
+                if (px + w > vw) {
+                    px = x - w - gap;
+                    placement = 'left';
+                }
+                if (py + h > vh) {
+                    py = vh - h - gap;
+                }
+                if (py < 0) py = gap;
+
+                this.popover.x = px;
+                this.popover.y = py;
+                this.popover.placement = placement;
+            },
+
+            closePopover() {
+                this.popover.open = false;
+                this.popover.job = null;
+            },
+
             // Перетаскивание задач
-            drag: {task: null, offsetX: 0, widthPx: 0, cell: null, previewX: 0, moved: false, startX: null},
+            drag: {
+                task: null,
+                offsetX: 0,
+                widthPx: 0,
+                cell: null,
+                previewX: 0,
+                pressed: false,
+                moved: false,
+                startX: null,
+                row: 0,
+                previewY: 0,
+                durationSlots: 0
+            },
             startDrag(task, evt) {
+                if (evt.button !== 0) return;
                 this.drag.task = task;
                 this.drag.offsetX = evt.offsetX;
                 this.drag.moved = false;
                 this.drag.startX = evt.clientX;
                 this.drag.cell = evt.currentTarget.closest('div[data-day]');
-                const startIdx = this.timeSlots.indexOf(task.start);
-                const endIdx = this.timeSlots.indexOf(task.end);
-                this.drag.previewX = startIdx * this.slotWidth;
-                this.drag.widthPx = Math.max(1, endIdx - startIdx) * this.slotWidth;
+                const start = dayjs(task.start, 'HH:mm:ss');
+                const end = dayjs(task.end, 'HH:mm:ss');
+                this.drag.durationSlots = Math.max(1, Math.round(end.diff(start, 'minute') / 30));
+                this.drag.widthPx = this.drag.durationSlots * this.slotWidthPx;
+                this.drag.previewX = start * this.slotWidthPx;
+
+                const lane = this.laneOf(task) ?? 0;
+                this.drag.row = lane;
+                this.drag.previewY = lane * this.rowHeightPx;
 
                 this._onDragHandler = this.onDrag.bind(this);
                 this._onDropHandler = this.onDrop.bind(this);
-
                 document.addEventListener('mousemove', this._onDragHandler);
                 document.addEventListener('mouseup', this._onDropHandler);
             },
@@ -1468,61 +1759,117 @@
                 if (!this.drag.task) return;
                 const cell = this.drag.cell;
                 if (!cell) return;
-                if (Math.abs(evt.clientX - this.drag.startX) > 3) {
-                    this.drag.moved = true;
-                    const day = cell.dataset.day;
-                    const emp = +cell.closest('[data-emp]').dataset.emp;
-                    if (day !== this.drag.task.day || emp !== this.drag.task.technician) return;
-                    const rect = cell.getBoundingClientRect();
-                    let slotCount = this.timeSlots.length;
-                    let slotWidth = this.slotWidth;
-                    let x = evt.clientX - rect.left - this.drag.offsetX;
-                    const maxX = rect.width - slotWidth;
-                    x = Math.max(0, Math.min(maxX, x));
-                    const idx = Math.floor(x / slotWidth);
-                    this.drag.previewX = idx * slotWidth;
 
-                    let start = dayjs(this.drag.task.start, 'HH:mm:ss');
-                    let end = dayjs(this.drag.task.end, 'HH:mm:ss');
-                    let durationSlots = Math.max(1, Math.round((end.diff(start, 'minute')) / 30));
-                    this.drag.widthPx = durationSlots * slotWidth;
+                if (!this.drag.moved && Math.abs(evt.clientX - this.drag.startX) > 3) {
+                    this.drag.moved = true;
                 }
+                if (!this.drag.moved) return;
+
+                this.drag.moved = true;
+                const day = cell.dataset.day;
+                const emp = +cell.closest('[data-emp]').dataset.emp;
+                if (day !== this.drag.task.day || emp !== this.drag.task.technician) return;
+                const rect = cell.getBoundingClientRect();
+                const sw = this.slotWidthPx;
+                let slotCount = this.timeSlots.length;
+                let slotWidthPx = this.slotWidthPx;
+
+                // ---- X
+                let x = evt.clientX - rect.left - this.drag.offsetX;
+                const maxX = rect.width - this.drag.widthPx;
+                x = Math.max(0, Math.min(maxX, x));
+                let col = Math.floor(x / sw);
+                const maxStartCol = this.wrapCols - this.drag.durationSlots;
+                col = Math.max(0, Math.min(maxStartCol, col));
+                this.drag.previewX = col * sw;
+
+                // ---- Y
+                const rows = this.rowsFor(emp, {date: day});
+                let y = evt.clientY - rect.top;
+                let row = Math.floor(y / this.rowHeightPx);
+                row = Math.max(0, Math.min(rows - 1, row));
+                this.drag.row = row;
+                this.drag.previewY = row * this.rowHeightPx;
+
+                let start = dayjs(this.drag.task.start, 'HH:mm:ss');
+                let end = dayjs(this.drag.task.end, 'HH:mm:ss');
+                let durationSlots = Math.max(1, Math.round((end.diff(start, 'minute')) / 30));
+                this.drag.widthPx = durationSlots * slotWidthPx;
+
             },
-            async onDrop() {
+            async onDrop(evt) {
                 document.removeEventListener('mousemove', this._onDragHandler);
                 document.removeEventListener('mouseup', this._onDropHandler);
-                const cell = this.drag.cell;
+
+                const t = this.drag.task;
+                const moved = this.drag.moved;
+                const cell = this.drag.cell || document.elementFromPoint(evt.clientX, evt.clientY)?.closest('div[data-day]');
+                let previewX = this.drag.previewX;
+
+                if (!t) {
+                    return reset.call(this);
+                }
+
+                function reset() {
+                    this.drag.task = null;
+                    this.drag.cell = null;
+                    this.drag.pressed = false;
+                    this.drag.moved = false;
+                    this.drag.previewX = 0;
+                    this.drag.previewY = 0;
+                }
+
+                if (!moved) {
+                    try {
+                        this.onTaskClick(t, evt);
+                    } finally {
+                        reset.call(this);
+                    }
+                    return;
+                }
+
                 if (!(cell && this.drag.task && this.drag.moved)) {
                     this.drag.task = this.drag.cell = null;
-                    this.drag.previewX = 0;
+                    previewX = 0;
                     return;
                 }
                 const to24 = (s) => dayjs(s, 'h:mm A').format('HH:mm:ss');
 
-                const slotCount = this.timeSlots.length;
-                const dayStr = cell.getAttribute('data-day');
-                const empId = Number(cell.getAttribute('data-emp'));
-
-                const idx = Math.max(0, Math.min(this.timeSlots.length - 1, Math.floor(this.drag.previewX / this.slotWidth)));
-                const slotLabel = this.timeSlots[idx];                // '2:30 PM'
-                const slot = dayjs(slotLabel, 'h:mm A').format('HH:mm:ss');
-
-                if (!slotLabel) {
-                    console.warn('moveTask: invalid slot index', {idx, slotCount, previewX: this.drag.previewX});
-                    this.drag.task = this.drag.cell = null;
-                    this.drag.previewX = 0;
-                    return;
-                }
-
                 try {
-                    await this.$wire.call('moveTask', this.drag.task.id, dayStr, slot, empId);
+                    if (!cell) return;
+                    this.isLoading = true;
+
+                    const sw = this.slotWidthPx;
+                    const dayStr = cell.getAttribute('data-day');
+                    const empId = Number(cell.getAttribute('data-emp'));
+
+                    let col = Math.floor(previewX / sw);
+                    const maxStartCol = this.wrapCols - this.drag.durationSlots;
+                    col = Math.max(0, Math.min(maxStartCol, col));
+
+                    const row = this.drag.row;
+                    const idx = row * this.wrapCols + col;
+
+                    const slotLabel = this.getSlotLabelByIdx(idx);
+                    if (!slotLabel) {
+                        this.drag.task = this.drag.cell = null;
+                        previewX = this.drag.previewY = 0;
+                        return;
+                    }
+                    const slot = to24(slotLabel);
+
+                    await this.$wire.call('moveTask', this.drag.task.id, dayStr, slot, empId, row);
                     await this.fetchWeek(this.days[0].date, this.days[6].date);
+                    this.resetLaneCaches();
+                    await this.$nextTick();
                 } finally {
                     // сброс драг-состояния
+                    this.isLoading = false;
                     this.drag.task = null;
                     this.drag.cell = null;
-                    this.drag.previewX = null;
+                    previewX = this.drag.previewY = 0;
                     this.drag.moved = false;
+                    this.resetLaneCaches();
                 }
             },
 
@@ -1532,17 +1879,20 @@
                 if (!s.isValid() || !e.isValid()) return '';
 
                 const base = dayjs(this.timeSlots[0], 'h:mm A');
-                const slotMin = this.slotWidth;
+                const slotMin = this.slotWidthPx;
 
                 const startIdx = Math.max(0, Math.round(s.diff(base, 'minute') / slotMin));
-                const endIdx   = Math.max(startIdx + 1,
+                const endIdx = Math.max(startIdx + 1,
                     Math.min(this.timeSlots.length,
                         Math.round(e.diff(base, 'minute') / slotMin)));
 
-                const leftPx  = startIdx * this.slotWidth;
-                const widthPx = (endIdx - startIdx) * this.slotWidth;
+                const leftPx = startIdx * this.slotWidthPx;
+                const widthPx = (endIdx - startIdx) * this.slotWidthPx;
 
-                return `left:${leftPx}px; width:${widthPx}px;`;
+                const lane = this.laneOf(task);
+                const topPx = lane * this.rowHeightPx;
+
+                return `left:${leftPx}px; width:${widthPx}px; top:${topPx}px;`;
             },
 
             subtotal() {
@@ -1561,6 +1911,11 @@
 
             formatMoney(val) {
                 return '$' + Number(val).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            },
+            formatTime(from, to) {
+                const f = dayjs(from, 'HH:mm:ss').format('h:mmA');
+                const t = dayjs(to, 'HH:mm:ss').format('h:mmA');
+                return `${f} – ${t}`;
             },
 
             recalcItemsTotal() {
@@ -1658,6 +2013,7 @@
                 this.$wire.call('deleteTask', task.id)
                     .then(() => {
                         this.confirmDeleteOpen = false;
+                        this.invalidateLanes();
                         // обновить UI, убрать задачу из локального списка, показать уведомление и т.д.
                     });
             },
@@ -1683,41 +2039,506 @@
                 return `${hour12}:${m} ${ampm}`;
             },
 
-            /*updateItemStock(it) {
-                if (!it.part_id) { it.stock = null; return; }
+            getStartIdx(t) {
+                return this.timeSlots.indexOf(dayjs(t.start, 'HH:mm:ss').format('h:mm A'));
+            },
 
-                const base = this.partsStock?.[it.part_id] || { quantity: Infinity };
+            getEndIdx(t) {
+                return this.timeSlots.indexOf(dayjs(t.end, 'HH:mm:ss').format('h:mm A'));
+            },
 
-                // сколько уже зарезервировано в текущем модальном окне (кроме текущей строки)
-                const reservedByForm = this.jobModalForm.items
-                    .filter(x => x !== it && x.part_id === it.part_id)
-                    .reduce((s, x) => s + (Number(x.qty) || 0), 0);
+            overlap(a, b) {
+                const a1 = this.getStartIdx(a), a2 = this.getEndIdx(a);
+                const b1 = this.getStartIdx(b), b2 = this.getEndIdx(b);
+                // [a1, a2) vs [b1, b2)
+                return a1 < b2 && b1 < a2;
+            },
 
-                const available = Math.max(0, (Number(base.quantity) || 0) - reservedByForm);
+            buildLanes(empId, day) {
+                const dayStr = this.dayKey(day);
+                const key = `${empId}-${dayStr}`;
+                // если уже строили — вернём из кэша
+                if (this._lanesCache[key]) return this._lanesCache[key];
 
-                it.stock = {
-                    reserved: reservedByForm,
-                    available,
-                };
-            },*/
+                const tasks = this.tasks
+                    .filter(t => t.technician === empId && t.day === dayStr)
+                    .sort((a, b) => a.start.localeCompare(b.start));
+
+                const lanes = [];
+                const map = {};
+                for (const t of tasks) {
+                    let placed = false;
+                    for (let i = 0; i < lanes.length; i++) {
+                        const lane = lanes[i];
+                        const last = lane[lane.length - 1];
+                        if (!this.overlap(last, t)) {
+                            lane.push(t);
+                            map[t.id] = i;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    if (!placed) {
+                        lanes.push([t]);
+                        map[t.id] = lanes.length - 1;
+                    }
+                }
+
+                const info = {lanesCount: Math.max(1, lanes.length), map};
+                this._lanesCache[key] = info;
+                return info;
+            },
+
+            laneOf(task) {
+                return (this.buildLanes(task.technician, task.day).map[task.id]) ?? 0;
+            },
+
+            // Сколько дорожек у (empId, day)
+            lanesCount(empId, day) {
+                return this.buildLanes(empId, day).lanesCount || 1;
+            },
+
+            invalidateLanes() {
+                this._lanesCache = {};
+                this._empMaxLanesCache = {};
+                this.lanesVersion++;
+            },
 
             qtyErrorsText() {
-                const over = (this.jobModalForm.items || []).filter(it => it.type === 'material' && (Number(it.qty)||0) > (it.stock?.available ?? Infinity));
+                const over = (this.jobModalForm.items || []).filter(it => it.type === 'material' && (Number(it.qty) || 0) > (it.stock?.available ?? Infinity));
                 if (!over.length) return '';
                 if (over.length === 1) {
-                    const it = over[0]; const max = it.stock?.available ?? 0;
+                    const it = over[0];
+                    const max = it.stock?.available ?? 0;
                     return `“${it.name || 'Material'}”: only ${max} available.`;
                 }
                 return `${over.length} item(s) exceed available stock.`;
             },
 
-            hasQtyErrors() {
-                return (this.jobModalForm.items || []).some(it => {
+            get hasQtyErrors() {
+                const items = this.jobModalForm.items || [];
+                return items.some(it => {
                     if (it.type !== 'material') return false;
-                    const max = it.stock?.available ?? Infinity;
-                    const q   = Number(it.qty) || 0;
+
+                    const q = Number.parseInt(it.qty ?? 0, 10);
+                    if (!Number.isFinite(q) || q < 0) return true;
+
+                    const max = Number.isFinite(it?.stock?.available)
+                        ? Number(it.stock.available)
+                        : Infinity;
+
                     return q > max;
                 });
+            },
+
+            empMaxLanes(empId) {
+                if (this._empMaxLanesCache[empId] != null) return this._empMaxLanesCache[empId];
+                let maxLanes = 1;
+                for (const d of this.days) {
+                    const info = this.buildLanes(empId, d);
+                    if (info.lanesCount > maxLanes) maxLanes = info.lanesCount;
+                }
+                this._empMaxLanesCache[empId] = maxLanes;
+                return maxLanes;
+            },
+            range(n) {
+                return Array.from({length: n}, (_, i) => i);
+            },
+            rowsFor(empId, day) {
+                const perDay = this.buildLanes(empId, this.dayKey(day)).lanesCount || 1;
+                const perEmp = this.empMaxLanes(empId);
+                return Math.max(1, perDay, perEmp);
+            },
+            getSlotLabelByIdx(i) {
+                const base = this.defaultTimeSlots;
+                const idx = i % base.length;
+                return base[idx];
+            },
+            rowsSlots(empId, day) {
+                const need = this.rowsFor(empId, day);
+                const base = Array.from({length: this.wrapCols}, (_, c) => c);
+                const rows = [];
+                for (let r = 0; r < need; r++) rows.push(base.map(c => r * this.wrapCols + c));
+                return rows;
+            },
+            flatSlots(empId, day) {
+                // rowsSlots(empId, day) уже возвращает массив рядов, где ряд = массив slotIdx
+                // Делаем плоский список всех slotIdx по порядку
+                const rows = this.rowsSlots(empId, day);
+                const flat = [];
+                for (let r = 0; r < rows.length; r++) {
+                    const row = rows[r];
+                    for (let k = 0; k < row.length; k++) {
+                        flat.push(row[k]);
+                    }
+                }
+                return flat;
+            },
+            containerHeight(empId, day) {
+                return this.rowsFor(empId, day) * this.rowHeightPx;
+            },
+            /*rowsCount() {
+                return Math.ceil(this.timeSlots.length / this.wrapCols);
+            },*/
+
+            routeControl: null,
+            routeLayer: null,
+            routeTech: null,
+            routeLayers: [],
+            mode: 'schedule',
+            map: null, markers: null, inited: false,
+            async showMap() {
+                this.mode = 'map';
+                if (!this.inited) {
+                    await this.initMap();
+                    this.inited = true;
+                }
+                await this.renderMarkers(this.tasks);
+                setTimeout(() => {
+                    if (this.map) {
+                        this.map.invalidateSize(true);
+
+                        if (this.bounds?.isValid?.()) {
+                            this.map.fitBounds(this.bounds, { padding: [40, 40] });
+                        }
+                    }
+                }, 50);
+            },
+            async initMap() {
+                this.map = L.map('jobsMap', {zoomControl: true}).setView([40.73, -73.93], 10);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(this.map);
+                this.markers = L.markerClusterGroup(); // кластеризация
+                this.map.addLayer(this.markers);
+                this.addEmployeeRouteControl();
+            },
+            showCalendar() {
+                this.mode = 'schedule';
+            },
+
+            addEmployeeRouteControl () {
+                const self = this;
+
+                const EmployeesControl = L.Control.extend({
+                    options: { position: 'topleft' },
+
+                    onAdd(map) {
+                        const wrap = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+
+                        // блокируем прокидывание событий на карту
+                        L.DomEvent.disableClickPropagation(wrap);
+                        L.DomEvent.disableScrollPropagation(wrap);
+
+                        // Контейнер
+                        wrap.style.background = '#fff';
+                        wrap.style.padding = '8px';
+                        wrap.style.minWidth = '260px';
+                        wrap.style.boxShadow = '0 1px 3px rgba(0,0,0,.25)';
+                        wrap.style.borderRadius = '8px';
+
+                        // Верхняя строка — переключатель маршрутизации
+                        const top = document.createElement('div');
+                        top.className = 'flex items-center gap-2 mb-2';
+
+                        const routeBtn = document.createElement('button');
+                        routeBtn.className = 'px-2 py-1 rounded bg-blue-600 text-white text-sm';
+                        routeBtn.textContent = 'Routing on';
+                        routeBtn.dataset.enabled = '1'; // включено
+
+                        top.appendChild(routeBtn);
+
+                        // Кнопка очистки
+                        const clearBtn = document.createElement('button');
+                        clearBtn.className = 'px-2 py-1 rounded bg-gray-200 text-sm';
+                        clearBtn.textContent = 'Clear';
+                        top.appendChild(clearBtn);
+
+                        wrap.appendChild(top);
+
+                        // Поисковая строка
+                        const search = document.createElement('input');
+                        search.type = 'text';
+                        search.placeholder = 'Filter by name or tag';
+                        search.className =
+                            'w-full border border-gray-300 rounded px-2 py-1 text-sm mb-2';
+                        wrap.appendChild(search);
+
+                        // Список сотрудников с чекбоксами
+                        const list = document.createElement('div');
+                        list.className = 'max-h-56 overflow-auto space-y-1';
+                        wrap.appendChild(list);
+
+                        // Локальное состояние
+                        let selected = new Set(); // id выбранных сотрудников
+                        let routingEnabled = true;
+
+                        // Рендер списка
+                        const renderList = () => {
+                            const q = search.value.trim().toLowerCase();
+                            list.innerHTML = '';
+
+                            (self.employees || []).forEach(e => {
+                                const hay = (e.name + ' ' + (e.tags || '')).toLowerCase();
+                                if (q && !hay.includes(q)) return;
+
+                                const row = document.createElement('label');
+                                row.className = 'flex items-center gap-2 cursor-pointer text-sm';
+
+                                const cb = document.createElement('input');
+                                cb.type = 'checkbox';
+                                cb.checked = selected.has(e.id);
+                                cb.addEventListener('change', () => {
+                                    cb.checked ? selected.add(e.id) : selected.delete(e.id);
+                                    maybeBuildRoute();
+                                });
+
+                                const color = document.createElement('span');
+                                color.style.display = 'inline-block';
+                                color.style.width = '12px';
+                                color.style.height = '12px';
+                                color.style.borderRadius = '3px';
+                                color.style.background = e.color || '#55b';
+                                color.style.border = '1px solid #999';
+
+                                const name = document.createElement('span');
+                                name.textContent = e.name;
+
+                                row.appendChild(cb);
+                                row.appendChild(color);
+                                row.appendChild(name);
+                                list.appendChild(row);
+                            });
+                        };
+
+                        renderList();
+
+                        // События
+                        search.addEventListener('input', renderList);
+
+                        routeBtn.addEventListener('click', () => {
+                            routingEnabled = !routingEnabled;
+                            routeBtn.textContent = routingEnabled ? 'Routing on' : 'Routing off';
+                            routeBtn.className =
+                                'px-2 py-1 rounded text-sm ' +
+                                (routingEnabled ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-800');
+                            maybeBuildRoute();
+                        });
+
+                        clearBtn.addEventListener('click', () => {
+                            selected.clear();
+                            renderList();
+                            self.clearRoute();
+                        });
+
+                        // Помощник: строим/обновляем маршрут только если включено
+                        function maybeBuildRoute() {
+                            if (!routingEnabled) {
+                                self.clearRoute();
+                                return;
+                            }
+                            // передаём массив id
+                            const ids = Array.from(selected);
+                            self.showTechRoute(ids, self.currentDayISO);
+                        }
+
+                        return wrap;
+                    },
+                });
+
+                this.map.addControl(new EmployeesControl());
+            },
+
+            async renderMarkers(tasks) {
+                this.markers.clearLayers();
+                const bounds = [];
+                for (const t of tasks) {
+                    // ожидаем у каждой задачи t.client: {name, phone, address, lat, lng}
+                    let {lat, lng} = t.client ?? {};
+                    if ((lat == null || lng == null) && t.client?.address_formatted) {
+                        // дернуть бэкенд-геокодер — он вернёт lat/lng и сохранит в БД
+                        const res = await fetch(`/geocode?addr=${encodeURIComponent(t.client.address)}`);
+                        if (res.ok) {
+                            const p = await res.json();
+                            lat = p.lat;
+                            lng = p.lng;
+                        }
+                    }
+                    if (lat == null || lng == null) continue;
+
+                    const totalSum = t.items.reduce((sum, item) => sum + (item.total ?? 0.0), 0);
+                    const techNames = Array.isArray(t.technician)
+                        ? t.technician.map(x => (typeof x === 'object' ? x.name : this.employees.find(e => e.id === x)?.name))
+                            .filter(Boolean).join(', ')
+                        : this.employees?.find(e => e.id === t.technician)?.name || '';
+                    const formatTime = this.formatTime(t.start, t.end);
+                    const formatted = dayjs(t.day).format("MMM D YYYY");
+
+                    function makePopupEl(t, formatted, formatTime, totalSum, techNames) {
+                        const root = document.createElement('div'); root.className = 'text-xs';
+
+                        const line = (html) => { const d = document.createElement('div'); d.innerHTML = html; root.appendChild(d); };
+                        const txt  = (tag, text, cls) => { const d = document.createElement(tag); if (cls) d.className = cls; d.textContent = text; root.appendChild(d); };
+
+                        txt('div', `Job #${t.id ?? ''}`, 'font-semibold');
+                        txt('div', `${formatted} ${formatTime}`, 'mt-0 mb-2 text-gray-500 text-[10px]');
+                        txt('div', t.message ?? '');
+                        line(`<b>Price: </b>$${(totalSum ?? 0).toLocaleString()}`);
+                        line(`<b>Client: </b>${t.client?.name ?? ''}`);
+                        txt('div', t.client?.address ?? '');
+                        line(`<b>Phone: </b>${t.client?.phone ?? ''}`);
+                        line(`<b>Technician: </b>${techNames ?? ''}`);
+                        return root;
+                    }
+
+                    const el = makePopupEl(t, formatted, formatTime, totalSum, techNames);
+                    const m = L.marker([lat, lng]).bindPopup(el);
+                    this.markers.addLayer(m);
+                    bounds.push([lat, lng]);
+                }
+                if (bounds.length) this.map.fitBounds(bounds, {padding: [40, 40]});
+            },
+            makeStopIcon(n) {
+                return L.divIcon({
+                    className: 'stop-num',
+                    html: `<div style="
+                      width:28px;height:28px;border-radius:50%;
+                      background:#1e90ff;color:#fff;display:flex;
+                      align-items:center;justify-content:center;
+                      font-weight:600">${n}</div>`,
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 14],
+                });
+            },
+
+            clearRoute() {
+                if (this.routeControl) { this.map.removeControl(this.routeControl); this.routeControl = null; }
+                if (this.routeLayer)   { this.routeLayer.clearLayers(); }
+            },
+            async showTechRoute(selectedTechIds = [], dayISO) {
+                this.clearRoute();
+
+                // раскладываем цвет по технику (можно взять e.color из employees)
+                const colorByTech = id => {
+                    const e = (this.employees || []).find(x => x.id === id);
+                    return e?.color || '#1e90ff';
+                };
+
+                for (const techId of selectedTechIds) {
+                    // 1) точки задач этого техника за день (сортируем по start)
+                    const points = (this.tasks || [])
+                        .filter(t => t.technician === techId && t.day === dayISO && t.client && t.client.lat != null && t.client.lng != null)
+                        .sort((a, b) => (a.start || '').localeCompare(b.start || ''))
+                        .map(t => ({ lat: t.client.lat, lng: t.client.lng }));
+
+                    if (points.length < 2) continue; // для 1 точки строить нечего
+
+                    // 2) запрос в Geoapify
+                    const waypoints = points.map(p => `${p.lat},${p.lng}`).join('|');
+                    const apiKey = window.GEOAPIFY_KEY;
+                    console.log(apiKey);
+                    const url = `https://api.geoapify.com/v1/routing?waypoints=${encodeURIComponent(waypoints)}&mode=drive&apiKey=${apiKey}`;
+
+                    let geojson;
+                    try {
+                        const res = await fetch(url);
+                        if (!res.ok) {
+                            console.warn('Routing error', techId, res.status, await res.text());
+                            continue;
+                        }
+                        geojson = await res.json();
+                    } catch (e) {
+                        console.error('Routing fetch failed', e);
+                        continue;
+                    }
+
+                    // 3) отрисовка (Geoapify возвращает GeoJSON)
+                    const lineColor = colorByTech(techId);
+                    const routeLayer = L.geoJSON(geojson, {
+                        style: { color: lineColor, weight: 5, opacity: 0.9 }
+                    }).addTo(this.map);
+
+                    this.routeLayers.push(routeLayer);
+
+                    // 4) необязательная маркировка точек порядком (1,2,3…)
+                    points.forEach((p, idx) => {
+                        const m = L.marker([p.lat, p.lng], {
+                            icon: L.divIcon({
+                                className: 'route-order',
+                                html: `<div style="background:${lineColor};color:#fff;border-radius:12px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font:12px sans-serif">${idx+1}</div>`,
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })
+                        });
+                        m.addTo(routeLayer);
+                    });
+
+                    // зум к маршруту
+                    try { this.map.fitBounds(routeLayer.getBounds(), { padding: [40, 40] }); } catch {}
+                }
+            },
+
+            addCustomer() {
+                return {
+                    // поля формы (минимум)
+                    name: '', email: '', phone: '',
+                    query: '',
+                    suggestions: [],
+                    open: false,
+                    selected: { id: '', label: '', lat: null, lng: null },
+
+                    resetSelection() {
+                        this.selected = { id: '', label: '', lat: null, lng: null };
+                    },
+
+                    async findSuggestions() {
+                        if (this.query.trim().length < 4) {
+                            this.suggestions = [];
+                            this.resetSelection();
+                            return;
+                        }
+                        // дергаем Livewire
+                        this.suggestions = await this.$wire.searchAddress(this.query);
+                        this.open = true;
+                    },
+
+                    selectSuggestion(s) {
+                        this.selected = { id: s.id, label: s.label, lat: s.lat, lng: s.lng };
+                        this.query = s.label;     // показываем читаемый адрес
+                        this.open = false;
+                    },
+
+                    async submit() {
+                        // собираем данные:
+                        const payload = {
+                            name:  this.name,
+                            email: this.email,
+                            phone: this.phone,
+
+                            // если адрес выбран из подсказки — кладём нормализованные поля
+                            address_formatted: this.selected.label || null,
+                            address_place_id:  this.selected.id    || null,
+                            address_lat:       this.selected.lat   ?? null,
+                            address_lng:       this.selected.lng   ?? null,
+                        };
+
+                        // если пользователь стирал поле руками после выбора — сбросим координаты
+                        if (!this.selected.id || this.query !== this.selected.label) {
+                            payload.address_formatted = null;
+                            payload.address_place_id  = null;
+                            payload.address_lat       = null;
+                            payload.address_lng       = null;
+                        }
+
+                        await this.$wire.createCustomer(payload);
+                        this.showAddCustomerModal = false;
+                    },
+
+                    onErrors(errors) {
+                        // можете подсветить поля / показать тосты
+                        console.warn(errors);
+                    }
+                }
             },
 
             async openJobModal(type = null, sel, contextMenu = null) {
@@ -1727,6 +2548,8 @@
                 const SLOT_MIN = 30;
                 const FIRST_HOUR = 6;
                 const SLOTS_PER_DAY = 32;
+
+                const norm = (i) => ((i % SLOTS_PER_DAY) + SLOTS_PER_DAY) % SLOTS_PER_DAY;
 
                 if (type === 'edit' && contextMenu.task) {
                     const t = contextMenu.task;
@@ -1800,25 +2623,29 @@
                     deepAssign(this.jobModalForm, defaultJobModalForm());
                     this.jobModalForm.jobModalType = 'new';
 
-                    // 1) Правильно парсим день из селекции
                     const day = dayjs(sel.day.date, 'YYYY-MM-DD');
 
-                    // 2) Границы слотов
-                    const startSlot = Math.max(0, Math.min(sel.startIdx ?? 0, SLOTS_PER_DAY - 1));
-                    const endSlot = Math.max(startSlot, Math.min((sel.endIdx ?? startSlot), SLOTS_PER_DAY - 1));
+                    const rawStart = sel.startIdx ?? 0;
+                    const rawEnd = sel.endIdx ?? rawStart;
+                    let startCol = norm(rawStart);
+                    let endCol = norm(rawEnd);
 
-                    // 3) Считаем from/to как dayjs
-                    let from = day.startOf('day').add(FIRST_HOUR, 'hour').add(startSlot * SLOT_MIN, 'minute');
-                    let to = day.startOf('day').add(FIRST_HOUR, 'hour').add((endSlot + 1) * SLOT_MIN, 'minute');
-
-                    // Если «to» убежал на следующий день — режем по границе
-                    if (!to.isSame(from, 'day')) {
-                        // можно ограничить до 21:59 того же дня, либо до 23:59 — на ваше усмотрение
-                        to = from.hour(22).minute(0).second(0).millisecond(0);
-                        // to = from.hour(21).minute(59).second(0).millisecond(0);
+                    if (endCol < startCol && (rawEnd - rawStart) < 0) {
+                        [startCol, endCol] = [endCol, startCol];
                     }
 
-                    // 4) Заполняем форму (и 12-часовой, и 24-часовой формат сразу)
+                    let from = day.startOf('day').add(FIRST_HOUR, 'hour').add(startCol * SLOT_MIN, 'minute');
+                    let to = day.startOf('day').add(FIRST_HOUR, 'hour').add((endCol + 1) * SLOT_MIN, 'minute');
+
+                    const endOfDay = day.startOf('day').hour(22).minute(0).second(0).millisecond(0);
+                    // Если «to» убежал на следующий день — режем по границе
+                    if (to.isAfter(endOfDay)) {
+                        // сдвигаем назад, чтобы длительность влезла в день
+                        const durMin = Math.max(SLOT_MIN, to.diff(from, 'minute'));
+                        to = endOfDay;
+                        from = endOfDay.clone().subtract(durMin, 'minute');
+                    }
+
                     this.jobModalForm.schedule_from_date = from.format('YYYY-MM-DD');
                     this.jobModalForm.schedule_to_date = to.format('YYYY-MM-DD');
 
@@ -1828,7 +2655,6 @@
                     this.jobModalForm.schedule_from_time = from.format('HH:mm');
                     this.jobModalForm.schedule_to_time = to.format('HH:mm');
 
-                    // 5) Подставляем выбранного сотрудника из селекции
                     const tech = this.employees.find(e => e.id === this.sel.emp);
                     if (tech && !this.jobModalForm.employees.some(e => e.id === tech.id)) {
                         this.jobModalForm.employees.push(tech);
@@ -1836,6 +2662,7 @@
                 }
                 this.jobModalForm.employees_query = '';
                 this.menuVisible = false;
+                this.invalidateLanes();
                 this.clearSelection();
             },
         }

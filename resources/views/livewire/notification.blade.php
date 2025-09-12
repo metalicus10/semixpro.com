@@ -27,5 +27,5 @@
     x-transition:leave-end="opacity-0"
     style="display: none;"
 >
-    <span x-text="message"></span>
+    <span x-html="message"></span>
 </div>

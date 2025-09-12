@@ -9,6 +9,23 @@ import isBetween from 'dayjs/plugin/isBetween';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import customParseFormat from "dayjs/plugin/customParseFormat";
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+
+L.Icon.Default.mergeOptions({
+    iconUrl,
+    iconRetinaUrl,
+    shadowUrl,
+});
+
+window.L = L;
+
 window.dayjs = dayjs;
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);

@@ -231,9 +231,9 @@
                     return $wire.parts.filter(part =>
                         (this.selectedCategory === '' || (part.category_id == this.selectedCategory)) &&
                         (this.selectedBrand === '' || (
-                            part.nomenclatures &&
-                            Array.isArray(part.nomenclatures.brands) &&
-                            part.nomenclatures.brands.some(brand => brand.id == this.selectedBrand)
+                            part.nomenclature &&
+                            Array.isArray(part.nomenclature.brands) &&
+                            part.nomenclature.brands.some(brand => brand.id == this.selectedBrand)
                         )) &&
                         (
                             part.name?.toLowerCase().includes(this.search.toLowerCase()) ||
@@ -241,9 +241,9 @@
                             (part.pns && part.pns.toLowerCase().includes(this.search.toLowerCase())) ||
                             (part.category?.name && part.category.name.toLowerCase().includes(this.search.toLowerCase())) ||
                             (
-                                part.nomenclatures &&
-                                Array.isArray(part.nomenclatures.brands) &&
-                                part.nomenclatures.brands.some(brand =>
+                                part.nomenclature &&
+                                Array.isArray(part.nomenclature.brands) &&
+                                part.nomenclature.brands.some(brand =>
                                     brand.name?.toLowerCase().includes(this.search.toLowerCase())
                                 )
                             )
@@ -641,7 +641,7 @@
                             <!-- table rows -->
                             <template x-if="!isPartsLoading">
                                 <template x-for="part in filteredParts()" :key="part.id">
-                                    <template x-if="part.nomenclatures?.is_archived == false">
+                                    <template x-if="part.nomenclature?.is_archived == false" x-init="console.log(part);">
                                         <div class="flex flex-col md:flex-row w-full md:items-center bg-white border
                                         dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-600 dark:hover:bg-[#162033] p-1 relative" :id="`part-${part.id}`">
                                             <!-- Checkbox -->
@@ -823,7 +823,7 @@
                                                 <div x-data="{
                                                     partName: '',
                                                     partImage: part.image,
-                                                    nomenclatureImage:part.nomenclatures.image,
+                                                    nomenclatureImage:part.nomenclature.image,
                                                     showTooltip: false,
                                                     isUploading: false,
                                                     isLoading: false,
@@ -1229,10 +1229,10 @@
                                                 <span x-text="categories.find(cat => cat.id == part.category_id)?.name || '—'"></span>
                                             </div>
                                             <div class="w-[150px] px-4 py-2">
-                                                <template x-if="part.nomenclatures.brands && part.nomenclatures.brands.length">
-                                                    <span x-text="part.nomenclatures.brands?.map(b => b.name).join(', ') || '—'"></span>
+                                                <template x-if="part.nomenclature.brands && part.nomenclature.brands.length">
+                                                    <span x-text="part.nomenclature.brands?.map(b => b.name).join(', ') || '—'"></span>
                                                 </template>
-                                                <template x-if="!part.nomenclatures.brands || !part.nomenclatures.brands.length">
+                                                <template x-if="!part.nomenclature.brands || !part.nomenclature.brands.length">
                                                     <span>—</span>
                                                 </template>
                                             </div>
