@@ -160,7 +160,6 @@ class ManagerSchedule extends Component
         })->values();
 
         $this->tasks = $mapped;
-
         return $mapped;
     }
 
@@ -195,6 +194,14 @@ class ManagerSchedule extends Component
                 ];
             })->filter(fn($x) => $x['id'] && $x['lat'] && $x['lng'])->values()->all();
         });
+    }
+
+    public function saveClientCoords(int $customerId, float $lat, float $lng): void
+    {
+        Customer::whereKey($customerId)->update([
+            'address_lat' => $lat,
+            'address_lng' => $lng,
+        ]);
     }
 
     #[On('createCustomer')]
@@ -242,7 +249,7 @@ class ManagerSchedule extends Component
                 'name' => $customer->name,
                 'email' => $customer->email,
                 'phone' => $customer->phone,
-                'address' => $customer->address_formatted,
+                'address' => $customer->address_formatted ?: $customer->address,
                 'lat' => $customer->address_lat,
                 'lng' => $customer->address_lng,
             ]);
