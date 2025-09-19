@@ -7,7 +7,7 @@
     class="overflow-x-auto bg-white text-gray-800 border"
 
 >
-    <div class="sticky top-0 z-5 flex items-center justify-between px-3 py-2 border-b">
+    <div class="sticky top-0 z-50 flex items-center justify-between px-3 py-2 border-b">
         <div class="flex items-center gap-2">
             <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
                     @click="dbg('moveWeek(-1) from UI'); moveWeek(-1); $dispatch('week:changed')">←
@@ -34,6 +34,39 @@
             >
                 <span class="ms-2">Map</span>
             </button>
+        </div>
+
+        <!-- правый блок шапки, рядом с выводом диапазона недели -->
+        <div class="relative" x-data="{ open:false }">
+            <button
+                @click="open = !open"
+                class="px-3 py-1 rounded-2xl bg-white border border-[#c45100] hover:bg-gray-200 text-sm text-[#c45100]"
+                :class="{ 'bg-blue-600 text-white': mapView === 'day' }"
+            >
+                <span class="text-[#c45100]" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
+                <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-[#c45100]" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+            </button>
+
+            <div
+                x-show="open" x-transition
+                @click.outside="open=false" @keydown.escape.window="open=false"
+                class="absolute flex flex-col right-0 mt-1 w-40 rounded-lg bg-white shadow z-50"
+            >
+                <button
+                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
+                    :class="mapView === 'week' ? 'bg-blue-50 text-blue-700' : ''"
+                    @click="setMapView('week'); open=false"
+                >
+                    Week
+                </button>
+                <button
+                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
+                    :class="mapView === 'day' ? 'bg-blue-50 text-blue-700' : ''"
+                    @click="setMapView('day'); open=false"
+                >
+                    Day
+                </button>
+            </div>
         </div>
 
         <!-- Диапазон дат недели -->
@@ -2279,7 +2312,9 @@
             selectedTechIds: new Set(),
             routingEnabled: true,
             currentDayISO: '',
-            routeCtlWrap: null,
+            routeCtlWrap: null, _employeesControlWrap: null, _employeesControl:null, _toolbarWrap:null, employeeFilter: null,
+            weekBtn: document.createElement('button'),
+            dayBtn: document.createElement('button'),
             GEOAPIFY_KEY: window.GEOAPIFY_KEY,
             DEFAULT_CENTER: [40.73, -73.93],
             DEFAULT_ZOOM: 10,
@@ -2321,6 +2356,7 @@
                 } else {
                     await this.refreshMap(true);
                 }
+                this.updateRouteControlVisibility();
             },
 
             async waitMapContainerReady(selector = '#jobsMap', maxTries = 12) {
@@ -2393,7 +2429,7 @@
             },
 
             async initMap() {
-                this.map = L.map('jobsMap', { zoomControl: true })
+                this.map = L.map('jobsMap', { zoomControl: false })
                     .setView(this.DEFAULT_CENTER, this.DEFAULT_ZOOM);
 
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -2403,8 +2439,10 @@
                 this.markers = L.markerClusterGroup();
                 this.map.addLayer(this.markers);
 
+                this.addDayToolbar();
+
                 setTimeout(() => { this.map?.invalidateSize(true); }, 0);
-                this.addEmployeeRouteControl();
+                this.updateRouteControlVisibility();
             },
 
             nextFrame() { return new Promise(r => requestAnimationFrame(r)); },
@@ -2424,53 +2462,6 @@
 
                 await this.nextFrame();
                 this.map.invalidateSize(true);
-
-                /*const points = [];
-
-                for (const t of this.tasks ?? []) {
-                    const c = t.client ?? {};
-                    let coords = this.getClientCoords(c);
-
-                    if (!coords && c.address_formatted) {
-                        try {
-                            const res = await fetch(`/geocode?addr=${encodeURIComponent(c.address_formatted)}`);
-                            if (res.ok) {
-                                const p = await res.json();
-                                coords = { lat: p.lat, lng: p.lng };
-
-                                if (c.id && lat != null && lng != null) {
-                                    this.$wire.call('saveClientCoords', c.id, p.lat, p.lng).catch(() => {});
-                                }
-                            }
-                        } catch (e) {
-                            this.dbg('geocode failed:', e);
-                        }
-                    }
-
-                    if (!coords) continue;
-
-                    const totalSum = (t.items ?? []).reduce((s, it) => s + (it.total ?? 0), 0);
-                    const techNames = Array.isArray(t.technician)
-                        ? t.technician.map(x => (typeof x === 'object' ? x.name : this.employees.find(e => e.id === x)?.name)).filter(Boolean).join(', ')
-                        : this.employees.find(e => e.id === t.technician)?.name ?? '';
-
-                    const formatted   = dayjs(t.day).format('MMM D YYYY');
-                    const formatTime  = `${t.start}–${t.end}`;
-
-                    const {lat, lng} = coords;
-                    const popupEl = this.makePopupEl(t, formatted, formatTime, totalSum, techNames);
-                    const m = L.marker([lat, lng]).bindPopup(popupEl);
-
-                    this.markers.addLayer(m);
-                    points.push([lat, lng]);
-                }
-
-                if (points.length && fit) {
-                    const bounds = L.latLngBounds(points);
-                    this.map.fitBounds(bounds, { padding: [40, 40] });
-                } else if (!points.length) {
-                    this.map.setView(this.DEFAULT_CENTER, this.DEFAULT_ZOOM);
-                }*/
             },
 
             async renderWeekMarkers({ fit = true } = {}) {
@@ -2541,159 +2532,217 @@
                 }
             },
 
+            updateRouteControlVisibility() {
+                if (!this._employeesControlWrap) return;
+                const wrap = this._employeesControlWrap;
+                this._employeesControlWrap.style.display = (this.mapView === 'day') ? '' : 'none';
+            },
+
+            paintModeButtons(){
+                this.weekBtn.className = 'px-2 py-1 rounded ' + (this.mapView === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
+                this.dayBtn.className  = 'px-2 py-1 rounded ' + (this.mapView === 'day'  ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
+            },
+
+            setMapView(view) {
+                this.mapView = view;
+                this.paintModeButtons?.();
+                this.updateRouteControlVisibility();
+                this.hardRefreshMap(true);
+            },
+
             showCalendar() {
                 this.mode = 'schedule';
             },
 
-            updateRouteControlVisibility() {
-                if (!this.routeCtlWrap) return;
-                // показываем панель только в режиме Day
-                this.routeCtlWrap.style.display = (this.viewMode === 'day') ? '' : 'none';
-            },
-
-            addEmployeeRouteControl () {
+            addDayToolbar() {
                 const self = this;
-                if (!(self.selectedTechIds instanceof Set)) self.selectedTechIds = new Set();
-                const selected = self.selectedTechIds;
 
-                const EmployeesControl = L.Control.extend({
+                // состояние
+                if (!self.selectedTechIds) self.selectedTechIds = new Set(); // по умолчанию выберем всех ниже
+                if (self.routingEnabled == null) self.routingEnabled = true;
+                self.employeeFilter = '';
+
+                // Leaflet control
+                const Toolbar = L.Control.extend({
                     options: { position: 'topleft' },
+                    onAdd() {
+                        const wrap = L.DomUtil.create('div', 'leaflet-control route-toolbar');
+                        wrap.style.zIndex = 1000;                       // выше тайл-слоя
+                        wrap.style.display = 'flex';
+                        wrap.style.gap = '10px';
 
-                    onAdd(map) {
-                        const wrap = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                        /* -------- Кнопка: Routing -------- */
+                        const routing = document.createElement('div');
+                        routing.className = 'rt-btn';
+                        routing.style.position = 'relative';
 
-                        this.routeCtlWrap = wrap;
-                        self.updateRouteControlVisibility();
+                        const routingBtn = document.createElement('button');
+                        routingBtn.className = 'rt-pill';
+                        routingBtn.type = 'button';
+                        routingBtn.innerHTML = `<span class="rt-pill__text">Routing ${self.routingEnabled ? 'on' : 'off'}</span> ▾`;
+                        routing.appendChild(routingBtn);
 
-                        L.DomEvent.disableClickPropagation(wrap);
-                        L.DomEvent.disableScrollPropagation(wrap);
+                        const routingMenu = document.createElement('div');
+                        routingMenu.className = 'rt-menu';
+                        routingMenu.innerHTML = `
+                            <button data-v="on"  class="rt-item">On</button>
+                            <button data-v="off" class="rt-item">Off</button>
+                          `;
+                        routing.appendChild(routingMenu);
 
-                        wrap.style.background = '#fff';
-                        wrap.style.padding = '8px';
-                        wrap.style.minWidth = '260px';
-                        wrap.style.boxShadow = '0 10px 30px rgba(0,0,0,.25)';
-                        wrap.style.borderRadius = '8px';
+                        routingBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            closeAllMenus();
+                            routingMenu.classList.toggle('open');
+                        });
+                        routingMenu.addEventListener('click', (e) => {
+                            const v = e.target?.dataset?.v;
+                            if (!v) return;
+                            self.routingEnabled = (v === 'on');
+                            routingBtn.querySelector('.rt-pill__text').textContent =
+                                `Routing ${self.routingEnabled ? 'on' : 'off'}`;
+                            routingMenu.classList.remove('open');
+                            maybeBuildRoute();
+                        });
 
-                        // верхняя строка
-                        const top = document.createElement('div');
-                        top.className = 'flex items-center gap-2 mb-2';
+                        /* -------- Кнопка: Employees -------- */
+                        const empl = document.createElement('div');
+                        empl.className = 'rt-btn';
+                        empl.style.position = 'relative';
 
-                        const routeBtn = document.createElement('button');
-                        routeBtn.className = 'px-2 py-1 rounded bg-blue-600 text-white text-sm';
-                        routeBtn.textContent = 'Routing on';
-                        routeBtn.dataset.enabled = '1';
+                        const emplBtn = document.createElement('button');
+                        emplBtn.className = 'rt-pill';
+                        emplBtn.type = 'button';
+                        emplBtn.innerHTML = `<span class="rt-pill__text">All employees</span> ▾`;
+                        empl.appendChild(emplBtn);
 
-                        const clearBtn = document.createElement('button');
-                        clearBtn.className = 'px-2 py-1 rounded bg-gray-200 text-sm';
-                        clearBtn.textContent = 'Clear';
+                        const emplMenu = document.createElement('div');
+                        emplMenu.className = 'rt-menu';
+                        // фильтр
+                        const filterWrap = document.createElement('div');
+                        filterWrap.style.padding = '8px';
+                        filterWrap.innerHTML = `
+                            <input class="rt-input" type="text" placeholder="Filter by name or tag">
+                          `;
+                        emplMenu.appendChild(filterWrap);
+                        const filterInput = filterWrap.querySelector('input');
 
-                        top.appendChild(routeBtn);
-                        top.appendChild(clearBtn);
-                        wrap.appendChild(top);
-
-                        // поиск
-                        const search = document.createElement('input');
-                        search.type = 'text';
-                        search.placeholder = 'Filter by name or tag';
-                        search.className = 'w-full border border-gray-300 rounded px-2 py-1 text-sm mb-2';
-                        wrap.appendChild(search);
-
-                        // список
+                        // список чекбоксов
                         const list = document.createElement('div');
-                        list.className = 'max-h-56 overflow-auto space-y-1';
-                        wrap.appendChild(list);
+                        list.style.maxHeight = '260px';
+                        list.style.overflow = 'auto';
+                        emplMenu.appendChild(list);
 
-                        if (self.mapView === 'day' && selected.size === 0) {
-                            const dayISO = self.currentDayISO || self.todayISO();
-                            const byTech = self.groupByTech(self.tasksForDay(dayISO));
-                            for (const id of byTech.keys()) selected.add(String(id));
-                        }
+                        empl.appendChild(emplMenu);
 
+                        // отрисовка списка
                         const renderList = () => {
-                            const q = (search.value || '').trim().toLowerCase();
+                            const q = (self.employeeFilter || '').trim().toLowerCase();
                             list.innerHTML = '';
-
                             (self.employees || []).forEach(e => {
-                                const hay = `${e.name} ${e.tags || ''}`.toLowerCase();
+                                const hay = (e.name + ' ' + (e.tags || '')).toLowerCase();
                                 if (q && !hay.includes(q)) return;
 
                                 const row = document.createElement('label');
-                                row.className = 'flex items-center gap-2 cursor-pointer text-sm';
+                                row.className = 'rt-row';
 
                                 const cb = document.createElement('input');
                                 cb.type = 'checkbox';
+                                cb.checked = self.selectedTechIds.size === 0 // при первом запуске выберем всех
+                                    ? true
+                                    : self.selectedTechIds.has(String(e.id));
+                                cb.style.accentColor = e.color || '#555';
 
-                                const id = String(e.id);
-                                cb.checked = selected.has(id);
-
-                                cb.addEventListener('change', () => {
-                                    if (cb.checked) selected.add(id); else selected.delete(id);
-                                    if (self.mapView === 'day') self.hardRefreshMap(true);
-                                });
-
-                                const colorDot = document.createElement('span');
-                                colorDot.style.display = 'inline-block';
-                                colorDot.style.width = '12px';
-                                colorDot.style.height = '12px';
-                                colorDot.style.borderRadius = '3px';
-                                colorDot.style.background = e.color || '#55b';
-                                colorDot.style.border = '1px solid #999';
+                                const color = document.createElement('span');
+                                color.className = 'rt-color';
+                                color.style.background = e.color || '#555';
 
                                 const name = document.createElement('span');
                                 name.textContent = e.name;
 
                                 row.appendChild(cb);
-                                row.appendChild(colorDot);
+                                //row.appendChild(color);
                                 row.appendChild(name);
                                 list.appendChild(row);
+
+                                cb.addEventListener('change', () => {
+                                    const id = String(e.id);
+                                    if (cb.checked) self.selectedTechIds.add(id);
+                                    else self.selectedTechIds.delete(id);
+                                    updateEmployeesBtnTitle();
+                                    maybeBuildRoute();
+                                });
                             });
                         };
 
-                        const modeRow = document.createElement('div');
-                        modeRow.className = 'flex gap-2 mb-2';
-
-                        const weekBtn = document.createElement('button');
-                        const dayBtn  = document.createElement('button');
-
-                        function paintModeButtons(){
-                            weekBtn.className = 'px-2 py-1 rounded ' + (self.mapView === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
-                            dayBtn.className  = 'px-2 py-1 rounded ' + (self.mapView === 'day'  ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
-                        }
-                        weekBtn.textContent = 'Week';
-                        dayBtn.textContent  = 'Day';
-                        paintModeButtons();
-
-                        weekBtn.addEventListener('click', () => { self.mapView = 'week'; paintModeButtons(); self.hardRefreshMap(true); });
-                        dayBtn .addEventListener('click', () => { self.mapView = 'day';  paintModeButtons(); self.hardRefreshMap(true); });
-
-                        modeRow.appendChild(weekBtn);
-                        modeRow.appendChild(dayBtn);
-                        wrap.appendChild(modeRow);
-
-                        // события
-                        search.addEventListener('input', renderList);
-
-                        routeBtn.addEventListener('click', () => {
-                            this.routingEnabled = !this.routingEnabled;
-                            routeBtn.textContent = this.routingEnabled ? 'Routing on' : 'Routing off';
-                            routeBtn.className = this.routingEnabled
-                                ? 'px-2 py-1 rounded text-sm bg-blue-600 text-white'
-                                : 'px-2 py-1 rounded text-sm bg-gray-300 text-gray-800';
-                            self.maybeBuildRoute();
-                        });
-
-                        clearBtn.addEventListener('click', () => {
-                            selected.clear();
+                        // фильтр
+                        filterInput.addEventListener('input', () => {
+                            self.employeeFilter = filterInput.value;
                             renderList();
-                            self.clearRoute();
                         });
 
-                        renderList();
+                        // раскрытие/закрытие меню
+                        emplBtn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            closeAllMenus();
+                            emplMenu.classList.toggle('open');
+                            // ленивая инициализация: при первом открытии выберем всех
+                            if (self.selectedTechIds.size === 0 && (self.employees || []).length) {
+                                (self.employees || []).forEach(e => self.selectedTechIds.add(String(e.id)));
+                                updateEmployeesBtnTitle();
+                            }
+                            renderList();
+                        });
+
+                        // Добавляем оба блока в обёртку
+                        wrap.appendChild(routing);
+                        wrap.appendChild(empl);
+
+                        // задания помощников
+                        function updateEmployeesBtnTitle() {
+                            const total = (self.employees || []).length;
+                            const n = self.selectedTechIds.size;
+                            const txt = (n === 0 || n === total) ? 'All employees' : `${n} employee${n > 1 ? 's' : ''}`;
+                            emplBtn.querySelector('.rt-pill__text').textContent = txt;
+                        }
+
+                        function maybeBuildRoute() {
+                            // строим/чистим только в режиме "day"
+                            if (self.mapView !== 'day') return self.clearRoute();
+
+                            if (!self.routingEnabled) {
+                                self.clearRoute();
+                                return;
+                            }
+                            const ids = Array.from(self.selectedTechIds);
+                            self.showTechRoute(ids, self.currentDayISO ?? self.todayISO);
+                        }
+
+                        function closeAllMenus() {
+                            wrap.querySelectorAll('.rt-menu.open').forEach(m => m.classList.remove('open'));
+                        }
+
+                        // закрытие по клику вне
+                        document.addEventListener('click', () => closeAllMenus());
+
+                        // сохраним ссылку, чтобы управлять видимостью
+                        self._toolbarWrap = wrap;
+
+                        // текст на старте
+                        updateEmployeesBtnTitle();
+
                         return wrap;
                     }
                 });
 
-                this.map.addControl(new EmployeesControl());
+                this.map.addControl(new Toolbar());
+                this.updateToolbarVisibility();    // сразу прячем в неделе
+            },
+
+            updateToolbarVisibility() {
+                const wrap = this._toolbarWrap;
+                if (!wrap) return;
+                wrap.style.display = (this.mapView === 'day') ? 'flex' : 'none';
             },
 
             maybeBuildRoute() {
@@ -2826,7 +2875,7 @@
                     // задача попадает в выбранный диапазон (день/неделя)
                     function inScope(t, dayISO) {
                         // если явно просим день — сравниваем именно день
-                        if (this.viewMode === 'day') {                 // <-- поставьте своё условие/флаг режима
+                        if (this.mapView === 'day') {
                             const d = dayISO || this.currentDayISO || this.todayISO();
                             return String(t.day || '') === String(d);
                         }

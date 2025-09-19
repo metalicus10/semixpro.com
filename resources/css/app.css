@@ -297,3 +297,40 @@ p {
 .highlighted {
     animation: fadeInOut 1s ease-in-out;
 }
+
+/* Обёртка Leaflet уже даёт позиционирование. Цвета/бордеры — как в скринах */
+.leaflet-control.route-toolbar .rt-pill{
+    background:#0f172a;           /* slate-900 */
+    color:#fff;
+    padding:8px 14px;
+    border-radius:9999px;         /* pill */
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+    font-weight:600;
+}
+.leaflet-control.route-toolbar .rt-btn{ position:relative; }
+.leaflet-control.route-toolbar .rt-menu{
+    position:absolute; top:38px; left:0;
+    background:#fff; border-radius:8px;
+    box-shadow:0 10px 25px rgba(0,0,0,.25);
+    min-width: 230px; display:none;
+}
+.leaflet-control.route-toolbar .rt-menu.open{ display:block; }
+.leaflet-control.route-toolbar .rt-item{
+    display:block; width:100%; padding:10px 12px; text-align:left;
+}
+.leaflet-control.route-toolbar .rt-item:hover{ background:#f2f2f2; }
+
+.leaflet-control.route-toolbar .rt-input{
+    width:100%; border:1px solid #e5e7eb; border-radius:6px;
+    padding:8px 10px; outline:none;
+}
+.leaflet-control.route-toolbar .rt-row{
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; cursor:pointer;
+}
+.leaflet-control.route-toolbar .rt-row:hover{ background:#f8fafc; }
+.leaflet-control.route-toolbar .rt-row input{ margin:0; }
+.leaflet-control.route-toolbar .rt-color{
+    width:12px; height:12px; border-radius:3px; border:1px solid #999;
+    display:inline-block;
+}
