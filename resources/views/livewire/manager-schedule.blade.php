@@ -7,29 +7,45 @@
     class="overflow-x-auto bg-white text-gray-800 border"
 
 >
-    <div class="sticky top-0 z-50 flex items-center justify-between px-3 py-2 border-b">
+    <div class="sticky top-0 z-40 flex items-center justify-between px-3 py-2 border-b">
         <div class="flex items-center gap-2">
-            <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
-                    @click="dbg('moveWeek(-1) from UI'); moveWeek(-1); $dispatch('week:changed')">←
-            </button>
-            <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
+            <button type="button" class="px-2 py-1 rounded-3xl bg-white hover:bg-[#e7fdef] border-2 border-brand-accent font-bold text-[12px] text-brand-accent"
                     @click="goToday(); $dispatch('week:changed')">Today
             </button>
-            <button type="button" class="px-2 py-1 rounded bg-gray-100 hover:bg-gray-200"
-                    @click="dbg('moveWeek(1) from UI'); moveWeek(1); $dispatch('week:changed')">→
+            <button type="button" class="px-2 py-1 rounded hover:shadow"
+                    @click="dbg('moveWeek(-1) from UI'); moveWeek(-1); $dispatch('week:changed')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M15 4.5L7.5 12L15 19.5"
+                          stroke="currentColor" stroke-width="2.25"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </button>
-            <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'This week' : ''"></span>
+            <button type="button" class="px-2 py-1 rounded hover:shadow"
+                    @click="dbg('moveWeek(1) from UI'); moveWeek(1); $dispatch('week:changed')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M9 4.5L16.5 12L9 19.5"
+                          stroke="currentColor" stroke-width="2.25"
+                          stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <!-- Диапазон дат недели -->
+            <div class="text-sm font-medium text-gray-700 font-[LufgaSemiBold]"
+                 x-text="days && days.length === 7 ? (days[0].label + ' — ' + days[6].label) : ''">
+            </div>
+            <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'Current week' : ''"></span>
         </div>
 
-        <div class="flex items-center gap-2 mb-2">
-            <button @click="showCalendar"
-                    x-bind:class="mode === 'schedule' ? 'bg-blue-600 text-white' : 'bg-gray-100'"
+        <div class="flex items-center gap-2">
+            <button @click="showCalendar; destroyMap()"
+                    x-bind:class="mode === 'schedule' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
                     class="px-3 py-1 rounded"
             >
                 <span class="ms-2">Calendar</span>
             </button>
             <button @click="showMap"
-                    x-bind:class="mode === 'map' ? 'bg-blue-600 text-white' : 'bg-gray-100'"
+                    x-bind:class="mode === 'map' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
                     class="px-3 py-1 rounded"
             >
                 <span class="ms-2">Map</span>
@@ -40,11 +56,11 @@
         <div class="relative" x-data="{ open:false }">
             <button
                 @click="open = !open"
-                class="px-3 py-1 rounded-2xl bg-white border border-[#c45100] hover:bg-gray-200 text-sm text-[#c45100]"
+                class="px-3 py-1 rounded-2xl bg-white border-2 border-brand-accent font-bold text-[12px] text-brand-accent hover:bg-[#e7fdef]"
                 :class="{ 'bg-blue-600 text-white': mapView === 'day' }"
             >
-                <span class="text-[#c45100]" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
-                <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-[#c45100]" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+                <span class="text-brand-accent" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
+                <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-brand-accent font-bold" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
             </button>
 
             <div
@@ -68,14 +84,9 @@
                 </button>
             </div>
         </div>
-
-        <!-- Диапазон дат недели -->
-        <div class="text-sm font-medium text-gray-700"
-             x-text="days.length ? (days[0].label + ' — ' + days[6].label) : ''">
-        </div>
     </div>
 
-    <div x-show="mode==='schedule'">
+    <div x-show="mode==='schedule' && mapView==='week'">
         <div class="overflow-x-auto pb-[10px]">
             <!-- Глобальный оверлей спиннера -->
 
@@ -96,7 +107,7 @@
                             </div>
                             {{-- Часы --}}
                             <div class="flex">
-                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx">
+                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx" x-init="console.log(defaultTimeSlots);">
                                     <div
                                         class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
                                         <span x-text="slotLabel"></span>
@@ -193,6 +204,39 @@
         </div>
     </div>
 
+    <!-- ДНЕВНАЯ СЕТКА -->
+    <div x-show="mode==='schedule' && mapView==='day'">
+        <div id="dayGrid" class="relative bg-white rounded border overflow-hidden"
+             :style="`height:${dayGridHeight}px`">
+
+            <!-- горизонтальные линии + подписи слева -->
+            <template x-for="slot in daySlots" :key="slot.h" x-init="console.log(daySlots);">
+                <div>
+                    <!-- линия часа -->
+                    <div class="absolute left-0 right-0 border-t border-gray-200"
+                         :style="`top:${slot.top}px`"></div>
+
+                    <!-- подпись часа -->
+                    <div class="absolute left-2 text-[11px] text-gray-500"
+                         :style="`top:${slot.top+2}px`"
+                         x-text="slot.label"></div>
+                </div>
+            </template>
+
+            <!-- Блоки задач -->
+            <template x-for="t in dayTasks" :key="t.id">
+                <div
+                    class="absolute left-24 right-3 rounded-md shadow-sm overflow-hidden"
+                    :style="`top:${t._top}px;height:${t._height}px;background:${t._color}22;border:1px solid ${t._color}55`">
+                    <div class="px-2 pt-1 text-xs font-medium truncate text-gray-900/90"
+                         x-text="t?.client?.name || t.message || 'Task'"></div>
+                    <div class="px-2 pb-1 text-[11px] opacity-90"
+                         x-text="`${t.start_time || t.start || ''} – ${t.end_time || t.end || ''}`"></div>
+                </div>
+            </template>
+        </div>
+    </div>
+
     {{-- Спиннер --}}
     <div>
         <template x-if="isLoading">
@@ -211,7 +255,7 @@
 
     <div x-show="mode === 'map'" class="h-full rounded border overflow-hidden z-5"
          x-init="$watch('mode', v => { if (v === 'map') $nextTick(() => window.dispatchEvent(new Event('map:shown'))) })" id="jobsMap">
-        <div class="relative h-screen">
+        <div class="relative h-[calc(100vh-140px)] min-h-[420px]">
             {{-- Карта --}}
             <div wire:ignore
                  x-init="
@@ -222,7 +266,7 @@
                         }
                     });
                  "
-                 class="h-full rounded border overflow-hidden z-10" id="jobsMap" x-transition></div>
+                 class="absolute inset-0 rounded border overflow-hidden z-10 h-full w-full" id="jobsMap" x-ref="jobsMap" x-transition></div>
         </div>
     </div>
 
@@ -1357,13 +1401,30 @@
     function scheduler() {
         return {
             init() {
-                this.invalidateLanes = () => {
-                    this._lanesCache = {};
-                };
+                console.log('Нет ошибки даты');
+                console.log('this.currentDayISO: '+this.currentDayISO);
+                if (!this.currentDayISO) this.currentDayISO = this.tz().format('YYYY-MM-DD');
+                console.log('this.currentDayISO: '+this.currentDayISO);
+                if (!this.weekStart)     this.weekStart     = this.startOfWeek(this.tz()).format('YYYY-MM-DD');
+
+                console.log('Нет ошибки даты');
+                this.invalidateLanes = () => { this._lanesCache = {}; };
                 this.stopClock();
-                this.startClock();
-                this.setWeek(this.currentNow());
+
+                console.log('Нет ошибки даты');
+
+                this.setWeek(this.tz());
                 this.$watch('tasks', () => this.invalidateLanes());
+
+                console.log('Нет ошибки даты');
+                this.$watch('mapView', () => {
+                    if (this.mapView === 'day') this.$nextTick(() => this.renderDayGrid());
+                });
+                console.log('Нет ошибки даты');
+
+                this.fetchForCurrentView().finally(() => {
+                    this.startClock();
+                });
 
                 window.addEventListener('map:shown', () => {
                     try {
@@ -1471,11 +1532,25 @@
                 },
             },
 
-            weekStart: null,
+            weekStart: '',
             days: [],
             firstDay: 1,
+            DAY_START_HOUR: 6,
+            DAY_END_HOUR: 22,
+            pxPerMin: 1,
+            dayTimeSlots: [],
 
             APP_TZ: dayjs.tz.guess(),
+            tz(d) {
+                return d ? dayjs.tz(d, this.APP_TZ) : dayjs().tz(this.APP_TZ);
+            },
+            safeTz(d) {
+                const m = d ? dayjs.tz(d, this.APP_TZ) : dayjs().tz(this.APP_TZ);
+                return m.isValid() ? m : null;
+            },
+            startOfWeek(d) { return this.tz(d).startOf('isoWeek'); },
+            endOfWeek(d)   { return this.tz(d).endOf('isoWeek'); },
+            get view() { return this.mapView || 'week'; },
             nowTs: null,
             clockId: null,
 
@@ -1493,17 +1568,17 @@
             },
 
             startClock() {
-                this.bumpNow();
-                this.clockId = setInterval(() => this.bumpNow(), 30_000);
+                this.stopClock();
+                const tick = () => {
+                    this.now = this.tz();
+                };
+                tick();
+                this.clockId = setInterval(tick, 30000);
             },
 
             stopClock() {
                 if (this.clockId) clearInterval(this.clockId);
-            },
-
-            bumpNow() {
-                this.nowTs = Date.now();
-                // this.$dispatch('time-tick', { now: this.nowTs });
+                this.clockId = null;
             },
 
             slotDateTime(dayObj, slotLabel) {
@@ -1534,34 +1609,28 @@
                 return typeof d === 'string' ? d : d?.date;
             },
 
-            async setWeek(d) {
-                const base = dayjs.isDayjs(d)
-                    ? (d.tz ? d.tz(this.APP_TZ) : d)
-                    : (dayjs.tz ? dayjs.tz(d, 'YYYY-MM-DD', this.APP_TZ) : dayjs(d));
-
-                let start = base.startOf('week');
-
-                if (this.firstDay === 1) {
-                    start = start.add(1, 'day');
-                }
+            async setWeek(weekStartInput) {
+                const ws = this.safeTz(weekStartInput) || this.startOfWeek(this.tz());
+                const start = this.startOfWeek(ws);
+                const end   = start.add(6, 'day').endOf('day');
 
                 this.weekStart = start.format('YYYY-MM-DD');
 
-                this.days = Array.from({length: 7}, (_, i) => {
+                const cur = this.safeTz(this.currentDayISO);
+                if (!cur || !cur.isBetween(start, end, null, '[]')) {
+                    this.currentDayISO = start.format('YYYY-MM-DD');
+                }
+
+                this.days = Array.from({ length: 7 }, (_, i) => {
                     const d = start.add(i, 'day');
-                    return {
-                        date: d.format('YYYY-MM-DD'),
-                        label: d.format('ddd, MMM D'),
-                    };
+                    return { date: d.format('YYYY-MM-DD'), label: d.format('ddd, MMM D') };
                 });
                 this.ensureCurrentDayIsInWeek();
 
-                const end   = start.add(6, 'day');
-                const cur = dayjs(this.currentDayISO);
-                this.currentDayISO =
+                /*this.currentDayISO =
                     (cur.isValid() && cur.isBetween(start, end, 'day', '[]'))
                         ? cur.format('YYYY-MM-DD')
-                        : start.format('YYYY-MM-DD');
+                        : start.format('YYYY-MM-DD');*/
 
                 if (this.fetchWeek) {
                     await this.fetchWeek(this.days[0].date, this.days[6].date);
@@ -1578,31 +1647,89 @@
                 this.resetLaneCaches();
             },
 
-            moveWeek(delta) {
-                const start = dayjs.tz
-                    ? dayjs.tz(this.weekStart, 'YYYY-MM-DD', this.APP_TZ)
-                    : dayjs(this.weekStart, 'YYYY-MM-DD');
-                this.setWeek(start.add(delta, 'week'));
+            toDate(d) {
+                const m = this.safeTz(d);
+                return m ? new Date(m.valueOf()) : new Date();
             },
 
-            goToday() {
-                this.setWeek(this.currentNow());
+            async setDay(day) {
+                const d = this.safeTz(day) || this.tz();
+                this.currentDayISO = d.format('YYYY-MM-DD');
+
+                const ws = this.startOfWeek(d);
+                if (!this.weekStart || !this.safeTz(this.weekStart).isSame(ws, 'day')) {
+                    await this.setWeek(ws);
+                }
+            },
+
+            async moveWeek(delta) {
+                if (this.view === 'day') {
+                    const base = this.safeTz(this.currentDayISO) || this.tz();
+                    await this.setDay(base.add(delta, 'day'));
+                } else {
+                    const base = this.safeTz(this.weekStart) || this.startOfWeek(this.tz());
+                    await this.setWeek(this.startOfWeek(base.add(delta, 'week')));
+                }
+                await this.fetchForCurrentView();
+
+                /*const start = dayjs.tz
+                    ? dayjs.tz(this.weekStart, 'YYYY-MM-DD', this.APP_TZ)
+                    : dayjs(this.weekStart, 'YYYY-MM-DD');
+                this.setWeek(start.add(delta, 'week'));*/
+            },
+
+            async goToday() {
+                const now = this.tz();
+
+                if (this.view === 'day') {
+                    await this.setDay(now);
+                } else {
+                    await this.setWeek(this.startOfWeek(now));
+                }
+
                 this.invalidateLanes()
+                await this.fetchForCurrentView();
             },
 
             isCurrentWeek() {
-                const now = this.currentNow();
-                const start = dayjs.tz
-                    ? dayjs.tz(this.weekStart, 'YYYY-MM-DD', this.APP_TZ)
-                    : dayjs(this.weekStart, 'YYYY-MM-DD');
-                const end = start.add(6, 'day').endOf('day');
+                const ws = this.safeTz(this.weekStart);
+                if (!ws) return false;
+                const start = this.startOfWeek(ws);
+                const end   = start.add(6, 'day').endOf('day');
+                const now   = this.tz();
                 return now.isAfter(start) && now.isBefore(end);
+            },
+
+            isCurrentDay() {
+                const cur = this.safeTz(this.currentDayISO);
+                return !!cur && cur.isSame(this.tz(), 'day');
+            },
+
+            async fetchForCurrentView() {
+                if (this.view === 'day') {
+                    const d = this.currentDayISO ? this.tz(this.currentDayISO) : this.tz();
+                    await this.fetchWeek(d.startOf('day'), d.endOf('day'));
+                } else {
+                    const s = this.weekStart ? this.tz(this.weekStart) : this.startOfWeek(this.tz());
+                    await this.fetchWeek(s.startOf('day'), s.add(6, 'day').endOf('day'));
+                }
+
+                // если сейчас открыт режим карты — перерисуем
+                if (this.mode === 'map') {
+                    await this.refreshMap(true);
+                    if (this.routingEnabled && this.selectedTechIds.size) {
+                        await this.showTechRoute(Array.from(this.selectedTechIds), this.currentDayISO);
+                    }
+                }
             },
 
             async fetchWeek(fromDate, toDate) {
                 this.isLoading = true;
                 try {
-                    const tasks = await this.$wire.call('loadTasksForRange', fromDate, toDate);
+                    const from = this.tz(fromDate).format('YYYY-MM-DD');
+                    const to   = this.tz(toDate).format('YYYY-MM-DD');
+
+                    const tasks = await this.$wire.call('loadTasksForRange', from, to);
                     this.tasks = tasks ?? [];
                 } finally {
                     this.isLoading = false;
@@ -1611,10 +1738,126 @@
                     if (this.mode === 'map') {
                         await this.refreshMap(true);
                         if (this.routingEnabled && this.selectedTechIds.size) {
-                            this.showTechRoute(Array.from(this.selectedTechIds), this.currentDayISO);
+                            await this.showTechRoute(Array.from(this.selectedTechIds), this.currentDayISO);
                         }
                     }
                 }
+            },
+
+            moveDay(delta) {
+                const cur = this.currentDayISO ? this.tz(this.currentDayISO) : this.tz();
+                this.currentDayISO = cur.add(delta, 'day').format('YYYY-MM-DD');
+                this.renderDayGrid();
+                this.fetchForCurrentView();
+            },
+
+            get daySlots() {
+                const out = [];
+                for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++) {
+                    out.push({
+                        h,
+                        label: this.to12Hour(h),
+                        top: (h - this.DAY_START_HOUR) * 60 * this.pxPerMin
+                    });
+                }
+                return out;
+            },
+
+            // высота всей области дня
+            get dayGridHeight() {
+                return (this.DAY_END_HOUR - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+            },
+
+            buildDayTimeSlots() {
+                const base = this.currentDayISO
+                    ? this.tz(this.currentDayISO).startOf('day')
+                    : this.tz().startOf('day');
+
+                const slots = [];
+                for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++) {
+                    const t = base.hour(h).minute(0).second(0);
+                    slots.push({
+                        label: t.format('hA'),
+                        startISO: t.toISOString(),
+                        endISO: t.add(1, 'hour').toISOString(),
+                        hour: h
+                    });
+                }
+                this.dayTimeSlots = slots;
+            },
+
+            renderDayGrid() {
+                const root = document.getElementById('dayGrid');
+                if (!root) return;
+                root.innerHTML = '';
+                this.buildDayTimeSlots();
+
+                // параметры шкалы
+                const startHour = 6;      // начало дня
+                const endHour   = 22;     // конец дня
+                const pxPerMin  = 2;      // 1 минута = 2px ⇒ 1 час = 120px
+                const totalMin  = (endHour - startHour) * 60;
+                root.style.height = `${totalMin * pxPerMin}px`;
+                root.classList.add('bg-white','rounded','border');
+
+                // вертикальные линии часов слева
+                for (let h = startHour; h <= endHour; h++) {
+                    const y = (h - startHour) * 60 * pxPerMin;
+                    const line = document.createElement('div');
+                    line.style.cssText = `position:absolute;left:0;right:0;top:${y}px;height:0;border-top:1px solid #e5e7eb`;
+                    root.appendChild(line);
+
+                    const lbl = document.createElement('div');
+                    lbl.textContent = `${h}`;
+                    lbl.style.cssText = `position:absolute;left:8px;top:${y+2}px;font-size:11px;color:#6b7280`;
+                    root.appendChild(lbl);
+                }
+
+                // задачи дня
+                const dayTasks = this.tasksForDay(this.currentDayISO)
+                    .map(t => {
+                        const start = this.hmToMin(t.start_time || t.start || '00:00');
+                        const end   = this.hmToMin(t.end_time || t.end   || '00:00');
+                        return { ...t, _startMin: start, _endMin: Math.max(end, start + 30) };
+                    })
+                    .sort((a,b) => a._startMin - b._startMin);
+
+                // цвет по технику
+                const colorByTech = (techId) => this.colorOfTech(String(techId));
+
+                // рисуем блоки
+                dayTasks.forEach(t => {
+                    const top    = (t._startMin - startHour*60) * pxPerMin;
+                    const height = (t._endMin   - t._startMin)  * pxPerMin;
+
+                    const box = document.createElement('div');
+                    box.className = 'absolute left-24 right-3 rounded-md shadow-sm';
+                    box.style.top    = `${top}px`;
+                    box.style.height = `${height}px`;
+                    box.style.background = colorByTech(t.technician) || '#0ea5e9';
+                    box.style.opacity = '.9';
+                    box.style.padding = '6px 8px';
+                    box.style.color   = 'white';
+                    box.style.border  = '1px solid rgba(0,0,0,.1)';
+                    box.style.overflow = 'hidden';
+
+                    const title = document.createElement('div');
+                    title.className = 'text-xs font-medium truncate';
+                    title.textContent = t.client?.name || t.message || 'Task';
+                    box.appendChild(title);
+
+                    const time = document.createElement('div');
+                    time.className = 'text-[11px] opacity-90';
+                    time.textContent = `${t.start_time || t.start} – ${t.end_time || t.end}`;
+                    box.appendChild(time);
+
+                    root.appendChild(box);
+                });
+            },
+
+            hmToMin(hm) {
+                const [h, m] = String(hm).split(':').map(Number);
+                return h*60 + (m||0);
             },
 
             onContextMenu(event, emp, day, idx) {
@@ -1711,6 +1954,39 @@
                 const d = (typeof day === 'string') ? day : (day && day.date ? day.date : null);
                 if (!d) return [];
                 return this.tasks.filter(t => String(t.technician) === String(empId) && String(t.day) === String(d));
+            },
+
+            get dayModeTasks() {
+                const dISO = this.currentDayISO;                 // 'YYYY-MM-DD'
+                const selected = this.selectedTechIds?.size
+                    ? Array.from(this.selectedTechIds).map(String)
+                    : (this.employees || []).map(e => String(e.id)); // если ничего не выбрано — все
+
+                return (this.tasks || [])
+                    .filter(t => String(t.day) === String(dISO))
+                    .filter(t => {
+                        const ids = Array.isArray(t.technician) ? t.technician.map(String) : [String(t.technician)];
+                        return ids.some(id => selected.includes(id));
+                    })
+                    .map(t => {
+                        // координаты времени
+                        const s = this.hmToMin(t.start_time || t.start || '00:00');
+                        const e = this.hmToMin(t.end_time   || t.end   || '00:00');
+
+                        const startMin = (s ?? (this.dayStartHour*60));
+                        const endMin   = Math.max((e ?? startMin + 30), startMin + 30); // не меньше 30 минут
+
+                        const top    = (startMin - this.dayStartHour * 60) * this.pxPerMin;
+                        const height = (endMin   - startMin)              * this.pxPerMin;
+
+                        return {
+                            ...t,
+                            _top: Math.max(0, top),
+                            _height: Math.max(6, height),
+                            _color: this.colorOfTech(String(t.technician))
+                        };
+                    })
+                    .sort((a, b) => a._top - b._top);
             },
 
             // Разметка при выделении для создания задачи
@@ -2300,18 +2576,19 @@
             },
             // ===== /LOG HELPERS =====
 
-
             routeControl: null,
             routeLayer: null,
             routeTech: null,
             routeLayers: {},
             routeCache: new Map(),
             mode: 'schedule',
-            map: null, markers: null, inited: false,
+            map: null, markers: null, inited: false, _initializingMap: false,
             mapView: 'week',
+            colorMap: [],
             selectedTechIds: new Set(),
             routingEnabled: true,
-            currentDayISO: '',
+            currentDayISO: null,
+            weekStartISO: null,
             routeCtlWrap: null, _employeesControlWrap: null, _employeesControl:null, _toolbarWrap:null, employeeFilter: null,
             weekBtn: document.createElement('button'),
             dayBtn: document.createElement('button'),
@@ -2345,8 +2622,15 @@
 
             async showMap() {
                 this.mode = 'map';
-                if (!this.inited) {
-                    await this.initMap.call(this);
+
+                await this.$nextTick();
+
+                if (this._initializingMap) return;
+                this._initializingMap = true;
+
+                if (!this.map) {
+                    await this.waitMapContainerReady();
+                    await this.initMap();
                     this.inited = true;
                 }
                 this.ensureCurrentDayIsInWeek();
@@ -2357,9 +2641,10 @@
                     await this.refreshMap(true);
                 }
                 this.updateRouteControlVisibility();
+                this._initializingMap = false;
             },
 
-            async waitMapContainerReady(selector = '#jobsMap', maxTries = 12) {
+            async waitMapContainerReady(selector = '#jobsMap', maxTries = 20) {
                 const el = document.querySelector(selector);
                 for (let i = 0; i < maxTries; i++) {
                     const vis = el && getComputedStyle(el).display !== 'none';
@@ -2429,6 +2714,15 @@
             },
 
             async initMap() {
+                const el = this.$refs.jobsMap;
+
+                if (el._leaflet_id) {
+                    try { el._leaflet_id = null; } catch (_) {}
+                    el.innerHTML = '';
+                }
+
+                if (this.map) return;
+
                 this.map = L.map('jobsMap', { zoomControl: false })
                     .setView(this.DEFAULT_CENTER, this.DEFAULT_ZOOM);
 
@@ -2443,6 +2737,22 @@
 
                 setTimeout(() => { this.map?.invalidateSize(true); }, 0);
                 this.updateRouteControlVisibility();
+            },
+
+            destroyMap() {
+                if (!this.map) return;
+                try {
+                    this.map.off();
+                    this.map.remove();
+                } catch (_) {}
+                this.map = null;
+                this.inited = false;
+
+                const el = this.$refs.jobsMap;
+                if (el) {
+                    try { el._leaflet_id = null; } catch (_) {}
+                    el.innerHTML = '';
+                }
             },
 
             nextFrame() { return new Promise(r => requestAnimationFrame(r)); },
@@ -2538,6 +2848,24 @@
                 this._employeesControlWrap.style.display = (this.mapView === 'day') ? '' : 'none';
             },
 
+            colorOfTech(id) {
+                const key = String(id);
+                if (this.colorMap[key]) return this.colorMap[key];
+
+                // детерминированный "seed" из id
+                let seed = 0;
+                for (let i = 0; i < key.length; i++) seed = (seed * 31 + key.charCodeAt(i)) >>> 0;
+
+                // распределяем оттенок по кругу (golden angle)
+                const hue = (seed * 137.508) % 360;
+                const sat = 70;   // насыщенность
+                const lig = 50;   // светлота
+                const color = `hsl(${hue}, ${sat}%, ${lig}%)`;
+
+                this.colorMap[key] = color;
+                return color;
+            },
+
             paintModeButtons(){
                 this.weekBtn.className = 'px-2 py-1 rounded ' + (this.mapView === 'week' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
                 this.dayBtn.className  = 'px-2 py-1 rounded ' + (this.mapView === 'day'  ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
@@ -2545,6 +2873,10 @@
 
             setMapView(view) {
                 this.mapView = view;
+                if (view === 'day' && !this.currentDayISO) this.currentDayISO = this.todayISO(); this.renderDayGrid();
+                if (view === 'week') {
+                    if (this.currentDayISO) this.tasksForDay(this.currentDayISO);
+                }
                 this.paintModeButtons?.();
                 this.updateRouteControlVisibility();
                 this.hardRefreshMap(true);
@@ -2643,19 +2975,21 @@
                                 const hay = (e.name + ' ' + (e.tags || '')).toLowerCase();
                                 if (q && !hay.includes(q)) return;
 
+                                e.color = self.colorOfTech(e.id);
+
                                 const row = document.createElement('label');
                                 row.className = 'rt-row';
 
                                 const cb = document.createElement('input');
                                 cb.type = 'checkbox';
-                                cb.checked = self.selectedTechIds.size === 0 // при первом запуске выберем всех
+                                cb.checked = self.selectedTechIds.size === 0
                                     ? true
                                     : self.selectedTechIds.has(String(e.id));
-                                cb.style.accentColor = e.color || '#555';
+                                cb.style.color = e.color;
 
-                                const color = document.createElement('span');
-                                color.className = 'rt-color';
-                                color.style.background = e.color || '#555';
+                                const swatch = document.createElement('span');
+                                swatch.className = 'rt-color';
+                                swatch.style.background = e.color;
 
                                 const name = document.createElement('span');
                                 name.textContent = e.name;
@@ -2674,6 +3008,14 @@
                                 });
                             });
                         };
+
+                        filterInput.addEventListener('mousedown', e => e.stopPropagation());
+                        filterInput.addEventListener('click',      e => e.stopPropagation());
+                        filterInput.addEventListener('pointerdown',e => e.stopPropagation());
+
+                        list.addEventListener('mousedown', e => e.stopPropagation());
+                        list.addEventListener('click',      e => e.stopPropagation());
+                        list.addEventListener('pointerdown',e => e.stopPropagation());
 
                         // фильтр
                         filterInput.addEventListener('input', () => {
@@ -2752,9 +3094,7 @@
                 }
                 // передаём массив id
                 const ids = Array.from(this.selectedTechIds);
-                console.log('ids: '+ids);
                 const dayISO = this.currentDayISO || this.days?.[0]?.date || '';
-                console.log('dayISO: '+dayISO);
                 this.dbg('[ROUTE] ids=', ids, 'day=', dayISO);
                 this.showTechRoute(ids, this.currentDayISO);
             },
@@ -2866,7 +3206,6 @@
                 const ids = selectedTechIds.map(String);
                 this.dbg('[ROUTE] ids=', ids, 'dayISO=', dayISO);
 
-                console.log(this.tasks);
                 for (const techId of ids) {
                     function hasId(ids, v) {
                         return ids?.has ? ids.has(v) : ids?.includes?.(v);

@@ -102,7 +102,7 @@
 }
 
 @theme {
-    --font-display: "Lufga SemiBold", "sans-serif";
+    --font-display: "Lufga SemiBold";
 
     --color-brand-light: #F4F5EF;
     --color-brand-primary: #FFE37C;
