@@ -206,21 +206,32 @@
 
     <!-- ДНЕВНАЯ СЕТКА -->
     <div x-show="mode==='schedule' && mapView==='day'">
-        <div id="dayGrid" class="relative bg-white rounded border overflow-hidden"
+        <div id="dayGrid" class="relative bg-white border border-b-gray-400 overflow-auto"
              :style="`height:${dayGridHeight}px`">
 
-            <!-- горизонтальные линии + подписи слева -->
-            <template x-for="slot in daySlots" :key="slot.h" x-init="console.log(daySlots);">
+            <div class="flex sticky top-0 z-10 h-[28px] w-full bg-gray-300">
+                <div class="w-[50px] text-[11px] items-center px-1">GMT-04</div>
+                <div class="flex-1"></div>
+            </div>
+
+            <!-- ЧАСОВЫЕ линии + подпись -->
+            <template x-for="slot in hours" :key="slot.h">
                 <div>
-                    <!-- линия часа -->
-                    <div class="absolute left-0 right-0 border-t border-gray-200"
+                    <!-- толстая часовая линия -->
+                    <div class="absolute left-10 right-0 border-t border-gray-300"
                          :style="`top:${slot.top}px`"></div>
 
-                    <!-- подпись часа -->
-                    <div class="absolute left-2 text-[11px] text-gray-500"
-                         :style="`top:${slot.top+2}px`"
+                    <!-- подпись по центру часа -->
+                    <div class="absolute left-2 text-[11px] text-gray-500 select-none"
+                         :style="`top:${slot.center}px; transform:translateY(-50%);`"
                          x-text="slot.label"></div>
                 </div>
+            </template>
+
+            <!-- ПОЛУЧАСОВЫЕ тонкие линии -->
+            <template x-for="hh in halfHours" :key="hh.top">
+                <div class="absolute left-10 right-0 border-t border-gray-200"
+                     :style="`top:${hh.top}px`"></div>
             </template>
 
             <!-- Блоки задач -->
@@ -1401,26 +1412,18 @@
     function scheduler() {
         return {
             init() {
-                console.log('Нет ошибки даты');
-                console.log('this.currentDayISO: '+this.currentDayISO);
                 if (!this.currentDayISO) this.currentDayISO = this.tz().format('YYYY-MM-DD');
-                console.log('this.currentDayISO: '+this.currentDayISO);
                 if (!this.weekStart)     this.weekStart     = this.startOfWeek(this.tz()).format('YYYY-MM-DD');
 
-                console.log('Нет ошибки даты');
                 this.invalidateLanes = () => { this._lanesCache = {}; };
                 this.stopClock();
-
-                console.log('Нет ошибки даты');
 
                 this.setWeek(this.tz());
                 this.$watch('tasks', () => this.invalidateLanes());
 
-                console.log('Нет ошибки даты');
-                this.$watch('mapView', () => {
+                /*this.$watch('mapView', () => {
                     if (this.mapView === 'day') this.$nextTick(() => this.renderDayGrid());
-                });
-                console.log('Нет ошибки даты');
+                });*/
 
                 this.fetchForCurrentView().finally(() => {
                     this.startClock();
@@ -1539,8 +1542,18 @@
             DAY_END_HOUR: 22,
             pxPerMin: 1,
             dayTimeSlots: [],
-
             APP_TZ: dayjs.tz.guess(),
+
+            to12h(h) {
+                const am = h < 12;
+                let hh = h % 12; if (hh === 0) hh = 12;
+                return `${hh}${am ? 'am' : 'pm'}`;
+            },
+            mondayStart(d) {
+                const m = this.tz(d).startOf('day');
+                const offset = (m.day() + 6) % 7;
+                return m.subtract(offset, 'day');
+            },
             tz(d) {
                 return d ? dayjs.tz(d, this.APP_TZ) : dayjs().tz(this.APP_TZ);
             },
@@ -1610,14 +1623,12 @@
             },
 
             async setWeek(weekStartInput) {
-                const ws = this.safeTz(weekStartInput) || this.startOfWeek(this.tz());
-                const start = this.startOfWeek(ws);
-                const end   = start.add(6, 'day').endOf('day');
-
+                const start = this.mondayStart(weekStartInput);
                 this.weekStart = start.format('YYYY-MM-DD');
+                this.weekEnd   = start.add(6, 'day').format('YYYY-MM-DD');
 
                 const cur = this.safeTz(this.currentDayISO);
-                if (!cur || !cur.isBetween(start, end, null, '[]')) {
+                if (!cur || !cur.isBetween(this.weekStart, this.weekEnd, null, '[]')) {
                     this.currentDayISO = start.format('YYYY-MM-DD');
                 }
 
@@ -1664,8 +1675,8 @@
 
             async moveWeek(delta) {
                 if (this.view === 'day') {
-                    const base = this.safeTz(this.currentDayISO) || this.tz();
-                    await this.setDay(base.add(delta, 'day'));
+                    const base = this.mondayStart(this.weekStart || this.currentDayISO || this.tz());
+                    await this.setWeek(base.add(delta, 'week'));
                 } else {
                     const base = this.safeTz(this.weekStart) || this.startOfWeek(this.tz());
                     await this.setWeek(this.startOfWeek(base.add(delta, 'week')));
@@ -1679,12 +1690,11 @@
             },
 
             async goToday() {
-                const now = this.tz();
-
+                this.currentDayISO = this.tz().format('YYYY-MM-DD');
                 if (this.view === 'day') {
-                    await this.setDay(now);
+                    await this.setDay(this.currentDayISO);
                 } else {
-                    await this.setWeek(this.startOfWeek(now));
+                    await this.setWeek(this.currentDayISO);
                 }
 
                 this.invalidateLanes()
@@ -1692,12 +1702,9 @@
             },
 
             isCurrentWeek() {
-                const ws = this.safeTz(this.weekStart);
-                if (!ws) return false;
-                const start = this.startOfWeek(ws);
-                const end   = start.add(6, 'day').endOf('day');
-                const now   = this.tz();
-                return now.isAfter(start) && now.isBefore(end);
+                const nowMon = this.mondayStart(this.tz());
+                const curMon = this.mondayStart(this.weekStart || this.currentDayISO);
+                return nowMon.format('YYYY-MM-DD') === curMon.format('YYYY-MM-DD');
             },
 
             isCurrentDay() {
@@ -1726,10 +1733,7 @@
             async fetchWeek(fromDate, toDate) {
                 this.isLoading = true;
                 try {
-                    const from = this.tz(fromDate).format('YYYY-MM-DD');
-                    const to   = this.tz(toDate).format('YYYY-MM-DD');
-
-                    const tasks = await this.$wire.call('loadTasksForRange', from, to);
+                    const tasks = await this.$wire.call('loadTasksForRange', fromDate, toDate);
                     this.tasks = tasks ?? [];
                 } finally {
                     this.isLoading = false;
@@ -1747,17 +1751,21 @@
             moveDay(delta) {
                 const cur = this.currentDayISO ? this.tz(this.currentDayISO) : this.tz();
                 this.currentDayISO = cur.add(delta, 'day').format('YYYY-MM-DD');
-                this.renderDayGrid();
+                //this.renderDayGrid();
                 this.fetchForCurrentView();
             },
 
             get daySlots() {
                 const out = [];
                 for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++) {
+                    const top = (h - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+                    let yHour = (h * 60) * this.pxPerMin;
                     out.push({
                         h,
-                        label: this.to12Hour(h),
-                        top: (h - this.DAY_START_HOUR) * 60 * this.pxPerMin
+                        label: this.to12h(h),
+                        top,
+                        yHour,
+                        yHalf: yHour + 30 * this.pxPerMin,
                     });
                 }
                 return out;
@@ -1766,6 +1774,29 @@
             // высота всей области дня
             get dayGridHeight() {
                 return (this.DAY_END_HOUR - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+            },
+
+            get hours(){
+                const out = [];
+                for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++){
+                    const top = (h - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+                    out.push({
+                        h,
+                        label: this.to12h(h),
+                        top,
+                        center: top + 30*this.pxPerMin
+                    });
+                }
+                return out;
+            },
+
+            get halfHours(){
+                const out = [];
+                for (let h = this.DAY_START_HOUR; h < this.DAY_END_HOUR; h++){
+                    const top = ((h - this.DAY_START_HOUR) * 60 + 30) * this.pxPerMin;
+                    out.push({ top });
+                }
+                return out;
             },
 
             buildDayTimeSlots() {
@@ -1786,7 +1817,7 @@
                 this.dayTimeSlots = slots;
             },
 
-            renderDayGrid() {
+            /*renderDayGrid() {
                 const root = document.getElementById('dayGrid');
                 if (!root) return;
                 root.innerHTML = '';
@@ -1795,7 +1826,7 @@
                 // параметры шкалы
                 const startHour = 6;      // начало дня
                 const endHour   = 22;     // конец дня
-                const pxPerMin  = 2;      // 1 минута = 2px ⇒ 1 час = 120px
+                const pxPerMin  = 1;      // 1 минута = 2px ⇒ 1 час = 120px
                 const totalMin  = (endHour - startHour) * 60;
                 root.style.height = `${totalMin * pxPerMin}px`;
                 root.classList.add('bg-white','rounded','border');
@@ -1853,7 +1884,7 @@
 
                     root.appendChild(box);
                 });
-            },
+            },*/
 
             hmToMin(hm) {
                 const [h, m] = String(hm).split(':').map(Number);
@@ -2873,7 +2904,7 @@
 
             setMapView(view) {
                 this.mapView = view;
-                if (view === 'day' && !this.currentDayISO) this.currentDayISO = this.todayISO(); this.renderDayGrid();
+                if (view === 'day' && !this.currentDayISO) this.currentDayISO = this.todayISO(); //this.renderDayGrid();
                 if (view === 'week') {
                     if (this.currentDayISO) this.tasksForDay(this.currentDayISO);
                 }

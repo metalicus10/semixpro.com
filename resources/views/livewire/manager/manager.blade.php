@@ -1,4 +1,4 @@
-<div>
+<div class="overflow-auto">
     <div x-cloak x-show="currentTab == 'dashboard'" class="w-full">
         <livewire:manager-dashboard :key="'manager-dashboard-' . auth()->id()" />
     </div>
