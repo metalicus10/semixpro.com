@@ -1,979 +1,901 @@
 {{-- resources/views/livewire/job-scheduler.blade.php --}}
-<div
-    x-data="scheduler()"
-    @mouseup.window="$event.button === 0 && endSelection()"
-    @unique-slot-error.window="alert($event.detail[0].message)"
-    @interval-overlap-error.window="alert($event.detail[0].message)"
-    class="overflow-x-auto bg-white text-gray-800 border"
+<div x-data="viewportPanel()" x-ref="panel"
+     class="overflow-auto"
+     :style="`height:${h}px`">
+    <div
+        x-data="scheduler()"
+        @mouseup.window="$event.button === 0 && endSelection()"
+        @unique-slot-error.window="alert($event.detail[0].message)"
+        @interval-overlap-error.window="alert($event.detail[0].message)"
+        class="overflow-x-auto bg-white text-gray-800 border"
 
->
-    <div class="sticky top-0 z-40 flex items-center justify-between px-3 py-2 border-b">
-        <div class="flex items-center gap-2">
-            <button type="button" class="px-2 py-1 rounded-3xl bg-white hover:bg-[#e7fdef] border-2 border-brand-accent font-bold text-[12px] text-brand-accent"
-                    @click="goToday(); $dispatch('week:changed')">Today
-            </button>
-            <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="dbg('moveWeek(-1) from UI'); moveWeek(-1); $dispatch('week:changed')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M15 4.5L7.5 12L15 19.5"
-                          stroke="currentColor" stroke-width="2.25"
-                          stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="dbg('moveWeek(1) from UI'); moveWeek(1); $dispatch('week:changed')">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M9 4.5L16.5 12L9 19.5"
-                          stroke="currentColor" stroke-width="2.25"
-                          stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <!-- Диапазон дат недели -->
-            <div class="text-sm font-medium text-gray-700 font-[LufgaSemiBold]"
-                 x-text="days && days.length === 7 ? (days[0].label + ' — ' + days[6].label) : ''">
-            </div>
-            <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'Current week' : ''"></span>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <button @click="showCalendar; destroyMap()"
-                    x-bind:class="mode === 'schedule' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
-                    class="px-3 py-1 rounded"
-            >
-                <span class="ms-2">Calendar</span>
-            </button>
-            <button @click="showMap"
-                    x-bind:class="mode === 'map' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
-                    class="px-3 py-1 rounded"
-            >
-                <span class="ms-2">Map</span>
-            </button>
-        </div>
-
-        <!-- правый блок шапки, рядом с выводом диапазона недели -->
-        <div class="relative" x-data="{ open:false }">
-            <button
-                @click="open = !open"
-                class="px-3 py-1 rounded-2xl bg-white border-2 border-brand-accent font-bold text-[12px] text-brand-accent hover:bg-[#e7fdef]"
-                :class="{ 'bg-blue-600 text-white': mapView === 'day' }"
-            >
-                <span class="text-brand-accent" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
-                <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-brand-accent font-bold" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
-            </button>
-
-            <div
-                x-show="open" x-transition
-                @click.outside="open=false" @keydown.escape.window="open=false"
-                class="absolute flex flex-col right-0 mt-1 w-40 rounded-lg bg-white shadow z-50"
-            >
-                <button
-                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
-                    :class="mapView === 'week' ? 'bg-blue-50 text-blue-700' : ''"
-                    @click="setMapView('week'); open=false"
-                >
-                    Week
+    >
+        <div class="sticky top-0 z-40 flex items-center justify-between px-3 py-2">
+            <div class="flex items-center gap-2">
+                <button type="button" class="px-2 py-1 rounded-3xl bg-white hover:bg-[#e7fdef] border-2 border-brand-accent font-bold text-[12px] text-brand-accent"
+                        @click="goToday(); $dispatch('week:changed')">Today
                 </button>
-                <button
-                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
-                    :class="mapView === 'day' ? 'bg-blue-50 text-blue-700' : ''"
-                    @click="setMapView('day'); open=false"
-                >
-                    Day
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div x-show="mode==='schedule' && mapView==='week'">
-        <div class="overflow-x-auto pb-[10px]">
-            <!-- Глобальный оверлей спиннера -->
-
-            {{-- Заголовок --}}
-            <div class="inline-flex items-center border-b border-b-gray-400">
-                {{-- Первая узкая ячейка для таймзоны или иконки --}}
-                <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
-                    GMT -04
-                </div>
-                {{-- Дни недели с часами --}}
-                <div class="flex-1 inline-flex border-l-2 border-l-gray-400">
-                    <template x-for="day in days" :key="day.date">
-                        <div class="flex flex-col">
-                            {{-- Дата --}}
-                            <div
-                                class="h-5 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
-                                <span x-text="day.label"></span>
-                            </div>
-                            {{-- Часы --}}
-                            <div class="flex">
-                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx" x-init="console.log(defaultTimeSlots);">
-                                    <div
-                                        class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
-                                        <span x-text="slotLabel"></span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
-            </div>
-
-            {{-- Строки сотрудников --}}
-            <template x-for="employee in employees" :key="employee.id">
-                <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
-                    {{-- Колонка с аватаром и именем --}}
-                    <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
-                        <img
-                            :src="employee.avatar"
-                            alt=""
-                            class="w-8 h-8 rounded-full object-cover"
-                        />
-                        <span class="text-sm font-medium truncate" x-text="employee.name"></span>
-                    </div>
-
-                    {{-- Семь дней --}}
-                    <div class="flex-1 inline-flex relative" wire:ignore>
-                        <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
-                            <div class="relative flex-shrink-0"
-                                 :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
-                                 :class="{ 'day-left-border': day !== 0 }" :data-day="day.date" :data-emp="employee.id">
-                                {{-- Фоновые ячейки часов --}}
-                                <div class="grid"
-                                     :style="`grid-template-columns: repeat(${wrapCols}, ${slotWidthPx}px);`">
-                                    <template x-for="(slotIdx, i) in flatSlots(employee.id, day)"
-                                              :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`">
-                                        <div x-data="{ slotIdx: slotIdx }"
-                                             :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`"
-                                             wire:key="cell-${employee.id}-${day.date}-${i}-${lanesVersion}"
-                                             class="h-15 border-r border-r-gray-300"
-                                             :class="{
-                                                  'bg-blue-100': isSelected(employee.id, day, slotIdx),
-                                                  'bg-gray-100 pointer-events-none': isPast(day, slotIdx),
-                                                }"
-                                             @mousedown.prevent="$event.button === 0
-                                                  && !isPast(day, slotIdx)
-                                                  && startSelection(employee.id, day, slotIdx)"
-                                             @mouseenter.prevent="$event.buttons === 1
-                                                  && !isPast(day, slotIdx)
-                                                  && !dragSelection(employee.id, day, slotIdx)"
-                                             @contextmenu.prevent="onContextMenu($event, employee, day, slotIdx)">
-                                        </div>
-                                    </template>
-                                </div>
-
-                                {{-- Задачи --}}
-                                <template x-for="task in dayTasks(employee.id, day)" :key="task.id">
-                                    <div
-                                        class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
-                                        :class="{
-                                                'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
-                                                'cursor-pointer': !isTaskPast(task)
-                                            }"
-                                        @click.stop="onTaskClick(task, $event)"
-                                        @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
-                                        @contextmenu.prevent.stop="
-                                            suppressTaskClick = true;
-                                                contextMenu.x = $event.clientX;
-                                                contextMenu.y = $event.clientY;
-                                                contextMenu.task = task;
-
-                                                const col = $event.currentTarget.closest('[data-day]');
-                                                sel.day = col ? col.dataset.day : null;
-                                                const row = $event.currentTarget.closest('[data-emp]');
-                                                sel.emp = row ? +row.dataset.emp : null;
-
-                                                contextMenu.visible = true;
-                                        "
-                                        :style="drag.task && drag.task.id === task.id
-                                                ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65; top:${drag.previewY}px; height:${rowHeightPx}px;`
-                                                : taskStyle(task)"
-                                    >
-                                        <div class="flex flex-col">
-                                            <span class="truncate" x-text="task.client.name"></span>
-                                            <span class="whitespace-wrap"
-                                                  x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </template>
-        </div>
-    </div>
-
-    <!-- ДНЕВНАЯ СЕТКА -->
-    <div x-show="mode==='schedule' && mapView==='day'">
-        <div id="dayGrid" class="relative bg-white border border-b-gray-400 overflow-auto"
-             :style="`height:${dayGridHeight}px`">
-
-            <div class="flex sticky top-0 z-10 h-[28px] w-full bg-gray-300">
-                <div class="w-[50px] text-[11px] items-center px-1">GMT-04</div>
-                <div class="flex-1"></div>
-            </div>
-
-            <!-- ЧАСОВЫЕ линии + подпись -->
-            <template x-for="slot in hours" :key="slot.h">
-                <div>
-                    <!-- толстая часовая линия -->
-                    <div class="absolute left-10 right-0 border-t border-gray-300"
-                         :style="`top:${slot.top}px`"></div>
-
-                    <!-- подпись по центру часа -->
-                    <div class="absolute left-2 text-[11px] text-gray-500 select-none"
-                         :style="`top:${slot.center}px; transform:translateY(-50%);`"
-                         x-text="slot.label"></div>
-                </div>
-            </template>
-
-            <!-- ПОЛУЧАСОВЫЕ тонкие линии -->
-            <template x-for="hh in halfHours" :key="hh.top">
-                <div class="absolute left-10 right-0 border-t border-gray-200"
-                     :style="`top:${hh.top}px`"></div>
-            </template>
-
-            <!-- Блоки задач -->
-            <template x-for="t in dayTasks" :key="t.id">
-                <div
-                    class="absolute left-24 right-3 rounded-md shadow-sm overflow-hidden"
-                    :style="`top:${t._top}px;height:${t._height}px;background:${t._color}22;border:1px solid ${t._color}55`">
-                    <div class="px-2 pt-1 text-xs font-medium truncate text-gray-900/90"
-                         x-text="t?.client?.name || t.message || 'Task'"></div>
-                    <div class="px-2 pb-1 text-[11px] opacity-90"
-                         x-text="`${t.start_time || t.start || ''} – ${t.end_time || t.end || ''}`"></div>
-                </div>
-            </template>
-        </div>
-    </div>
-
-    {{-- Спиннер --}}
-    <div>
-        <template x-if="isLoading">
-            <div class="fixed inset-0 z-50 grid place-items-center bg-black/35 backdrop-blur-sm">
-                <div class="flex items-center gap-3 rounded-xl bg-white/90 px-5 py-3 shadow-xl">
-                    <svg class="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                        <path class="opacity-75" fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                <button type="button" class="px-2 py-1 rounded hover:shadow"
+                        @click="dbg('moveWeek(-1) from UI'); moveWeek(-1); $dispatch('week:changed')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M15 4.5L7.5 12L15 19.5"
+                              stroke="currentColor" stroke-width="2.25"
+                              stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
-                    <span class="text-sm font-medium text-gray-700">Loading…</span>
+                </button>
+                <button type="button" class="px-2 py-1 rounded hover:shadow"
+                        @click="dbg('moveWeek(1) from UI'); moveWeek(1); $dispatch('week:changed')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M9 4.5L16.5 12L9 19.5"
+                              stroke="currentColor" stroke-width="2.25"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <!-- Диапазон дат недели -->
+                <div class="text-sm font-medium text-gray-700 font-[LufgaSemiBold]"
+                     x-text="days && days.length === 7 ? (days[0].label + ' — ' + days[6].label) : ''">
+                </div>
+                <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'Current week' : ''"></span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button @click="showCalendar; destroyMap()"
+                        x-bind:class="mode === 'schedule' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
+                        class="px-3 py-1 rounded"
+                >
+                    <span class="ms-2">Calendar</span>
+                </button>
+                <button @click="showMap"
+                        x-bind:class="mode === 'map' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
+                        class="px-3 py-1 rounded"
+                >
+                    <span class="ms-2">Map</span>
+                </button>
+            </div>
+
+            <!-- правый блок шапки, рядом с выводом диапазона недели -->
+            <div class="relative" x-data="{ open:false }">
+                <button
+                    @click="open = !open"
+                    class="px-3 py-1 rounded-2xl bg-white border-2 border-brand-accent font-bold text-[12px] text-brand-accent hover:bg-[#e7fdef]"
+                    :class="{ 'bg-blue-600 text-white': mapView === 'day' }"
+                >
+                    <span class="text-brand-accent" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
+                    <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-brand-accent font-bold" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/></svg>
+                </button>
+
+                <div
+                    x-show="open" x-transition
+                    @click.outside="open=false" @keydown.escape.window="open=false"
+                    class="absolute flex flex-col right-0 mt-1 w-40 rounded-lg bg-white shadow z-50"
+                >
+                    <button
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
+                        :class="mapView === 'week' ? 'bg-blue-50 text-blue-700' : ''"
+                        @click="setMapView('week'); open=false"
+                    >
+                        Week
+                    </button>
+                    <button
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
+                        :class="mapView === 'day' ? 'bg-blue-50 text-blue-700' : ''"
+                        @click="setMapView('day'); open=false"
+                    >
+                        Day
+                    </button>
                 </div>
             </div>
-        </template>
-    </div>
-
-    <div x-show="mode === 'map'" class="h-full rounded border overflow-hidden z-5"
-         x-init="$watch('mode', v => { if (v === 'map') $nextTick(() => window.dispatchEvent(new Event('map:shown'))) })" id="jobsMap">
-        <div class="relative h-[calc(100vh-140px)] min-h-[420px]">
-            {{-- Карта --}}
-            <div wire:ignore
-                 x-init="
-                    window.addEventListener('week:changed', async () => {
-                        if (mode === 'map') {
-                            await nextFrame();
-                            await rerenderMap({ fit: true });
-                        }
-                    });
-                 "
-                 class="absolute inset-0 rounded border overflow-hidden z-10 h-full w-full" id="jobsMap" x-ref="jobsMap" x-transition></div>
         </div>
-    </div>
 
-    <!-- Контекстное меню таймлайна -->
-    <div
-        x-show="menuVisible"
-        @click.away="closeMenu()"
-        class="absolute z-[9999] bg-white shadow border rounded w-40"
-        :style="`top: ${menuY}px; left: ${menuX}px;`"
-    >
-        <button
-            @click="openJobModal('createJob', sel); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <span class="font-medium">+Job</span>
-        </button>
-        <button
-            @click="openJobModal('createEstimate'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <!-- … SVG … -->
-            <span class="font-medium">+Estimate</span>
-        </button>
-        <button
-            @click="openJobModal('createEvent'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <!-- … SVG … -->
-            <span class="font-medium">+Event</span>
-        </button>
-    </div>
+        <div x-show="mode==='schedule' && mapView==='week'">
+            <div class="overflow-x-auto pb-[10px]">
+                <!-- Глобальный оверлей спиннера -->
 
-    <!-- Контекстное меню задачи -->
-    <div
-        x-show="contextMenu.visible"
-        :style="`top:${contextMenu.y}px; left:${contextMenu.x}px`"
-        class="fixed z-50 bg-white border rounded shadow-lg animate-fade-in"
-        @click.away="contextMenu.visible = false"
-    >
-        <button
-            class="block w-full px-4 py-2 hover:bg-gray-100 text-left"
-            @click="
-                        contextMenu.visible = false;
-                        openJobModal('edit', sel, contextMenu);
-                    "
-        >Изменить
-        </button>
-        <button
-            class="block w-full px-4 py-2 hover:bg-gray-100 text-left text-red-600"
-            @click="
-                        contextMenu.visible = false;
-                        taskToDelete = contextMenu.task;
-                        confirmDeleteOpen = true;
-                    "
-        >Удалить
-        </button>
-    </div>
-
-    <!-- Подтверждение удаления задачи -->
-    <div
-        x-show="confirmDeleteOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-    >
-        <div class="bg-white rounded shadow-lg p-8 w-full max-w-sm">
-            <div class="mb-4 text-lg">Вы уверены, что хотите удалить задачу?</div>
-            <div class="flex justify-end space-x-4">
-                <button class="px-4 py-2" @click="confirmDeleteOpen = false">Отмена</button>
-                <button class="px-4 py-2 bg-red-600 text-white rounded"
-                        @click="deleteTask(taskToDelete)"
-                >Да
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- AddCustomerModal -->
-    <div x-data="addCustomer()" x-on:customer-validation-error.window="onErrors($event.detail.errors)"
-         x-show="showAddCustomerModal"
-         x-transition
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-         style="display: none;"
-    >
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
-             @click.away="showAddCustomerModal = false">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Add new customer</h2>
-                <button type="button" @click="showAddCustomerModal = false"
-                        class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;
-                </button>
-            </div>
-            <template x-if="customerError">
-                <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
-            </template>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Name*</label>
-                <input type="text" x-model="name" required
-                       class="w-full border rounded px-3 py-2 text-sm">
-            </div>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Email</label>
-                <input type="email" x-model="email" required
-                       class="w-full border rounded px-3 py-2 text-sm">
-            </div>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Phone</label>
-                <input type="text" x-model="phone" required
-                       class="w-full border rounded px-3 py-2 text-sm">
-            </div>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Address</label>
-                <div class="relative">
-                    <input type="text"
-                           class="w-full border rounded px-3 py-2 text-sm"
-                           placeholder="Start typing address…"
-                           x-model="query"
-                           @input.debounce.400ms="findSuggestions"
-                           @focus="open = true"
-                           @keydown.escape="open = false; resetSelection()"
-                           @blur="setTimeout(()=>open=false,150)">
-
-                    <!-- dropdown -->
-                    <template x-if="open && suggestions.length">
-                        <ul class="absolute z-20 left-0 right-0 bg-white border mt-1 rounded shadow max-h-60 overflow-auto">
-                            <template x-for="(s, i) in suggestions" :key="s.id">
-                                <li @mousedown.prevent="selectSuggestion(s)"
-                                    class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                                    x-text="s.label"></li>
-                            </template>
-                        </ul>
-                    </template>
-                </div>
-
-                <!-- скрытые поля, которые пойдут в createCustomer -->
-                <input type="hidden" x-model="selected.id">
-                <input type="hidden" x-model="selected.name">
-                <input type="hidden" x-model="selected.email">
-                <input type="hidden" x-model="selected.phone">
-                <input type="hidden" x-model="selected.lat">
-                <input type="hidden" x-model="selected.lng">
-            </div>
-            <div class="flex justify-end gap-2 mt-4">
-                <button type="button" @click="showAddCustomerModal = false"
-                        class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
-                </button>
-                <button type="button" @click="submit"
-                        class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Add
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div x-show="jobModalOpen"
-         class="fixed inset-0 z-[45] flex items-center justify-center bg-black bg-opacity-40">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <h2 class="text-xl font-semibold" x-text="jobModalType === 'edit' ? 'Edit job' : 'New job'"></h2>
-                <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
-                </button>
-            </div>
-
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Left Column -->
-                <div class="w-full lg:w-1/3 space-y-6">
-                    <div class="bg-gray-50 rounded-lg border p-4 w-full max-w-[400px]">
-                        <div class="font-medium text-sm mb-1 flex items-center gap-1">
-                            <svg class="w-4 h-4"/>
-                            Customer
-                        </div>
-                        <div class="relative">
-                            <input type="text" x-model="jobModalForm.customer_query"
-                                   @input.live.debounce.500ms="searchCustomers"
-                                   @focus="showCustomerModal = true"
-                                   @blur="setTimeout(() => showCustomerModal = false, 500)"
-                                   class="w-full rounded px-2 py-1 text-sm border"
-                                   placeholder="Name, email, phone, or address"/>
-                            <!-- Список найденных клиентов -->
-                            <div x-show="showCustomerModal && jobModalForm.results.length"
-                                 class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
-                                <template x-for="customer in jobModalForm.results">
-                                    <div
-                                        @click="selectCustomer(customer)"
-                                        class="block px-2 py-1 hover:bg-gray-100 cursor-pointer"
-                                        x-text="customer.name + ' ' + (customer.email || '')"
-                                    >
-                                    </div>
-                                </template>
-                            </div>
-                            <div
-                                x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
-                                class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">
-                                Ничего не найдено
-                            </div>
-
-                        </div>
-                        <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">
-                            + New customer
-                        </button>
+                {{-- Заголовок --}}
+                <div class="inline-flex items-center border-b border-b-gray-400">
+                    {{-- Первая узкая ячейка для таймзоны или иконки --}}
+                    <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
+                        GMT -04
                     </div>
-
-                    <!-- Schedule -->
-                    <div class="border p-4 rounded space-y-4">
-                        <label class="block text-sm font-medium">Schedule</label>
-                        <div class="flex flex-col gap-2 items-start">
-                            <div class="flex justify-between items-center">
-                                <label class="block text-xs text-gray-500 mb-1 w-10">From</label>
-                                <div class="flex gap-2 items-center">
-                                    <input type="date" x-model="jobModalForm.schedule_from_date"
-                                           class="border rounded px-2 py-1">
-                                    <div
-                                        x-data="{
-                                                        show: false,
-                                                        hour: 9,
-                                                        minute: '00',
-                                                        ampm: 'AM',
-                                                        get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
-                                                        setValue(h, m, a) {
-                                                            this.hour = h;
-                                                            this.minute = m;
-                                                            this.ampm = a;
-                                                            this.show = false;
-                                                            $dispatch('time-changed', { field: 'from', value: this.value });
-                                                        },
-                                                        setFromExternal(val) {
-                                                            if (!val) return;
-                                                            let [time, ampm] = val.split(' ');
-                                                            let [h, m] = time.split(':');
-                                                            this.hour = parseInt(h);
-                                                            this.minute = m;
-                                                            this.ampm = ampm || 'AM';
-                                                        }
-                                                    }"
-
-                                        x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
-                                        @time-changed.window="updateTime($event.detail)"
-                                        class="relative w-36"
-                                    >
-                                        <button type="button"
-                                                @click="show = !show"
-                                                class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
-                                        >
-                                            <span x-text="value"></span>
-                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <path d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="show"
-                                             @click.away="show = false"
-                                             class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
-                                             style="min-width: 210px"
-                                        >
-                                            <!-- Часы -->
-                                            <select x-model="hour"
-                                                    class="w-[60px] border rounded p-1">
-                                                <template x-for="h in 12" :key="h">
-                                                    <option :value="h" x-text="h"></option>
-                                                </template>
-                                            </select>
-                                            <!-- Минуты -->
-                                            <select x-model="minute"
-                                                    class="w-[60px] border rounded p-1">
-                                                <template x-for="m in [0, 30]" :key="m">
-                                                    <option :value="m.toString().padStart(2, '0')"
-                                                            x-text="m.toString().padStart(2, '0')"></option>
-                                                </template>
-                                            </select>
-                                            <!-- AM/PM -->
-                                            <select x-model="ampm" class="w-[60px] border rounded p-1">
-                                                <option>AM</option>
-                                                <option>PM</option>
-                                            </select>
-                                            <button
-                                                @click="setValue(hour, minute, ampm)"
-                                                class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
-                                                OK
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <input type="hidden" x-model="jobModalForm.schedule_from_time12"
-                                           name="schedule_from_time12">
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <label class="block text-xs text-gray-500 mb-1 w-10">To</label>
-                                <div class="flex gap-2 items-center">
-                                    <input type="date" x-model="jobModalForm.schedule_to_date"
-                                           class="border rounded px-2 py-1">
-                                    <div
-                                        x-data="{
-                                                        show: false,
-                                                        hour: 9,
-                                                        minute: '00',
-                                                        ampm: 'AM',
-                                                        get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
-                                                        setValue(h, m, a) {
-                                                            this.hour = h;
-                                                            this.minute = m;
-                                                            this.ampm = a;
-                                                            this.show = false;
-                                                            // Если нужна двусторонняя связь с jobModalForm:
-                                                            $dispatch('time-changed', { field: 'to', value: this.value });
-                                                        },
-                                                        setFromExternal(val) {
-                                                            if (!val) return;
-                                                            let [time, ampm] = val.split(' ');
-                                                            let [h, m] = time.split(':');
-                                                            this.hour = parseInt(h);
-                                                            this.minute = m;
-                                                            this.ampm = ampm || 'AM';
-                                                        }
-                                                    }"
-
-                                        x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
-                                        @time-changed.window="updateTime($event.detail)"
-                                        class="relative w-36"
-                                    >
-                                        <button type="button"
-                                                @click="show = !show"
-                                                class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
-                                        >
-                                            <span x-text="value"></span>
-                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <path d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="show"
-                                             @click.away="show = false"
-                                             class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
-                                             style="min-width: 210px"
-                                        >
-                                            <!-- Часы -->
-                                            <select x-model="hour"
-                                                    class="w-[60px] border rounded p-1">
-                                                <template x-for="h in 12" :key="h">
-                                                    <option :value="h" x-text="h"></option>
-                                                </template>
-                                            </select>
-                                            <!-- Минуты -->
-                                            <select x-model="minute" class="w-[60px] border rounded p-1">
-                                                <template x-for="m in [0, 30]" :key="m">
-                                                    <option :value="m.toString().padStart(2, '0')"
-                                                            x-text="m.toString().padStart(2, '0')"></option>
-                                                </template>
-                                            </select>
-                                            <!-- AM/PM -->
-                                            <select x-model="ampm" class="w-[60px] border rounded p-1">
-                                                <option>AM</option>
-                                                <option>PM</option>
-                                            </select>
-                                            <button
-                                                @click="setValue(hour, minute, ampm)"
-                                                class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
-                                                OK
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <input type="hidden" x-model="jobModalForm.schedule_to_time12"
-                                           name="schedule_to_time12">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-xs text-gray-500 mb-1">Employee</label>
-                            <div class="relative">
-                                <input type="text"
-                                       x-model="jobModalForm.employees_query"
-                                       @input.debounce.300ms="searchEmployees"
-                                       @focus="showEmployeesDropdown = true"
-                                       @blur="setTimeout(() => showEmployeesDropdown = false, 200)"
-                                       placeholder="Dispatch employee by name or tag"
-                                       class="w-full border rounded px-3 py-2 text-sm"
-                                >
-                                <!-- ВЫПАДАЮЩИЙ СПИСОК -->
+                    {{-- Дни недели с часами --}}
+                    <div class="flex-1 inline-flex border-l-2 border-l-gray-400">
+                        <template x-for="day in days" :key="day.date">
+                            <div class="flex flex-col">
+                                {{-- Дата --}}
                                 <div
-                                    x-show="showEmployeesDropdown && jobModalForm.employees_results.length > 0"
-                                    class="absolute z-30 mt-1 bg-white w-full rounded border shadow"
-                                >
-                                    <template x-for="employee in jobModalForm.employees_results" :key="employee.id">
-                                        <div @click="addEmployee(employee)"
-                                             class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
-                                            <span x-text="employee.name"></span>
-                                            <span class="ml-2 text-xs text-gray-400" x-text="employee.tag"></span>
+                                    class="h-5 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
+                                    <span x-text="day.label"></span>
+                                </div>
+                                {{-- Часы --}}
+                                <div class="flex">
+                                    <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx" x-init="console.log(defaultTimeSlots);">
+                                        <div
+                                            class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
+                                            <span x-text="slotLabel"></span>
                                         </div>
                                     </template>
                                 </div>
                             </div>
-                            <!-- ВЫБРАННЫЕ СОТРУДНИКИ -->
-                            <div class="flex flex-wrap mt-2 gap-2">
-                                <template x-for="(employee, idx) in jobModalForm.employees" :key="employee.id">
-                                    <div class="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
-                                        <span x-text="employee.name"></span>
-                                        <button class="ml-2 text-gray-500 hover:text-red-500"
-                                                @click="removeEmployee(idx)">
-                                            &times;
-                                        </button>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
-                            <label class="text-sm">Notify customer</label>
-                        </div>
+                        </template>
                     </div>
                 </div>
 
-                <!-- Center Column -->
-                <div class="w-full lg:w-2/3 space-y-6">
-                    <div class="border p-4 rounded"
-                         x-data="{
-                                    money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
-                                    openList(it){
-                                        if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
-                                        this.sel.id = it.id;
-                                        this.jobModalForm.items.forEach(x => { if (x.search) x.search.open = (x === it); });
-                                        it.search.open = true;
-                                    },
+                {{-- Строки сотрудников --}}
+                <template x-for="employee in employees" :key="employee.id">
+                    <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
+                        {{-- Колонка с аватаром и именем --}}
+                        <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
+                            <img
+                                :src="employee.avatar"
+                                alt=""
+                                class="w-8 h-8 rounded-full object-cover"
+                            />
+                            <span class="text-sm font-medium truncate" x-text="employee.name"></span>
+                        </div>
 
-                                    hideList(it) {
-                                        it.search.open = false;
-                                        it.search.hi = -1;
-                                    },
-
-                                    deferClose(it) {
-                                        clearTimeout(it.search._t);
-                                        it.search._t = setTimeout(() => { it.search.open = false; }, 120);
-                                    },
-
-                                    async autocomplete(it){
-                                        if (!it) it = this.getSelItem();
-                                        if (!it) return;
-                                        if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
-                                        const q = (it.name || '').trim();
-                                        it.search.q = q;
-                                        it.search.loading = true;
-                                        it.search.open = true;
-                                        it.search.hi = -1;
-
-                                        if (q.length < 2) { it.search.results = []; it.search.loading = false; it.search.open = false; return; }
-                                        try {
-                                            const res = await $wire.call('searchParts', q);
-                                            it.search.results = Array.isArray(res) ? res : [];
-                                        } catch(e){
-                                            it.search.results = [];
-                                            console.error(e);
-                                        } finally {
-                                            it.search.loading = false;
-                                        }
-                                    },
-
-                                    move(it, dir){
-                                        if (!it.search.open || it.search.results.length === 0) return;
-                                        const n = it.search.results.length;
-                                        it.search.hi = (it.search.hi + dir + n) % n;
-                                    },
-
-                                    choose(index){
-                                        const p = this.jobModalForm.items[index].search.results[index];
-                                        const it = this.jobModalForm.items[index];
-
-                                        it.name       = p.name;
-                                        it.part_id    = p.id;
-                                        it.unit_price = Number(p.price) || 0;
-                                        it.is_custom  = false;
-                                        it.priceLocked = true;
-
-                                        it.stock = {
-                                            available: Number(p.available ?? 0),
-                                            reserved:  Number(p.reserved ?? 0),
-                                            quantity:  Number(p.quantity ?? 0),
-                                        };
-
-                                        if (it.qty > it.stock.available) {
-                                            it.qty = Math.max(0, it.stock.available);
-                                            it.warn.qty = `Only ${it.stock.available} available (reserved: ${it.stock.reserved}).`;
-                                        } else {
-                                            it.warn.qty = '';
-                                        }
-
-                                        if (typeof it.stock.available === 'number') {
-                                            if (Number(it.qty) > it.stock.available) it.qty = it.stock.available;
-                                        }
-
-                                        this.onQtyInput(it);
-                                        this.hideList(it);
-                                        this.recalcItemsTotal();
-                                    },
-
-                                    onQtyInput(it) {
-                                        const q = Math.max(0, Number.parseInt(it.qty ?? 0, 10) || 0);
-                                        const max = Number.isFinite(it?.stock?.available) ? Number(it.stock.available) : Infinity;
-
-                                        if (q > max) {
-                                            it.qty = max;
-                                            it.warn = `Only ${max} available.`;
-                                        } else {
-                                            it.qty = q;
-                                            it.warn = '';
-                                        }
-                                        this.recalcItemsTotal();
-                                    },
-
-                                    selectPart(it, p){
-                                        it.name       = p.name;
-                                        it.part_id    = p.id;
-                                        it.item_id    = p.id;
-                                        it.is_custom  = false;
-                                        it.unit_price = Number(p.price ?? 0.0);
-                                        it.unit_cost  = Number(p.cost ?? 0.0);
-                                        it.stock      = Number(p.quantity ?? 0.0);
-                                        it.priceLocked = true;
-                                        this.enforceQty(it, showMsg=true);
-                                        this.recalcItemsTotal();
-                                        it.search.open = false;
-                                    },
-
-                                    unlinkPart(it){
-                                        if (!it.warn) it.warn = { qty: '' };
-                                        it.part_id   = null;
-                                        it.item_id   = null;
-                                        it.is_custom = true;
-                                        it.priceLocked = false;
-                                        it.stock       = null;
-                                        it.warn.qty    = '';
-                                        // it.unit_price = 0;
-                                        this.recalcItemsTotal();
-                                    },
-                                }"
-                    >
-                        <label class="block text-sm font-medium mb-2">Job items</label>
-                        <!-- Services -->
-                        <button
-                            @click="addItem('service')"
-                            class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                            type="button"
-                        >
-                            + Add service
-                        </button>
-                        <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
-                                  :key="item.id">
-                            <div class="mb-4 space-y-2 border-b pb-2">
-                                <div class="flex flex-row justify-between w-full">
-                                    <div class="flex w-4/5">
-                                        <!-- Drag-handle, если нужен -->
-                                        <div class="flex items-start text-gray-400 cursor-move">
-                                            <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <circle cx="5" cy="7" r="1.5"/>
-                                                <circle cx="5" cy="12" r="1.5"/>
-                                                <circle cx="5" cy="17" r="1.5"/>
-                                                <circle cx="12" cy="7" r="1.5"/>
-                                                <circle cx="12" cy="12" r="1.5"/>
-                                                <circle cx="12" cy="17" r="1.5"/>
-                                            </svg>
-                                        </div>
-
-                                        <!-- Service fields (имя, qty, price и т.д.) -->
-                                        <div class="flex flex-col bg-white rounded w-full ">
-                                            <div class="flex gap-2 mb-2 w-full">
-
-                                                <!-- Service Name + Tax -->
-                                                <div class="flex-1 flex flex-col w-3/5">
-                                                    <label class="sr-only">Service name</label>
-                                                    <div class="relative flex items-center">
-                                                        <input x-model="item.name" type="text"
-                                                               placeholder="Item name"
-                                                               class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
-                                                        <label
-                                                            class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
-                                                            Tax
-                                                            <input type="checkbox" x-model="item.tax"
-                                                                   class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
-                                                        </label>
-                                                    </div>
-                                                </div>
-
-                                                <div class="flex w-2/5 gap-1">
-                                                    <!-- Qty -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                               x-model="item.qty" type="number" step="1" min="0"
-                                                               placeholder=" " @input="recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`qty-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Qty
-                                                        </label>
-                                                    </div>
-
-                                                    <!-- Unit price -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                               x-model="item.unit_price" type="number"
-                                                               step="0.01"
-                                                               min="0" @input="recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`uprice-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit price
-                                                        </label>
-                                                    </div>
-                                                </div>
+                        {{-- Семь дней --}}
+                        <div class="flex-1 inline-flex relative" wire:ignore>
+                            <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
+                                <div class="relative flex-shrink-0"
+                                     :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
+                                     :class="{ 'day-left-border': day !== 0 }" :data-day="day.date" :data-emp="employee.id">
+                                    {{-- Фоновые ячейки часов --}}
+                                    <div class="grid"
+                                         :style="`grid-template-columns: repeat(${wrapCols}, ${slotWidthPx}px);`">
+                                        <template x-for="(slotIdx, i) in flatSlots(employee.id, day)"
+                                                  :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`">
+                                            <div x-data="{ slotIdx: slotIdx }"
+                                                 :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`"
+                                                 wire:key="cell-${employee.id}-${day.date}-${i}-${lanesVersion}"
+                                                 class="h-15 border-r border-r-gray-300"
+                                                 :class="{
+                                                      'bg-blue-100': isSelected(employee.id, day, slotIdx),
+                                                      'bg-gray-100 pointer-events-none': isPast(day, slotIdx),
+                                                    }"
+                                                 @mousedown.prevent="$event.button === 0
+                                                      && !isPast(day, slotIdx)
+                                                      && startSelection(employee.id, day, slotIdx)"
+                                                 @mouseenter.prevent="$event.buttons === 1
+                                                      && !isPast(day, slotIdx)
+                                                      && !dragSelection(employee.id, day, slotIdx)"
+                                                 @contextmenu.prevent="onContextMenu($event, employee, day, slotIdx)">
                                             </div>
-                                            <!-- Вторая строка: Описание и Unit Cost -->
-                                            <div class="flex gap-2 w-full">
-                                                <div class="flex-1 w-3/5">
-                                                                <textarea x-model="item.description"
-                                                                          placeholder="Description (optional)" rows="1"
-                                                                          class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
-                                                </div>
-                                                <div class="relative flex flex-col w-2/5">
-                                                    <input :id="`ucost-${index}`" x-model="item.unit_cost"
-                                                           type="number" step="0.1"
-                                                           min="0" @input="recalcItemsTotal()"
-                                                           class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                    <label :for="`ucost-${index}`"
-                                                           class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                        Unit cost
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
+                                        </template>
                                     </div>
-                                    <div class="flex flex-row items-start w-1/5">
-                                        <!-- Итоговая цена -->
-                                        <div class="p-2 text-right text-sm min-w-[70px]">
-                                            <span x-text="formatMoney(item.total)"></span>
+
+                                    {{-- Задачи --}}
+                                    <template x-for="task in dayTasks(employee.id, day)" :key="task.id">
+                                        <div
+                                            class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
+                                            :class="{
+                                                    'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
+                                                    'cursor-pointer': !isTaskPast(task)
+                                                }"
+                                            @click.stop="onTaskClick(task, $event)"
+                                            @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                            @contextmenu.prevent.stop="
+                                                suppressTaskClick = true;
+                                                    contextMenu.x = $event.clientX;
+                                                    contextMenu.y = $event.clientY;
+                                                    contextMenu.task = task;
+
+                                                    const col = $event.currentTarget.closest('[data-day]');
+                                                    sel.day = col ? col.dataset.day : null;
+                                                    const row = $event.currentTarget.closest('[data-emp]');
+                                                    sel.emp = row ? +row.dataset.emp : null;
+
+                                                    contextMenu.visible = true;
+                                            "
+                                            :style="drag.task && drag.task.id === task.id
+                                                    ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65; top:${drag.previewY}px; height:${rowHeightPx}px;`
+                                                    : taskStyle(task)"
+                                        >
+                                            <div class="flex flex-col">
+                                                <span class="truncate" x-text="task.client.name"></span>
+                                                <span class="whitespace-wrap"
+                                                      x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- ДНЕВНАЯ СЕТКА -->
+        <div x-show="mode==='schedule' && mapView==='day'">
+            <div id="dayGrid" class="relative bg-white overflow-auto"
+                 :style="`height:${dayGridHeight}px`">
+
+                <div
+                    class="absolute left-12 top-0 bottom-0 bg-gray-200/60 cursor-not-allowed"
+                    style="z-index: 5"
+                    :style="{
+                      top: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`,
+                      height: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`
+                    }"
+                    @mousedown.stop
+                    @click.stop
+                    @touchstart.stop
+                ></div>
+
+                <!-- маска 6:00–7:00 -->
+                <div
+                    class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
+                    style="z-index: 5"
+                    :style="{
+                      top: `${DAY_HEADER_H}px`,
+                      height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 29}px`
+                    }"
+                    @mousedown.stop
+                    @click.stop
+                    @touchstart.stop
+                    title="Недоступно для создания задач"
+                ></div>
+
+                <!-- маска 9:30PM – 10:00PM -->
+                <div
+                    class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
+                    style="z-index: 5"
+                    :style="{
+                      top: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 30}px`,
+                      height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 28}px`
+                    }"
+                    @mousedown.stop
+                    @click.stop
+                    @touchstart.stop
+                    title="Недоступно для создания задач"
+                ></div>
+
+                <div class="flex sticky items-center top-0 z-10 h-[30px] w-full bg-gray-300 day-grid-top-panel-border">
+                    <div class="flex w-[50px] text-[9px] justify-center items-center px-0">GMT-04</div>
+                    <div class="flex-1"></div>
+                </div>
+
+                <!-- ЧАСОВЫЕ линии + подпись -->
+                <template x-for="slot in hours" :key="slot.h">
+                    <template x-if="slot.h >= DAY_OPEN_HOUR">
+                        <div x-init="console.log(slot);">
+                            <!-- толстая часовая линия -->
+                            <div class="absolute left-10 right-0 border-t border-gray-300"
+                                 :style="`top:${slot.top}px`"></div>
+
+                            <!-- подпись по центру часа -->
+                            <div class="absolute left-2 text-[11px] text-gray-500 select-none"
+                                 :style="`top:${slot.center}px; transform:translateY(-50%);`"
+                                 x-text="slot.label"></div>
+                        </div>
+                    </template>
+                </template>
+
+                <!-- ПОЛУЧАСОВЫЕ тонкие линии -->
+                <template x-for="hh in halfHours" :key="'h'+hh.top">
+                    <div class="absolute left-10 right-0 border-t border-gray-200"
+                         :style="`top:${hh.top}px`"></div>
+                </template>
+
+                <!-- Блоки задач -->
+                <template x-for="t in dayTasks" :key="t.id">
+                    <div
+                        class="absolute left-24 right-3 rounded-md shadow-sm overflow-hidden"
+                        :style="`top:${t._top}px;height:${t._height}px;background:${t._color}22;border:1px solid ${t._color}55`">
+                        <div class="px-2 pt-1 text-xs font-medium truncate text-gray-900/90"
+                             x-text="t?.client?.name || t.message || 'Task'"></div>
+                        <div class="px-2 pb-1 text-[11px] opacity-90"
+                             x-text="`${t.start_time || t.start || ''} – ${t.end_time || t.end || ''}`"></div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        {{-- Спиннер --}}
+        <div>
+            <template x-if="isLoading">
+                <div class="fixed inset-0 z-50 grid place-items-center bg-black/35 backdrop-blur-sm">
+                    <div class="flex items-center gap-3 rounded-xl bg-white/90 px-5 py-3 shadow-xl">
+                        <svg class="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor"
+                                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700">Loading…</span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <div x-show="mode === 'map'" class="h-full rounded border overflow-hidden z-5"
+             x-init="$watch('mode', v => { if (v === 'map') $nextTick(() => window.dispatchEvent(new Event('map:shown'))) })" id="jobsMap">
+            <div class="relative h-[calc(100vh-140px)] min-h-[420px]">
+                {{-- Карта --}}
+                <div wire:ignore
+                     x-init="
+                        window.addEventListener('week:changed', async () => {
+                            if (mode === 'map') {
+                                await nextFrame();
+                                await rerenderMap({ fit: true });
+                            }
+                        });
+                     "
+                     class="absolute inset-0 rounded border overflow-hidden z-10 h-full w-full" id="jobsMap" x-ref="jobsMap" x-transition></div>
+            </div>
+        </div>
+
+        <!-- Контекстное меню таймлайна -->
+        <div
+            x-show="menuVisible"
+            @click.away="closeMenu()"
+            class="absolute z-[9999] bg-white shadow border rounded w-40"
+            :style="`top: ${menuY}px; left: ${menuX}px;`"
+        >
+            <button
+                @click="openJobModal('createJob', sel); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <span class="font-medium">+Job</span>
+            </button>
+            <button
+                @click="openJobModal('createEstimate'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <!-- … SVG … -->
+                <span class="font-medium">+Estimate</span>
+            </button>
+            <button
+                @click="openJobModal('createEvent'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <!-- … SVG … -->
+                <span class="font-medium">+Event</span>
+            </button>
+        </div>
+
+        <!-- Контекстное меню задачи -->
+        <div
+            x-show="contextMenu.visible"
+            :style="`top:${contextMenu.y}px; left:${contextMenu.x}px`"
+            class="fixed z-50 bg-white border rounded shadow-lg animate-fade-in"
+            @click.away="contextMenu.visible = false"
+        >
+            <button
+                class="block w-full px-4 py-2 hover:bg-gray-100 text-left"
+                @click="
+                            contextMenu.visible = false;
+                            openJobModal('edit', sel, contextMenu);
+                        "
+            >Изменить
+            </button>
+            <button
+                class="block w-full px-4 py-2 hover:bg-gray-100 text-left text-red-600"
+                @click="
+                            contextMenu.visible = false;
+                            taskToDelete = contextMenu.task;
+                            confirmDeleteOpen = true;
+                        "
+            >Удалить
+            </button>
+        </div>
+
+        <!-- Подтверждение удаления задачи -->
+        <div
+            x-show="confirmDeleteOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+        >
+            <div class="bg-white rounded shadow-lg p-8 w-full max-w-sm">
+                <div class="mb-4 text-lg">Вы уверены, что хотите удалить задачу?</div>
+                <div class="flex justify-end space-x-4">
+                    <button class="px-4 py-2" @click="confirmDeleteOpen = false">Отмена</button>
+                    <button class="px-4 py-2 bg-red-600 text-white rounded"
+                            @click="deleteTask(taskToDelete)"
+                    >Да
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AddCustomerModal -->
+        <div x-data="addCustomer()" x-on:customer-validation-error.window="onErrors($event.detail.errors)"
+             x-show="showAddCustomerModal"
+             x-transition
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+             style="display: none;"
+        >
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+                 @click.away="showAddCustomerModal = false">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">Add new customer</h2>
+                    <button type="button" @click="showAddCustomerModal = false"
+                            class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;
+                    </button>
+                </div>
+                <template x-if="customerError">
+                    <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
+                </template>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Name*</label>
+                    <input type="text" x-model="name" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" x-model="email" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Phone</label>
+                    <input type="text" x-model="phone" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Address</label>
+                    <div class="relative">
+                        <input type="text"
+                               class="w-full border rounded px-3 py-2 text-sm"
+                               placeholder="Start typing address…"
+                               x-model="query"
+                               @input.debounce.400ms="findSuggestions"
+                               @focus="open = true"
+                               @keydown.escape="open = false; resetSelection()"
+                               @blur="setTimeout(()=>open=false,150)">
+
+                        <!-- dropdown -->
+                        <template x-if="open && suggestions.length">
+                            <ul class="absolute z-20 left-0 right-0 bg-white border mt-1 rounded shadow max-h-60 overflow-auto">
+                                <template x-for="(s, i) in suggestions" :key="s.id">
+                                    <li @mousedown.prevent="selectSuggestion(s)"
+                                        class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                        x-text="s.label"></li>
+                                </template>
+                            </ul>
+                        </template>
+                    </div>
+
+                    <!-- скрытые поля, которые пойдут в createCustomer -->
+                    <input type="hidden" x-model="selected.id">
+                    <input type="hidden" x-model="selected.name">
+                    <input type="hidden" x-model="selected.email">
+                    <input type="hidden" x-model="selected.phone">
+                    <input type="hidden" x-model="selected.lat">
+                    <input type="hidden" x-model="selected.lng">
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" @click="showAddCustomerModal = false"
+                            class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
+                    </button>
+                    <button type="button" @click="submit"
+                            class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="jobModalOpen"
+             class="fixed inset-0 z-[45] flex items-center justify-center bg-black bg-opacity-40">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
+                <div class="flex justify-between items-center border-b pb-4 mb-6">
+                    <h2 class="text-xl font-semibold" x-text="jobModalType === 'edit' ? 'Edit job' : 'New job'"></h2>
+                    <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
+                    </button>
+                </div>
+
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- Left Column -->
+                    <div class="w-full lg:w-1/3 space-y-6">
+                        <div class="bg-gray-50 rounded-lg border p-4 w-full max-w-[400px]">
+                            <div class="font-medium text-sm mb-1 flex items-center gap-1">
+                                <svg class="w-4 h-4"/>
+                                Customer
+                            </div>
+                            <div class="relative">
+                                <input type="text" x-model="jobModalForm.customer_query"
+                                       @input.live.debounce.500ms="searchCustomers"
+                                       @focus="showCustomerModal = true"
+                                       @blur="setTimeout(() => showCustomerModal = false, 500)"
+                                       class="w-full rounded px-2 py-1 text-sm border"
+                                       placeholder="Name, email, phone, or address"/>
+                                <!-- Список найденных клиентов -->
+                                <div x-show="showCustomerModal && jobModalForm.results.length"
+                                     class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
+                                    <template x-for="customer in jobModalForm.results">
+                                        <div
+                                            @click="selectCustomer(customer)"
+                                            class="block px-2 py-1 hover:bg-gray-100 cursor-pointer"
+                                            x-text="customer.name + ' ' + (customer.email || '')"
+                                        >
+                                        </div>
+                                    </template>
+                                </div>
+                                <div
+                                    x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
+                                    class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">
+                                    Ничего не найдено
+                                </div>
+
+                            </div>
+                            <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">
+                                + New customer
+                            </button>
+                        </div>
+
+                        <!-- Schedule -->
+                        <div class="border p-4 rounded space-y-4">
+                            <label class="block text-sm font-medium">Schedule</label>
+                            <div class="flex flex-col gap-2 items-start">
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-xs text-gray-500 mb-1 w-10">From</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="date" x-model="jobModalForm.schedule_from_date"
+                                               class="border rounded px-2 py-1">
+                                        <div
+                                            x-data="{
+                                                            show: false,
+                                                            hour: 9,
+                                                            minute: '00',
+                                                            ampm: 'AM',
+                                                            get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                            setValue(h, m, a) {
+                                                                this.hour = h;
+                                                                this.minute = m;
+                                                                this.ampm = a;
+                                                                this.show = false;
+                                                                $dispatch('time-changed', { field: 'from', value: this.value });
+                                                            },
+                                                            setFromExternal(val) {
+                                                                if (!val) return;
+                                                                let [time, ampm] = val.split(' ');
+                                                                let [h, m] = time.split(':');
+                                                                this.hour = parseInt(h);
+                                                                this.minute = m;
+                                                                this.ampm = ampm || 'AM';
+                                                            }
+                                                        }"
+
+                                            x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
+                                            @time-changed.window="updateTime($event.detail)"
+                                            class="relative w-36"
+                                        >
+                                            <button type="button"
+                                                    @click="show = !show"
+                                                    class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
+                                            >
+                                                <span x-text="value"></span>
+                                                <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <path d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="show"
+                                                 @click.away="show = false"
+                                                 class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
+                                                 style="min-width: 210px"
+                                            >
+                                                <!-- Часы -->
+                                                <select x-model="hour"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="h in 12" :key="h">
+                                                        <option :value="h" x-text="h"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- Минуты -->
+                                                <select x-model="minute"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="m in [0, 30]" :key="m">
+                                                        <option :value="m.toString().padStart(2, '0')"
+                                                                x-text="m.toString().padStart(2, '0')"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- AM/PM -->
+                                                <select x-model="ampm" class="w-[60px] border rounded p-1">
+                                                    <option>AM</option>
+                                                    <option>PM</option>
+                                                </select>
+                                                <button
+                                                    @click="setValue(hour, minute, ampm)"
+                                                    class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                                    OK
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <!-- Удалить -->
-                                        <button @click="removeItem(item.id)"
-                                                class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                tabindex="-1">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                <path d="M6 6l12 12M6 18L18 6"/>
-                                            </svg>
-                                        </button>
+                                        <input type="hidden" x-model="jobModalForm.schedule_from_time12"
+                                               name="schedule_from_time12">
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-xs text-gray-500 mb-1 w-10">To</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="date" x-model="jobModalForm.schedule_to_date"
+                                               class="border rounded px-2 py-1">
+                                        <div
+                                            x-data="{
+                                                            show: false,
+                                                            hour: 9,
+                                                            minute: '00',
+                                                            ampm: 'AM',
+                                                            get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                            setValue(h, m, a) {
+                                                                this.hour = h;
+                                                                this.minute = m;
+                                                                this.ampm = a;
+                                                                this.show = false;
+                                                                // Если нужна двусторонняя связь с jobModalForm:
+                                                                $dispatch('time-changed', { field: 'to', value: this.value });
+                                                            },
+                                                            setFromExternal(val) {
+                                                                if (!val) return;
+                                                                let [time, ampm] = val.split(' ');
+                                                                let [h, m] = time.split(':');
+                                                                this.hour = parseInt(h);
+                                                                this.minute = m;
+                                                                this.ampm = ampm || 'AM';
+                                                            }
+                                                        }"
+
+                                            x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
+                                            @time-changed.window="updateTime($event.detail)"
+                                            class="relative w-36"
+                                        >
+                                            <button type="button"
+                                                    @click="show = !show"
+                                                    class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
+                                            >
+                                                <span x-text="value"></span>
+                                                <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <path d="M19 9l-7 7-7-7"/>
+                                                </svg>
+                                            </button>
+
+                                            <div x-show="show"
+                                                 @click.away="show = false"
+                                                 class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
+                                                 style="min-width: 210px"
+                                            >
+                                                <!-- Часы -->
+                                                <select x-model="hour"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="h in 12" :key="h">
+                                                        <option :value="h" x-text="h"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- Минуты -->
+                                                <select x-model="minute" class="w-[60px] border rounded p-1">
+                                                    <template x-for="m in [0, 30]" :key="m">
+                                                        <option :value="m.toString().padStart(2, '0')"
+                                                                x-text="m.toString().padStart(2, '0')"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- AM/PM -->
+                                                <select x-model="ampm" class="w-[60px] border rounded p-1">
+                                                    <option>AM</option>
+                                                    <option>PM</option>
+                                                </select>
+                                                <button
+                                                    @click="setValue(hour, minute, ampm)"
+                                                    class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" x-model="jobModalForm.schedule_to_time12"
+                                               name="schedule_to_time12">
                                     </div>
                                 </div>
                             </div>
-                        </template>
-
-                        <!-- Materials -->
-                        <button
-                            @click="addItem('material')"
-                            class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                            type="button"
-                        >
-                            + Add material
-                        </button>
-                        <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
-                                  :key="item.key">
-                            <div class="mb-4 space-y-2 border-b pb-2">
-                                <!-- Material fields (имя, qty, price и т.д.) -->
-                                <div class="flex flex-row justify-between w-full">
-                                    <div class="flex w-4/5">
-                                        <!-- Drag-handle, если нужен -->
-                                        <div class="flex items-start text-gray-400 cursor-move">
-                                            <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <circle cx="5" cy="7" r="1.5"/>
-                                                <circle cx="5" cy="12" r="1.5"/>
-                                                <circle cx="5" cy="17" r="1.5"/>
-                                                <circle cx="12" cy="7" r="1.5"/>
-                                                <circle cx="12" cy="12" r="1.5"/>
-                                                <circle cx="12" cy="17" r="1.5"/>
-                                            </svg>
+                            <div class="mb-4">
+                                <label class="block text-xs text-gray-500 mb-1">Employee</label>
+                                <div class="relative">
+                                    <input type="text"
+                                           x-model="jobModalForm.employees_query"
+                                           @input.debounce.300ms="searchEmployees"
+                                           @focus="showEmployeesDropdown = true"
+                                           @blur="setTimeout(() => showEmployeesDropdown = false, 200)"
+                                           placeholder="Dispatch employee by name or tag"
+                                           class="w-full border rounded px-3 py-2 text-sm"
+                                    >
+                                    <!-- ВЫПАДАЮЩИЙ СПИСОК -->
+                                    <div
+                                        x-show="showEmployeesDropdown && jobModalForm.employees_results.length > 0"
+                                        class="absolute z-30 mt-1 bg-white w-full rounded border shadow"
+                                    >
+                                        <template x-for="employee in jobModalForm.employees_results" :key="employee.id">
+                                            <div @click="addEmployee(employee)"
+                                                 class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
+                                                <span x-text="employee.name"></span>
+                                                <span class="ml-2 text-xs text-gray-400" x-text="employee.tag"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <!-- ВЫБРАННЫЕ СОТРУДНИКИ -->
+                                <div class="flex flex-wrap mt-2 gap-2">
+                                    <template x-for="(employee, idx) in jobModalForm.employees" :key="employee.id">
+                                        <div class="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
+                                            <span x-text="employee.name"></span>
+                                            <button class="ml-2 text-gray-500 hover:text-red-500"
+                                                    @click="removeEmployee(idx)">
+                                                &times;
+                                            </button>
                                         </div>
+                                    </template>
+                                </div>
+                            </div>
 
-                                        <div class="flex flex-col bg-white rounded w-full ">
-                                            <div class="flex gap-2 mb-2 w-full">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
+                                <label class="text-sm">Notify customer</label>
+                            </div>
+                        </div>
+                    </div>
 
-                                                <!-- Material Name + Tax -->
-                                                <div class="flex-1 flex flex-col w-3/5">
-                                                    <label class="sr-only">Material name</label>
-                                                    <div class="relative flex flex-col" @click.outside="hideList(item)">
-                                                        <div class="relative flex flex-row">
+                    <!-- Center Column -->
+                    <div class="w-full lg:w-2/3 space-y-6">
+                        <div class="border p-4 rounded"
+                             x-data="{
+                                        money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
+                                        openList(it){
+                                            if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
+                                            this.sel.id = it.id;
+                                            this.jobModalForm.items.forEach(x => { if (x.search) x.search.open = (x === it); });
+                                            it.search.open = true;
+                                        },
+
+                                        hideList(it) {
+                                            it.search.open = false;
+                                            it.search.hi = -1;
+                                        },
+
+                                        deferClose(it) {
+                                            clearTimeout(it.search._t);
+                                            it.search._t = setTimeout(() => { it.search.open = false; }, 120);
+                                        },
+
+                                        async autocomplete(it){
+                                            if (!it) it = this.getSelItem();
+                                            if (!it) return;
+                                            if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
+                                            const q = (it.name || '').trim();
+                                            it.search.q = q;
+                                            it.search.loading = true;
+                                            it.search.open = true;
+                                            it.search.hi = -1;
+
+                                            if (q.length < 2) { it.search.results = []; it.search.loading = false; it.search.open = false; return; }
+                                            try {
+                                                const res = await $wire.call('searchParts', q);
+                                                it.search.results = Array.isArray(res) ? res : [];
+                                            } catch(e){
+                                                it.search.results = [];
+                                                console.error(e);
+                                            } finally {
+                                                it.search.loading = false;
+                                            }
+                                        },
+
+                                        move(it, dir){
+                                            if (!it.search.open || it.search.results.length === 0) return;
+                                            const n = it.search.results.length;
+                                            it.search.hi = (it.search.hi + dir + n) % n;
+                                        },
+
+                                        choose(index){
+                                            const p = this.jobModalForm.items[index].search.results[index];
+                                            const it = this.jobModalForm.items[index];
+
+                                            it.name       = p.name;
+                                            it.part_id    = p.id;
+                                            it.unit_price = Number(p.price) || 0;
+                                            it.is_custom  = false;
+                                            it.priceLocked = true;
+
+                                            it.stock = {
+                                                available: Number(p.available ?? 0),
+                                                reserved:  Number(p.reserved ?? 0),
+                                                quantity:  Number(p.quantity ?? 0),
+                                            };
+
+                                            if (it.qty > it.stock.available) {
+                                                it.qty = Math.max(0, it.stock.available);
+                                                it.warn.qty = `Only ${it.stock.available} available (reserved: ${it.stock.reserved}).`;
+                                            } else {
+                                                it.warn.qty = '';
+                                            }
+
+                                            if (typeof it.stock.available === 'number') {
+                                                if (Number(it.qty) > it.stock.available) it.qty = it.stock.available;
+                                            }
+
+                                            this.onQtyInput(it);
+                                            this.hideList(it);
+                                            this.recalcItemsTotal();
+                                        },
+
+                                        onQtyInput(it) {
+                                            const q = Math.max(0, Number.parseInt(it.qty ?? 0, 10) || 0);
+                                            const max = Number.isFinite(it?.stock?.available) ? Number(it.stock.available) : Infinity;
+
+                                            if (q > max) {
+                                                it.qty = max;
+                                                it.warn = `Only ${max} available.`;
+                                            } else {
+                                                it.qty = q;
+                                                it.warn = '';
+                                            }
+                                            this.recalcItemsTotal();
+                                        },
+
+                                        selectPart(it, p){
+                                            it.name       = p.name;
+                                            it.part_id    = p.id;
+                                            it.item_id    = p.id;
+                                            it.is_custom  = false;
+                                            it.unit_price = Number(p.price ?? 0.0);
+                                            it.unit_cost  = Number(p.cost ?? 0.0);
+                                            it.stock      = Number(p.quantity ?? 0.0);
+                                            it.priceLocked = true;
+                                            this.enforceQty(it, showMsg=true);
+                                            this.recalcItemsTotal();
+                                            it.search.open = false;
+                                        },
+
+                                        unlinkPart(it){
+                                            if (!it.warn) it.warn = { qty: '' };
+                                            it.part_id   = null;
+                                            it.item_id   = null;
+                                            it.is_custom = true;
+                                            it.priceLocked = false;
+                                            it.stock       = null;
+                                            it.warn.qty    = '';
+                                            // it.unit_price = 0;
+                                            this.recalcItemsTotal();
+                                        },
+                                    }"
+                        >
+                            <label class="block text-sm font-medium mb-2">Job items</label>
+                            <!-- Services -->
+                            <button
+                                @click="addItem('service')"
+                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                type="button"
+                            >
+                                + Add service
+                            </button>
+                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
+                                      :key="item.id">
+                                <div class="mb-4 space-y-2 border-b pb-2">
+                                    <div class="flex flex-row justify-between w-full">
+                                        <div class="flex w-4/5">
+                                            <!-- Drag-handle, если нужен -->
+                                            <div class="flex items-start text-gray-400 cursor-move">
+                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <circle cx="5" cy="7" r="1.5"/>
+                                                    <circle cx="5" cy="12" r="1.5"/>
+                                                    <circle cx="5" cy="17" r="1.5"/>
+                                                    <circle cx="12" cy="7" r="1.5"/>
+                                                    <circle cx="12" cy="12" r="1.5"/>
+                                                    <circle cx="12" cy="17" r="1.5"/>
+                                                </svg>
+                                            </div>
+
+                                            <!-- Service fields (имя, qty, price и т.д.) -->
+                                            <div class="flex flex-col bg-white rounded w-full ">
+                                                <div class="flex gap-2 mb-2 w-full">
+
+                                                    <!-- Service Name + Tax -->
+                                                    <div class="flex-1 flex flex-col w-3/5">
+                                                        <label class="sr-only">Service name</label>
+                                                        <div class="relative flex items-center">
                                                             <input x-model="item.name" type="text"
-                                                                   placeholder="Material name"
-                                                                   @input.debounce.300ms="autocomplete(item)"
-                                                                   @focus="openList(item)"
-                                                                   @blur="deferClose(item)"
-                                                                   @keydown.escape.prevent="hideList(item)"
-                                                                   @keydown.arrow-down.prevent="move(item,1)"
-                                                                   @keydown.arrow-up.prevent="move(item,-1)"
-                                                                   @keydown.enter.prevent="choose(index)"
+                                                                   placeholder="Item name"
                                                                    class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
                                                             <label
                                                                 class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
@@ -982,337 +904,461 @@
                                                                        class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
                                                             </label>
                                                         </div>
-                                                        <!-- Chip "Linked to part" -->
-                                                        <div x-show="item.part_id"
-                                                             class="mt-1 flex items-center gap-2 text-xs">
-                                                                                    <span
-                                                                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-                                                                                        <svg class="w-3.5 h-3.5"
-                                                                                             viewBox="0 0 24 24"
-                                                                                             fill="none"
-                                                                                             stroke="currentColor">
-                                                                                            <path
-                                                                                                d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5"
-                                                                                                stroke-width="2"/>
-                                                                                            <path
-                                                                                                d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19"
-                                                                                                stroke-width="2"/>
-                                                                                        </svg>
-                                                                                        Linked to part #<span
-                                                                                            x-text="item.part_id"></span>
-                                                                                    </span>
+                                                    </div>
 
-                                                            <button type="button"
-                                                                    @click="unlinkPart(item)"
-                                                                    class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
-                                                                Unlink
-                                                            </button>
+                                                    <div class="flex w-2/5 gap-1">
+                                                        <!-- Qty -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                   x-model="item.qty" type="number" step="1" min="0"
+                                                                   placeholder=" " @input="recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`qty-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Qty
+                                                            </label>
                                                         </div>
 
-                                                        <!-- выпадающий список -->
-                                                        <div x-show="item.search.open" x-transition.opacity
-                                                             @mousedown.prevent
-                                                             class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
-                                                            <template x-if="item.search.loading">
-                                                                <div class="px-3 py-2 text-sm text-gray-500">
-                                                                    Searching…
-                                                                </div>
-                                                            </template>
+                                                        <!-- Unit price -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                   x-model="item.unit_price" type="number"
+                                                                   step="0.01"
+                                                                   min="0" @input="recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`uprice-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Unit price
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Вторая строка: Описание и Unit Cost -->
+                                                <div class="flex gap-2 w-full">
+                                                    <div class="flex-1 w-3/5">
+                                                                    <textarea x-model="item.description"
+                                                                              placeholder="Description (optional)" rows="1"
+                                                                              class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
+                                                    </div>
+                                                    <div class="relative flex flex-col w-2/5">
+                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                               type="number" step="0.1"
+                                                               min="0" @input="recalcItemsTotal()"
+                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                        <label :for="`ucost-${index}`"
+                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                            peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                            Unit cost
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-row items-start w-1/5">
+                                            <!-- Итоговая цена -->
+                                            <div class="p-2 text-right text-sm min-w-[70px]">
+                                                <span x-text="formatMoney(item.total)"></span>
+                                            </div>
 
-                                                            <template x-for="(p, idx) in item.search.results"
-                                                                      :key="p.id">
-                                                                <div @click="choose(idx)"
-                                                                     :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
-                                                                    <div class="flex items-center gap-2">
-                                                                        <template x-if="p.image">
-                                                                            <img
-                                                                                :src="'{{ asset('storage') }}' + p.image"
-                                                                                alt="p.name"
-                                                                                class="w-9 h-9 rounded object-cover border">
-                                                                        </template>
-                                                                        <template
-                                                                            x-if="!p.image && p.nomenclature.image">
-                                                                            <img
-                                                                                :src="'{{ asset('storage') }}' + p.nomenclature.image"
-                                                                                :alt="p.name"
-                                                                                class="w-9 h-9 rounded object-cover border">
-                                                                        </template>
-                                                                        <template
-                                                                            x-if="!p.image && !p.nomenclature.image">
-                                                                                    <span class="w-[50px] h-[50px]">
-                                                                                        <div>
-                                                                                            <svg
-                                                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                                                xmlns:xlink="http://www.w3.org/1999/xlink"
-                                                                                                version="1.1" width="56"
-                                                                                                height="56"
-                                                                                                viewBox="0 0 256 256"
-                                                                                                xml:space="preserve">
-                                                                                                             <defs></defs>
-                                                                                                <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
-                                                                                                   transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
-                                                                                                    <path
-                                                                                                        d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z"
-                                                                                                        style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                                        transform=" matrix(1 0 0 1 0 0) "
-                                                                                                        stroke-linecap="round"/>
-                                                                                                    <path
-                                                                                                        d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z"
-                                                                                                        style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                                        transform=" matrix(1 0 0 1 0 0) "
-                                                                                                        stroke-linecap="round"/>
-                                                                                                    <path
-                                                                                                        d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z"
-                                                                                                        style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
-                                                                                                        transform=" matrix(1 0 0 1 0 0) "
-                                                                                                        stroke-linecap="round"/>
-                                                                                                </g>
-                                                                                            </svg>
-                                                                                        </div>
-                                                                                    </span>
-                                                                        </template>
-                                                                        <div class="min-w-0">
-                                                                            <div class="flex items-center gap-2">
+                                            <!-- Удалить -->
+                                            <button @click="removeItem(item.id)"
+                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                    tabindex="-1">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                    <path d="M6 6l12 12M6 18L18 6"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Materials -->
+                            <button
+                                @click="addItem('material')"
+                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                type="button"
+                            >
+                                + Add material
+                            </button>
+                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
+                                      :key="item.key">
+                                <div class="mb-4 space-y-2 border-b pb-2">
+                                    <!-- Material fields (имя, qty, price и т.д.) -->
+                                    <div class="flex flex-row justify-between w-full">
+                                        <div class="flex w-4/5">
+                                            <!-- Drag-handle, если нужен -->
+                                            <div class="flex items-start text-gray-400 cursor-move">
+                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <circle cx="5" cy="7" r="1.5"/>
+                                                    <circle cx="5" cy="12" r="1.5"/>
+                                                    <circle cx="5" cy="17" r="1.5"/>
+                                                    <circle cx="12" cy="7" r="1.5"/>
+                                                    <circle cx="12" cy="12" r="1.5"/>
+                                                    <circle cx="12" cy="17" r="1.5"/>
+                                                </svg>
+                                            </div>
+
+                                            <div class="flex flex-col bg-white rounded w-full ">
+                                                <div class="flex gap-2 mb-2 w-full">
+
+                                                    <!-- Material Name + Tax -->
+                                                    <div class="flex-1 flex flex-col w-3/5">
+                                                        <label class="sr-only">Material name</label>
+                                                        <div class="relative flex flex-col" @click.outside="hideList(item)">
+                                                            <div class="relative flex flex-row">
+                                                                <input x-model="item.name" type="text"
+                                                                       placeholder="Material name"
+                                                                       @input.debounce.300ms="autocomplete(item)"
+                                                                       @focus="openList(item)"
+                                                                       @blur="deferClose(item)"
+                                                                       @keydown.escape.prevent="hideList(item)"
+                                                                       @keydown.arrow-down.prevent="move(item,1)"
+                                                                       @keydown.arrow-up.prevent="move(item,-1)"
+                                                                       @keydown.enter.prevent="choose(index)"
+                                                                       class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
+                                                                <label
+                                                                    class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
+                                                                    Tax
+                                                                    <input type="checkbox" x-model="item.tax"
+                                                                           class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
+                                                                </label>
+                                                            </div>
+                                                            <!-- Chip "Linked to part" -->
+                                                            <div x-show="item.part_id"
+                                                                 class="mt-1 flex items-center gap-2 text-xs">
                                                                                         <span
-                                                                                            class="font-medium truncate"
-                                                                                            x-text="p.name"></span>
-                                                                                <span class="text-xs text-gray-500"
-                                                                                      x-text="p.sku ?? ''"></span>
-                                                                            </div>
-                                                                            <div
-                                                                                class="flex items-center gap-2 text-xs">
-                                                                                        <span class="text-gray-600"
-                                                                                              x-text="money(p.price)"></span>
-                                                                                <!-- бейдж наличия -->
-                                                                                <span
-                                                                                    :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
-                                                                                    class="px-1.5 py-0.5 rounded">
-                                                                                            <span
-                                                                                                x-show="p.available>0">In stock: <span
-                                                                                                    x-text="p.available"></span></span>
-                                                                                            <span
-                                                                                                x-show="p.available<=0">Out of stock</span>
+                                                                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                                                                                            <svg class="w-3.5 h-3.5"
+                                                                                                 viewBox="0 0 24 24"
+                                                                                                 fill="none"
+                                                                                                 stroke="currentColor">
+                                                                                                <path
+                                                                                                    d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 1 0-7.07-7.07L10 5"
+                                                                                                    stroke-width="2"/>
+                                                                                                <path
+                                                                                                    d="M14 11a5 5 0 0 0-7.07 0L4.8 13.12a5 5 0 1 0 7.07 7.07L14 19"
+                                                                                                    stroke-width="2"/>
+                                                                                            </svg>
+                                                                                            Linked to part #<span
+                                                                                                x-text="item.part_id"></span>
                                                                                         </span>
-                                                                                <template x-if="p.reserved > 0">
+
+                                                                <button type="button"
+                                                                        @click="unlinkPart(item)"
+                                                                        class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
+                                                                    Unlink
+                                                                </button>
+                                                            </div>
+
+                                                            <!-- выпадающий список -->
+                                                            <div x-show="item.search.open" x-transition.opacity
+                                                                 @mousedown.prevent
+                                                                 class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
+                                                                <template x-if="item.search.loading">
+                                                                    <div class="px-3 py-2 text-sm text-gray-500">
+                                                                        Searching…
+                                                                    </div>
+                                                                </template>
+
+                                                                <template x-for="(p, idx) in item.search.results"
+                                                                          :key="p.id">
+                                                                    <div @click="choose(idx)"
+                                                                         :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
+                                                                        <div class="flex items-center gap-2">
+                                                                            <template x-if="p.image">
+                                                                                <img
+                                                                                    :src="'{{ asset('storage') }}' + p.image"
+                                                                                    alt="p.name"
+                                                                                    class="w-9 h-9 rounded object-cover border">
+                                                                            </template>
+                                                                            <template
+                                                                                x-if="!p.image && p.nomenclature.image">
+                                                                                <img
+                                                                                    :src="'{{ asset('storage') }}' + p.nomenclature.image"
+                                                                                    :alt="p.name"
+                                                                                    class="w-9 h-9 rounded object-cover border">
+                                                                            </template>
+                                                                            <template
+                                                                                x-if="!p.image && !p.nomenclature.image">
+                                                                                        <span class="w-[50px] h-[50px]">
+                                                                                            <div>
+                                                                                                <svg
+                                                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                                                    xmlns:xlink="http://www.w3.org/1999/xlink"
+                                                                                                    version="1.1" width="56"
+                                                                                                    height="56"
+                                                                                                    viewBox="0 0 256 256"
+                                                                                                    xml:space="preserve">
+                                                                                                                 <defs></defs>
+                                                                                                    <g style="stroke: none; stroke-width: 0; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: none; fill-rule: nonzero; opacity: 1;"
+                                                                                                       transform="translate(1.4065934065934016 1.4065934065934016) scale(2.81 2.81)">
+                                                                                                        <path
+                                                                                                            d="M 89 20.938 c -0.553 0 -1 0.448 -1 1 v 46.125 c 0 2.422 -1.135 4.581 -2.898 5.983 L 62.328 50.71 c -0.37 -0.379 -0.973 -0.404 -1.372 -0.057 L 45.058 64.479 l -2.862 -2.942 c -0.385 -0.396 -1.019 -0.405 -1.414 -0.02 c -0.396 0.385 -0.405 1.019 -0.02 1.414 l 3.521 3.62 c 0.37 0.38 0.972 0.405 1.373 0.058 l 15.899 -13.826 l 21.783 22.32 c -0.918 0.391 -1.928 0.608 -2.987 0.608 H 24.7 c -0.552 0 -1 0.447 -1 1 s 0.448 1 1 1 h 55.651 c 5.32 0 9.648 -4.328 9.648 -9.647 V 21.938 C 90 21.386 89.553 20.938 89 20.938 z"
+                                                                                                            style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                            transform=" matrix(1 0 0 1 0 0) "
+                                                                                                            stroke-linecap="round"/>
+                                                                                                        <path
+                                                                                                            d="M 89.744 4.864 c -0.369 -0.411 -1.002 -0.444 -1.412 -0.077 l -8.363 7.502 H 9.648 C 4.328 12.29 0 16.618 0 21.938 v 46.125 c 0 4.528 3.141 8.328 7.356 9.361 l -7.024 6.3 c -0.411 0.368 -0.445 1.001 -0.077 1.412 c 0.198 0.22 0.471 0.332 0.745 0.332 c 0.238 0 0.476 -0.084 0.667 -0.256 l 88 -78.935 C 90.079 5.908 90.113 5.275 89.744 4.864 z M 9.648 14.29 h 68.091 L 34.215 53.33 L 23.428 42.239 c -0.374 -0.385 -0.985 -0.404 -1.385 -0.046 L 2 60.201 V 21.938 C 2 17.721 5.431 14.29 9.648 14.29 z M 2 68.063 v -5.172 l 20.665 -18.568 l 10.061 10.345 L 9.286 75.692 C 5.238 75.501 2 72.157 2 68.063 z"
+                                                                                                            style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                            transform=" matrix(1 0 0 1 0 0) "
+                                                                                                            stroke-linecap="round"/>
+                                                                                                        <path
+                                                                                                            d="M 32.607 35.608 c -4.044 0 -7.335 -3.291 -7.335 -7.335 s 3.291 -7.335 7.335 -7.335 s 7.335 3.291 7.335 7.335 S 36.652 35.608 32.607 35.608 z M 32.607 22.938 c -2.942 0 -5.335 2.393 -5.335 5.335 s 2.393 5.335 5.335 5.335 s 5.335 -2.393 5.335 -5.335 S 35.549 22.938 32.607 22.938 z"
+                                                                                                            style="stroke: none; stroke-width: 1; stroke-dasharray: none; stroke-linecap: butt; stroke-linejoin: miter; stroke-miterlimit: 10; fill: rgb(0,0,0); fill-rule: nonzero; opacity: 1;"
+                                                                                                            transform=" matrix(1 0 0 1 0 0) "
+                                                                                                            stroke-linecap="round"/>
+                                                                                                    </g>
+                                                                                                </svg>
+                                                                                            </div>
+                                                                                        </span>
+                                                                            </template>
+                                                                            <div class="min-w-0">
+                                                                                <div class="flex items-center gap-2">
                                                                                             <span
-                                                                                                class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
-                                                                                                Reserved <span
-                                                                                                    class="ml-1"
-                                                                                                    x-text="p.reserved"></span>
+                                                                                                class="font-medium truncate"
+                                                                                                x-text="p.name"></span>
+                                                                                    <span class="text-xs text-gray-500"
+                                                                                          x-text="p.sku ?? ''"></span>
+                                                                                </div>
+                                                                                <div
+                                                                                    class="flex items-center gap-2 text-xs">
+                                                                                            <span class="text-gray-600"
+                                                                                                  x-text="money(p.price)"></span>
+                                                                                    <!-- бейдж наличия -->
+                                                                                    <span
+                                                                                        :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                                                                                        class="px-1.5 py-0.5 rounded">
+                                                                                                <span
+                                                                                                    x-show="p.available>0">In stock: <span
+                                                                                                        x-text="p.available"></span></span>
+                                                                                                <span
+                                                                                                    x-show="p.available<=0">Out of stock</span>
                                                                                             </span>
-                                                                                </template>
+                                                                                    <template x-if="p.reserved > 0">
+                                                                                                <span
+                                                                                                    class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
+                                                                                                    Reserved <span
+                                                                                                        class="ml-1"
+                                                                                                        x-text="p.reserved"></span>
+                                                                                                </span>
+                                                                                    </template>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            </template>
+                                                                </template>
 
-                                                            <div
-                                                                x-show="!item.search.loading && item.search.results.length===0"
-                                                                class="px-3 py-2 text-sm text-gray-500">
-                                                                No matches. Press Enter to keep custom name.
+                                                                <div
+                                                                    x-show="!item.search.loading && item.search.results.length===0"
+                                                                    class="px-3 py-2 text-sm text-gray-500">
+                                                                    No matches. Press Enter to keep custom name.
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <div class="flex w-2/5 gap-1">
-                                                    <!-- Qty -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                               x-model="item.qty" type="number" step="1" min="0"
-                                                               placeholder=""
-                                                               @input="onQtyInput(item); recalcItemsTotal()"
-                                                               :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
-                                                               :max="item.part_id ? (item.stock ?? 0) : null"
-                                                               @blur="onQtyInput(item); recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
-                                                           x-text="item.warn.qty"></p>
-                                                        <label :for="`qty-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Qty
-                                                        </label>
+                                                    <div class="flex w-2/5 gap-1">
+                                                        <!-- Qty -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                   x-model="item.qty" type="number" step="1" min="0"
+                                                                   placeholder=""
+                                                                   @input="onQtyInput(item); recalcItemsTotal()"
+                                                                   :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
+                                                                   :max="item.part_id ? (item.stock ?? 0) : null"
+                                                                   @blur="onQtyInput(item); recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
+                                                               x-text="item.warn.qty"></p>
+                                                            <label :for="`qty-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Qty
+                                                            </label>
+                                                        </div>
+
+                                                        <!-- Unit price -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                   x-model="item.unit_price" type="number"
+                                                                   step="0.01" min="0"
+                                                                   @input="recalcItemsTotal()"
+                                                                   :readonly="item.priceLocked"
+                                                                   :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
+                                                                   title="Цена берётся из выбранной запчасти"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`uprice-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Unit price
+                                                            </label>
+                                                        </div>
                                                     </div>
-
-                                                    <!-- Unit price -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                               x-model="item.unit_price" type="number"
-                                                               step="0.01" min="0"
-                                                               @input="recalcItemsTotal()"
-                                                               :readonly="item.priceLocked"
-                                                               :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
-                                                               title="Цена берётся из выбранной запчасти"
+                                                </div>
+                                                <!-- Вторая строка: Описание и Unit Cost -->
+                                                <div class="flex gap-2 w-full">
+                                                    <div class="flex-1 w-3/5">
+                                                                    <textarea x-model="item.description"
+                                                                              placeholder="Description (optional)" rows="1"
+                                                                              class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
+                                                    </div>
+                                                    <div class="relative flex flex-col w-2/5">
+                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                               type="number" step="0.1"
+                                                               min="0" @input="recalcItemsTotal()"
                                                                class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`uprice-${index}`"
+                                                        <label :for="`ucost-${index}`"
                                                                class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit price
+                                                                            peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                            Unit cost
                                                         </label>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <!-- Вторая строка: Описание и Unit Cost -->
-                                            <div class="flex gap-2 w-full">
-                                                <div class="flex-1 w-3/5">
-                                                                <textarea x-model="item.description"
-                                                                          placeholder="Description (optional)" rows="1"
-                                                                          class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
-                                                </div>
-                                                <div class="relative flex flex-col w-2/5">
-                                                    <input :id="`ucost-${index}`" x-model="item.unit_cost"
-                                                           type="number" step="0.1"
-                                                           min="0" @input="recalcItemsTotal()"
-                                                           class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                    <label :for="`ucost-${index}`"
-                                                           class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                        peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                        Unit cost
-                                                    </label>
-                                                </div>
+                                        </div>
+                                        <div class="flex flex-row items-start w-1/5">
+                                            <!-- Итоговая цена -->
+                                            <div class="p-2 text-right text-sm min-w-[70px]">
+                                                <span x-text="formatMoney(item.total)"></span>
                                             </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-row items-start w-1/5">
-                                        <!-- Итоговая цена -->
-                                        <div class="p-2 text-right text-sm min-w-[70px]">
-                                            <span x-text="formatMoney(item.total)"></span>
-                                        </div>
 
-                                        <!-- Удалить -->
-                                        <button @click="removeItem(item.id)"
-                                                class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                tabindex="-1">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                <path d="M6 6l12 12M6 18L18 6"/>
-                                            </svg>
-                                        </button>
+                                            <!-- Удалить -->
+                                            <button @click="removeItem(item.id)"
+                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                    tabindex="-1">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                    <path d="M6 6l12 12M6 18L18 6"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            </template>
+                        </div>
+
+                        <div class="border p-4 rounded space-y-4">
+                            <div class="flex justify-between text-sm">
+                                <span>Subtotal</span>
+                                <span x-text="subtotal()"></span>
                             </div>
-                        </template>
-                    </div>
+                            <div class="flex justify-between text-sm">
+                                <span>Tax</span>
+                                <span x-text="taxTotal()"></span>
+                            </div>
+                            <div class="flex justify-between font-semibold text-base">
+                                <span>Total</span>
+                                <span x-text="total()"></span>
+                            </div>
+                        </div>
 
-                    <div class="border p-4 rounded space-y-4">
-                        <div class="flex justify-between text-sm">
-                            <span>Subtotal</span>
-                            <span x-text="subtotal()"></span>
+                        <div>
+                            <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
+                            </button>
+                            <template x-if="jobModalForm.message !== null">
+                                        <textarea x-model="jobModalForm.message"
+                                                  class="w-full border rounded mt-2 px-3 py-2 text-sm"
+                                                  placeholder="Add a message..."></textarea>
+                            </template>
                         </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Tax</span>
-                            <span x-text="taxTotal()"></span>
-                        </div>
-                        <div class="flex justify-between font-semibold text-base">
-                            <span>Total</span>
-                            <span x-text="total()"></span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
-                        </button>
-                        <template x-if="jobModalForm.message !== null">
-                                    <textarea x-model="jobModalForm.message"
-                                              class="w-full border rounded mt-2 px-3 py-2 text-sm"
-                                              placeholder="Add a message..."></textarea>
-                        </template>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex justify-end mt-6">
-                <button @click="onSubmit(jobModalForm); jobModalOpen = false"
-                        :disabled="saving || !validateJobModalForm(jobModalForm) || hasQtyErrors"
-                        :class="{'opacity-50 pointer-events-none': saving || !validateJobModalForm(jobModalForm) || hasQtyErrors}">
-                    <span x-show="!saving">Save job</span>
-                    <span x-show="saving">Saving…</span>
-                </button>
+                <div class="flex justify-end mt-6">
+                    <button @click="onSubmit(jobModalForm); jobModalOpen = false"
+                            :disabled="saving || !validateJobModalForm(jobModalForm) || hasQtyErrors"
+                            :class="{'opacity-50 pointer-events-none': saving || !validateJobModalForm(jobModalForm) || hasQtyErrors}">
+                        <span x-show="!saving">Save job</span>
+                        <span x-show="saving">Saving…</span>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Overlay для клика вне -->
-    <div
-        x-show="popover.open"
-        x-transition.opacity
-        @click="closePopover()"
-        class="fixed inset-0 z-40"
-    ></div>
+        <!-- Overlay для клика вне -->
+        <div
+            x-show="popover.open"
+            x-transition.opacity
+            @click="closePopover()"
+            class="fixed inset-0 z-40"
+        ></div>
 
-    <!-- Сам попап -->
-    <div
-        x-show="popover.open"
-        x-transition
-        @keydown.escape.window="closePopover()"
-        @click.outside="closePopover()"
-        class="fixed z-50 w-[360px] max-w-[90vw] bg-white rounded-xl shadow-2xl border border-gray-200"
-        :style="`left:${popover.x}px; top:${popover.y}px`"
-    >
-        <div class="p-4 space-y-3">
-            <!-- Заголовок -->
-            <div class="flex items-start gap-2">
-                <div class="shrink-0 mt-0.5">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M5 7h14M5 12h14M5 17h8" stroke="currentColor" stroke-width="1.5"
-                              stroke-linecap="round"/>
-                    </svg>
+        <!-- Сам попап -->
+        <div
+            x-show="popover.open"
+            x-transition
+            @keydown.escape.window="closePopover()"
+            @click.outside="closePopover()"
+            class="fixed z-50 w-[360px] max-w-[90vw] bg-white rounded-xl shadow-2xl border border-gray-200"
+            :style="`left:${popover.x}px; top:${popover.y}px`"
+        >
+            <div class="p-4 space-y-3">
+                <!-- Заголовок -->
+                <div class="flex items-start gap-2">
+                    <div class="shrink-0 mt-0.5">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 7h14M5 12h14M5 17h8" stroke="currentColor" stroke-width="1.5"
+                                  stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
+                        <div class="text-[10px] text-gray-500" x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
+                    </div>
                 </div>
-                <div class="min-w-0">
-                    <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
-                    <div class="text-[10px] text-gray-500" x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
-                </div>
-            </div>
 
-            <!-- Описание -->
-            <div class="flex items-start gap-2" x-show="popover.job?.description">
-                <div class="shrink-0 mt-0.5" title="Job description">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.5"
-                              stroke-linecap="round"/>
-                    </svg>
+                <!-- Описание -->
+                <div class="flex items-start gap-2" x-show="popover.job?.description">
+                    <div class="shrink-0 mt-0.5" title="Job description">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.5"
+                                  stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm text-gray-700 whitespace-pre-wrap" x-text="popover.job?.description"></div>
                 </div>
-                <div class="text-sm text-gray-700 whitespace-pre-wrap" x-text="popover.job?.description"></div>
-            </div>
 
-            <!-- Цена -->
-            <div class="flex items-center gap-2">
-                <div class="shrink-0" title="Price">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path
-                            d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
-                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
+                <!-- Цена -->
+                <div class="flex items-center gap-2">
+                    <div class="shrink-0" title="Price">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
                 </div>
-                <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
-            </div>
 
-            <!-- Клиент -->
-            <div class="flex items-start gap-2">
-                <div class="shrink-0 mt-0.5" title="Customer">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
-                              stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
+                <!-- Клиент -->
+                <div class="flex items-start gap-2">
+                    <div class="shrink-0 mt-0.5" title="Customer">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
+                                  stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm text-gray-700 leading-5">
+                        <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
+                        <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
+                        <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-700 leading-5">
-                    <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
-                    <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
-                    <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
-                </div>
-            </div>
 
-            <!-- Техник -->
-            <div class="flex items-center gap-2">
-                <div class="shrink-0" title="Technician">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
-                              stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
-                </div>
-                <div class="text-sm text-gray-700">
-                    <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
+                <!-- Техник -->
+                <div class="flex items-center gap-2">
+                    <div class="shrink-0" title="Technician">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
+                                  stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1540,6 +1586,8 @@
             firstDay: 1,
             DAY_START_HOUR: 6,
             DAY_END_HOUR: 22,
+            DAY_OPEN_HOUR: 7,
+            DAY_HEADER_H: 30,
             pxPerMin: 1,
             dayTimeSlots: [],
             APP_TZ: dayjs.tz.guess(),
@@ -1783,8 +1831,8 @@
                     out.push({
                         h,
                         label: this.to12h(h),
-                        top,
-                        center: top + 30*this.pxPerMin
+                        top: top + 1,
+                        center: top
                     });
                 }
                 return out;

@@ -1,4 +1,5 @@
-<div class="w-full p-2 md:p-4 space-y-2">
+<div x-data="viewportPanel()" x-init="init" x-ref="panel" :style="`height:${h}px`"
+     class="w-full p-2 md:p-4 space-y-2 overflow-auto">
     <div class="flex flex-col justify-between items-start mb-6 space-y-4 sm:space-y-0">
         <h1 class="text-3xl font-bold text-gray-500 dark:text-gray-400">Dashboard</h1>
         <p class="text-slate-400 text-sm mt-1">

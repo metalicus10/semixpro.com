@@ -352,5 +352,26 @@
         if (isAbort) event.preventDefault();
     });
 </script>
+<script>
+    function viewportPanel () {
+        return {
+            h: 0,
+            init() {
+                const update = () => {
+                    // сколько пикселей осталось до низа окна
+                    const top = this.$refs.panel.getBoundingClientRect().top;
+                    // если нужно оставить снизу небольшой отступ — вычтите 8–16px
+                    this.h = Math.max(0, window.innerHeight - top);
+                };
+
+                this.$nextTick(update);
+                window.addEventListener('resize', update);
+
+                // чтобы реагировать на изменения высоты верхних блоков (баннеры, алерты и т.п.)
+                new ResizeObserver(update).observe(document.body);
+            }
+        }
+    }
+</script>
 </body>
 </html>
