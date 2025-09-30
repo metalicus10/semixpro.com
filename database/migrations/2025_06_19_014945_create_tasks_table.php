@@ -13,9 +13,10 @@ return new class extends Migration
     {
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
-            $table->foreign('customer_id')->references('id')->on('customers')->nullOnDelete();
-            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->unsignedBigInteger('customer_id')->nullable();
             $table->foreign('order_id')->references('id')->on('orders')->nullOnDelete();
+            $table->foreign('customer_id')->references('id')->on('customers')->nullOnDelete();
             $table->date('day');
             $table->string('message')->nullable();
             $table->timestamp('start_time');

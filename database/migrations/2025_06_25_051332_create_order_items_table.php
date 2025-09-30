@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id');
             $table->string('item_title', 191);
             $table->string('item_type', 191);
             $table->string('item_description', 191);
-            $table->unsignedBigInteger('item_id');
+            $table->unsignedBigInteger('order_id')->nullable();
+            $table->unsignedBigInteger('item_id')->nullable();
             $table->unsignedBigInteger('part_id')->nullable();
             $table->unsignedBigInteger('consumed_by')->nullable()->index();
             $table->index(['order_id', 'item_type', 'part_id']);

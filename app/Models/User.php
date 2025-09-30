@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use Orchid\Access\UserAccess;
 use Orchid\Filters\Types\Like;
 use Orchid\Filters\Types\Where;
 use Orchid\Filters\Types\WhereDateStartEnd;
@@ -19,7 +18,6 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'permissions',
     ];
 
     /**
@@ -49,11 +47,11 @@ class User extends Authenticatable
      * @var array
      */
     protected $allowedFilters = [
-        'id'         => Where::class,
-        'name'       => Like::class,
-        'email'      => Like::class,
-        'updated_at' => WhereDateStartEnd::class,
-        'created_at' => WhereDateStartEnd::class,
+           'id'         => Where::class,
+           'name'       => Like::class,
+           'email'      => Like::class,
+           'updated_at' => WhereDateStartEnd::class,
+           'created_at' => WhereDateStartEnd::class,
     ];
 
     /**
@@ -68,58 +66,4 @@ class User extends Authenticatable
         'updated_at',
         'created_at',
     ];
-
-    // Добавляем проверку на блокировку
-    public function isBlocked()
-    {
-        return $this->is_blocked;
-    }
-
-    public function parts()
-    {
-        return $this->hasManyThrough(Part::class, Category::class, 'manager_id', 'category_id');
-    }
-
-    public function categories()
-    {
-        return $this->hasMany(Category::class, 'manager_id', 'id');
-    }
-
-    public function brands()
-    {
-        return $this->hasMany(Brand::class, 'manager_id', 'id');
-    }
-
-    public function managedWarehouses()
-    {
-        return $this->hasMany(Warehouse::class, 'manager_id', 'id');
-    }
-
-    public function assignedWarehouses()
-    {
-        return $this->belongsToMany(Warehouse::class, 'technician_warehouse', 'technician_id', 'warehouse_id')
-            ->withPivot('technician_id', 'warehouse_id')
-            ->select('warehouses.id', 'warehouses.name');
-    }
-
-    // Универсальный метод для получения складов в зависимости от роли
-    public function warehouses()
-    {
-        return $this->inRole('manager') ? $this->managedWarehouses() : $this->assignedWarehouses();
-    }
-
-    public function pns()
-    {
-        return $this->hasMany(Pn::class, 'manager_id', 'id');
-    }
-
-    public function assignedParts()
-    {
-        return Part::whereIn('warehouse_id', function ($query) {
-            $query->select('warehouse_id')
-                ->from('technician_warehouse')
-                ->where('technician_id', auth()->id());
-        })->get();
-    }
-
 }

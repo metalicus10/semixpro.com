@@ -331,7 +331,7 @@
     </section>
 
     <div
-        class="flex flex-col h-screen min-h-0 m-1 p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900 overflow-hidden">
+        class="flex flex-col h-screen min-h-0 m-1 p-1 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-600 bg-gray-900 overflow-hide">
         <livewire:notification/>
         {{ $slot }}
     </div>
