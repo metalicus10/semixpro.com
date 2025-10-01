@@ -22,3 +22,5 @@ yarn-error.log
 /.zed
 /storage/framework/views/
 /.osp/
+/storage/app/public/images/
+/storage/app/private/livewire-tmp/
