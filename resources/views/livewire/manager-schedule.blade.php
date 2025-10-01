@@ -14,7 +14,7 @@
                     @click="goToday(); $dispatch('week:changed')">Today
             </button>
             <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="dbg('moveWeek(-1) from UI'); moveWeek(-1); $dispatch('week:changed')">
+                    @click="prev(); $dispatch('week:changed')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                      xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M15 4.5L7.5 12L15 19.5"
@@ -23,7 +23,7 @@
                 </svg>
             </button>
             <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="dbg('moveWeek(1) from UI'); moveWeek(1); $dispatch('week:changed')">
+                    @click="next(); $dispatch('week:changed')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                      xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M9 4.5L16.5 12L9 19.5"
@@ -33,7 +33,7 @@
             </button>
             <!-- Диапазон дат недели -->
             <div class="text-sm font-medium text-gray-700 font-[LufgaSemiBold]"
-                 x-text="days && days.length === 7 ? (days[0].label + ' — ' + days[6].label) : ''">
+                 x-text="headerLabel">
             </div>
             <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'Current week' : ''"></span>
         </div>
@@ -112,8 +112,7 @@
                             </div>
                             {{-- Часы --}}
                             <div class="flex">
-                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx"
-                                          x-init="console.log(defaultTimeSlots);">
+                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx">
                                     <div
                                         class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
                                         <span x-text="slotLabel"></span>
@@ -219,11 +218,11 @@
                  :style="`height:${dayGridHeight}px`">
 
                 <div
-                    class="absolute left-12 top-0 bottom-0 bg-gray-200/60 cursor-not-allowed"
+                    class="absolute left-12 top-0 bottom-0 border-2 border-gray-200/60 cursor-not-allowed"
                     style="z-index: 5"
                     :style="{
-                          top: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`,
-                          height: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`
+                          top: 0,
+                          height: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`,
                         }"
                     @mousedown.stop
                     @click.stop
@@ -284,6 +283,34 @@
                     <div class="absolute left-10 right-0 border-t border-gray-200"
                          :style="`top:${hh.top}px`"></div>
                 </template>
+
+                <div class="absolute inset-x-0"
+                     :style="`top:${DAY_HEADER_H}px; bottom:0;`"
+                     @mouseleave="selecting && endSelectionDay()"
+                >
+                    <template x-for="cell in dayCells" :key="cell.i">
+                        <div
+                            class="absolute left-12 right-0 border-b border-transparent
+                                cursor-pointer select-none"
+                            :style="`top:${cell.top}px; height:${cell.h}px;`"
+
+                            :class="{
+                                'bg-blue-100/50 ring-1 ring-blue-300': isDaySelected(cell.i),
+                                'pointer-events-none':
+                                  cell.min < DAY_OPEN_HOUR*60 ||
+                                  cell.min >= DAY_END_HOUR*60
+                              }"
+
+                            @mousedown.prevent="startSelectionDay(cell.i)"
+                            @mousemove.prevent="dragSelectionDay(cell.i)"
+                            @mouseup.prevent="endSelectionDay()"
+
+                            @touchstart.prevent="startSelectionDay(cell.i)"
+                            @touchmove.prevent="dragSelectionDay(cell.i)"
+                            @touchend.prevent="endSelectionDay()"
+                        ></div>
+                    </template>
+                </div>
 
                 <!-- Блоки задач -->
                 <template x-for="t in dayTasks" :key="t.id">
@@ -1605,6 +1632,9 @@
             DAY_OPEN_HOUR: 7,
             DAY_HEADER_H: 30,
             pxPerMin: 1,
+            selecting: false,
+            selStartIdx: null,
+            selEndIdx: null,
             dayTimeSlots: [],
             APP_TZ: dayjs.tz.guess(),
 
@@ -1734,6 +1764,31 @@
                 return m ? new Date(m.valueOf()) : new Date();
             },
 
+            get dayCells() {
+                const out = [];
+                const startMin = this.DAY_START_HOUR * 60;
+                const endMin   = this.DAY_END_HOUR   * 60;
+                let idx = 0;
+
+                for (let m = startMin; m < endMin; m += 30, idx++) {
+                    const top = this.DAY_HEADER_H + (m - startMin) * this.pxPerMin;
+                    out.push({
+                        i: idx,
+                        min: m,
+                        top,
+                        h: 30 * this.pxPerMin
+                    });
+                }
+                return out;
+            },
+
+            isDaySelected(i) {
+                if (this.selStartIdx == null || this.selEndIdx == null) return false;
+                const a = Math.min(this.selStartIdx, this.selEndIdx);
+                const b = Math.max(this.selStartIdx, this.selEndIdx);
+                return i >= a && i <= b;
+            },
+
             async setDay(day) {
                 const d = this.safeTz(day) || this.tz();
                 this.currentDayISO = d.format('YYYY-MM-DD');
@@ -1742,6 +1797,25 @@
                 if (!this.weekStart || !this.safeTz(this.weekStart).isSame(ws, 'day')) {
                     await this.setWeek(ws);
                 }
+            },
+
+            prev() {
+                if (this.view === 'day') return this.moveDay(-1);
+                return this.moveWeek(-1);
+            },
+            next() {
+                if (this.view === 'day') return this.moveDay(1);
+                return this.moveWeek(1);
+            },
+
+            get headerLabel() {
+                if (this.view === 'day') {
+                    return this.tz(this.currentDayISO).format('ddd, MMM D');
+                }
+                // week
+                return this.days?.length === 7
+                    ? `${this.days[0].label} — ${this.days[6].label}`
+                    : '';
             },
 
             async moveWeek(delta) {
@@ -1761,11 +1835,11 @@
             },
 
             async goToday() {
-                this.currentDayISO = this.tz().format('YYYY-MM-DD');
+                //this.currentDayISO = this.tz().format('YYYY-MM-DD');
                 if (this.view === 'day') {
-                    await this.setDay(this.currentDayISO);
+                    this.currentDayISO = this.tz().format('YYYY-MM-DD');
                 } else {
-                    await this.setWeek(this.currentDayISO);
+                    await this.setWeek(this.mondayStart(this.tz()));
                 }
 
                 this.invalidateLanes()
@@ -1773,9 +1847,13 @@
             },
 
             isCurrentWeek() {
-                const nowMon = this.mondayStart(this.tz());
-                const curMon = this.mondayStart(this.weekStart || this.currentDayISO);
-                return nowMon.format('YYYY-MM-DD') === curMon.format('YYYY-MM-DD');
+                if (this.view === 'day') {
+                    return this.tz(this.currentDayISO).isSame(this.tz(), 'day');
+                }
+                const now = this.tz();
+                const start = this.tz(this.weekStart);
+                const end = start.add(6, 'day').endOf('day');
+                return now.isAfter(start) && now.isBefore(end);
             },
 
             isCurrentDay() {
@@ -1794,7 +1872,7 @@
 
                 // если сейчас открыт режим карты — перерисуем
                 if (this.mode === 'map') {
-                    await this.refreshMap(true);
+                    await this.hardRefreshMap(true);
                     if (this.routingEnabled && this.selectedTechIds.size) {
                         await this.showTechRoute(Array.from(this.selectedTechIds), this.currentDayISO);
                     }
@@ -1817,6 +1895,21 @@
                         }
                     }
                 }
+            },
+
+            async setView(v) {
+                if (this.view === v) return;
+                this.view = v;
+
+                // обеспечим валидную опорную дату
+                if (v === 'day' && !this.currentDayISO) {
+                    this.currentDayISO = this.tz().format('YYYY-MM-DD');
+                }
+                if (v === 'week' && !this.weekStart) {
+                    await this.setWeek(this.mondayStart(this.tz()));
+                }
+
+                await this.fetchForCurrentView();
             },
 
             moveDay(delta) {
@@ -1887,75 +1980,6 @@
                 }
                 this.dayTimeSlots = slots;
             },
-
-            /*renderDayGrid() {
-                const root = document.getElementById('dayGrid');
-                if (!root) return;
-                root.innerHTML = '';
-                this.buildDayTimeSlots();
-
-                // параметры шкалы
-                const startHour = 6;      // начало дня
-                const endHour   = 22;     // конец дня
-                const pxPerMin  = 1;      // 1 минута = 2px ⇒ 1 час = 120px
-                const totalMin  = (endHour - startHour) * 60;
-                root.style.height = `${totalMin * pxPerMin}px`;
-                root.classList.add('bg-white','rounded','border');
-
-                // вертикальные линии часов слева
-                for (let h = startHour; h <= endHour; h++) {
-                    const y = (h - startHour) * 60 * pxPerMin;
-                    const line = document.createElement('div');
-                    line.style.cssText = `position:absolute;left:0;right:0;top:${y}px;height:0;border-top:1px solid #e5e7eb`;
-                    root.appendChild(line);
-
-                    const lbl = document.createElement('div');
-                    lbl.textContent = `${h}`;
-                    lbl.style.cssText = `position:absolute;left:8px;top:${y+2}px;font-size:11px;color:#6b7280`;
-                    root.appendChild(lbl);
-                }
-
-                // задачи дня
-                const dayTasks = this.tasksForDay(this.currentDayISO)
-                    .map(t => {
-                        const start = this.hmToMin(t.start_time || t.start || '00:00');
-                        const end   = this.hmToMin(t.end_time || t.end   || '00:00');
-                        return { ...t, _startMin: start, _endMin: Math.max(end, start + 30) };
-                    })
-                    .sort((a,b) => a._startMin - b._startMin);
-
-                // цвет по технику
-                const colorByTech = (techId) => this.colorOfTech(String(techId));
-
-                // рисуем блоки
-                dayTasks.forEach(t => {
-                    const top    = (t._startMin - startHour*60) * pxPerMin;
-                    const height = (t._endMin   - t._startMin)  * pxPerMin;
-
-                    const box = document.createElement('div');
-                    box.className = 'absolute left-24 right-3 rounded-md shadow-sm';
-                    box.style.top    = `${top}px`;
-                    box.style.height = `${height}px`;
-                    box.style.background = colorByTech(t.technician) || '#0ea5e9';
-                    box.style.opacity = '.9';
-                    box.style.padding = '6px 8px';
-                    box.style.color   = 'white';
-                    box.style.border  = '1px solid rgba(0,0,0,.1)';
-                    box.style.overflow = 'hidden';
-
-                    const title = document.createElement('div');
-                    title.className = 'text-xs font-medium truncate';
-                    title.textContent = t.client?.name || t.message || 'Task';
-                    box.appendChild(title);
-
-                    const time = document.createElement('div');
-                    time.className = 'text-[11px] opacity-90';
-                    time.textContent = `${t.start_time || t.start} – ${t.end_time || t.end}`;
-                    box.appendChild(time);
-
-                    root.appendChild(box);
-                });
-            },*/
 
             hmToMin(hm) {
                 const [h, m] = String(hm).split(':').map(Number);
@@ -2100,15 +2124,47 @@
                 this.sel.endIdx = idx;
             },
             endSelection() {
-                // здесь НЕ сбрасываем sel!
-                // Просто флагим, что выбор завершён,
-                // чтобы дальнейший hover без зажатой ЛКМ не лез в dragSelection.
                 this.mouseDown = false;
             },
             isSelected(emp, day, idx) {
                 if (this.sel.emp !== emp || this.sel.day !== day) return false;
                 const [min, max] = [this.sel.startIdx, this.sel.endIdx].sort((a, b) => a - b);
                 return idx >= min && idx < max + 1;
+            },
+
+            startSelectionDay(i) {
+                this.selecting = true;
+                this.selStartIdx = i;
+                this.selEndIdx = i;
+            },
+            dragSelectionDay(i) {
+                if (!this.selecting) return;
+                this.selEndIdx = i;
+            },
+            endSelectionDay() {
+                if (!this.selecting) return;
+
+                const a = Math.min(this.selStartIdx, this.selEndIdx);
+                const b = Math.max(this.selStartIdx, this.selEndIdx);
+
+                const startMinutesFromOpen = a * 30;
+                const endMinutesFromOpen   = (b + 1) * 30;
+
+                // абсолютные минуты от полуночи
+                const absStartMin = this.DAY_START_HOUR * 60 + startMinutesFromOpen;
+                const absEndMin   = this.DAY_START_HOUR * 60 + endMinutesFromOpen;
+
+                // перерасчёт в «часы:мин» текущего дня (dayjs)
+                const d = this.tz(this.currentDayISO ?? this.tz());
+                const start = d.hour(0).minute(0).second(0).add(absStartMin, 'minute');
+                const end   = d.hour(0).minute(0).second(0).add(absEndMin, 'minute');
+
+                // здесь делайте то же, что делаете в неделе (создание задачи / модалка)
+                // this.createTaskFromSelection(start, end) ...
+                // или вызов уже существующего endSelection(...)
+
+                this.selecting = false;
+                this.selStartIdx = this.selEndIdx = null;
             },
 
             popover: {open: false, job: null, x: 0, y: 0, placement: 'right',},
@@ -3013,15 +3069,16 @@
                 this.dayBtn.className = 'px-2 py-1 rounded ' + (this.mapView === 'day' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800');
             },
 
-            setMapView(view) {
+            async setMapView(view) {
                 this.mapView = view;
-                if (view === 'day' && !this.currentDayISO) this.currentDayISO = this.todayISO(); //this.renderDayGrid();
-                if (view === 'week') {
+                if (view === 'day' && !this.currentDayISO) this.currentDayISO = this.todayISO();
+                if (view === 'week' && !this.weekStart) {
+                    await this.setWeek(this.mondayStart(this.tz()));
                     if (this.currentDayISO) this.tasksForDay(this.currentDayISO);
                 }
                 this.paintModeButtons?.();
                 this.updateRouteControlVisibility();
-                this.hardRefreshMap(true);
+                await this.hardRefreshMap(true);
             },
 
             showCalendar() {
