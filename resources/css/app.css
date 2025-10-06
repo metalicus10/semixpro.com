@@ -50,7 +50,7 @@
     .day-right-border::after {
         content: "";
         position: absolute;
-        top: 0;
+        right: 0;
         width: 2px;
         height: 100%;
         background-color: theme('colors.gray.400');

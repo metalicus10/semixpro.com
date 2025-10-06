@@ -98,11 +98,11 @@
             {{-- Заголовок --}}
             <div class="inline-flex items-center border-b border-b-gray-400">
                 {{-- Первая узкая ячейка для таймзоны или иконки --}}
-                <div class="w-32 flex-shrink-0 p-2 text-sm font-medium text-center">
+                <div class="sticky left-0 z-30 w-32 h-[61px] flex-shrink-0 p-2 text-sm font-medium text-center bg-gray-50 day-right-border">
                     GMT -04
                 </div>
                 {{-- Дни недели с часами --}}
-                <div class="flex-1 inline-flex border-l-2 border-l-gray-400">
+                <div class="flex-1 inline-flex">
                     <template x-for="day in days" :key="day.date">
                         <div class="flex flex-col">
                             {{-- Дата --}}
@@ -128,7 +128,7 @@
             <template x-for="employee in employees" :key="employee.id">
                 <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
                     {{-- Колонка с аватаром и именем --}}
-                    <div class="w-32 flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50">
+                    <div class="sticky left-0 z-20 w-32 h-[61px] flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50 day-right-border">
                         <img
                             :src="employee.avatar"
                             alt=""
@@ -142,7 +142,7 @@
                         <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
                             <div class="relative flex-shrink-0"
                                  :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
-                                 :class="{ 'day-left-border': day !== 0 }" :data-day="day.date" :data-emp="employee.id">
+                                 :class="{ 'day-left-border': days[0] !== day }" :data-day="day.date" :data-emp="employee.id">
                                 {{-- Фоновые ячейки часов --}}
                                 <div class="grid"
                                      :style="`grid-template-columns: repeat(${wrapCols}, ${slotWidthPx}px);`">
@@ -168,7 +168,7 @@
                                 </div>
 
                                 {{-- Задачи --}}
-                                <template x-for="task in dayTasks(employee.id, day)" :key="task.id">
+                                <template x-for="task in dayTasks(employee.id, day)" :key="`t-${task.id}-${employee.id}-${day}`">
                                     <div
                                         class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
                                         :class="{
@@ -214,115 +214,107 @@
         <div x-data="viewportPanel()" x-ref="panel"
              class="overflow-auto"
              :style="`height:${h}px`">
-            <div id="dayGrid" class="relative bg-white pb-5"
+            <div id="dayGrid" class="relative bg-white pb-10"
                  :style="`height:${dayGridHeight}px`">
+                <div class="relative" :style="`min-height:${dayGridHeight + 80}px`">
+                    <div
+                        class="absolute left-12 top-0 bottom-0 border-2 border-gray-200/60 cursor-not-allowed"
+                        style="z-index: 5"
+                        :style="{
+                              top: 0,
+                              height: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`,
+                            }"
+                        @mousedown.stop
+                        @click.stop
+                        @touchstart.stop
+                    ></div>
 
-                <div
-                    class="absolute left-12 top-0 bottom-0 border-2 border-gray-200/60 cursor-not-allowed"
-                    style="z-index: 5"
-                    :style="{
-                          top: 0,
-                          height: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`,
-                        }"
-                    @mousedown.stop
-                    @click.stop
-                    @touchstart.stop
-                ></div>
+                    <!-- маска 6:00–7:00 -->
+                    <div
+                        class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
+                        style="z-index: 5"
+                        :style="{
+                              top: `${DAY_HEADER_H}px`,
+                              height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 29}px`
+                            }"
+                        @mousedown.stop
+                        @click.stop
+                        @touchstart.stop
+                        title="Недоступно для создания задач"
+                    ></div>
 
-                <!-- маска 6:00–7:00 -->
-                <div
-                    class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
-                    style="z-index: 5"
-                    :style="{
-                          top: `${DAY_HEADER_H}px`,
-                          height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 29}px`
-                        }"
-                    @mousedown.stop
-                    @click.stop
-                    @touchstart.stop
-                    title="Недоступно для создания задач"
-                ></div>
+                    <!-- маска 9:30PM – 10:00PM -->
+                    <div
+                        class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
+                        style="z-index: 5"
+                        :style="{
+                              top: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 30}px`,
+                              height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 28}px`
+                            }"
+                        @mousedown.stop
+                        @click.stop
+                        @touchstart.stop
+                        title="Недоступно для создания задач"
+                    ></div>
 
-                <!-- маска 9:30PM – 10:00PM -->
-                <div
-                    class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
-                    style="z-index: 5"
-                    :style="{
-                          top: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 30}px`,
-                          height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 28}px`
-                        }"
-                    @mousedown.stop
-                    @click.stop
-                    @touchstart.stop
-                    title="Недоступно для создания задач"
-                ></div>
+                    <div class="flex sticky items-center top-0 z-10 h-[30px] w-full bg-gray-300 day-grid-top-panel-border">
+                        <div class="flex w-[50px] text-[9px] justify-center items-center px-0">GMT-04</div>
+                        <div class="flex-1"></div>
+                    </div>
 
-                <div class="flex sticky items-center top-0 z-10 h-[30px] w-full bg-gray-300 day-grid-top-panel-border">
-                    <div class="flex w-[50px] text-[9px] justify-center items-center px-0">GMT-04</div>
-                    <div class="flex-1"></div>
-                </div>
+                    <!-- ЧАСОВЫЕ линии + подпись -->
+                    <template x-for="slot in hours" :key="slot.h">
+                        <template x-if="slot.h >= DAY_OPEN_HOUR">
+                            <div>
+                                <!-- толстая часовая линия -->
+                                <div class="absolute left-10 right-0 border-t border-gray-300"
+                                     :style="`top:${slot.top}px`"></div>
 
-                <!-- ЧАСОВЫЕ линии + подпись -->
-                <template x-for="slot in hours" :key="slot.h">
-                    <template x-if="slot.h >= DAY_OPEN_HOUR">
-                        <div x-init="console.log(slot);">
-                            <!-- толстая часовая линия -->
-                            <div class="absolute left-10 right-0 border-t border-gray-300"
-                                 :style="`top:${slot.top}px`"></div>
+                                <!-- подпись по центру часа -->
+                                <div class="absolute left-2 text-[11px] text-gray-500 select-none"
+                                     :style="`top:${slot.center}px; transform:translateY(-50%);`"
+                                     x-text="slot.label"></div>
+                            </div>
+                        </template>
+                    </template>
 
-                            <!-- подпись по центру часа -->
-                            <div class="absolute left-2 text-[11px] text-gray-500 select-none"
-                                 :style="`top:${slot.center}px; transform:translateY(-50%);`"
-                                 x-text="slot.label"></div>
+                    <!-- ПОЛУЧАСОВЫЕ тонкие линии -->
+                    <template x-for="hh in halfHours" :key="'h'+hh.top">
+                        <div class="absolute left-10 right-0 border-t border-gray-200"
+                             :style="`top:${hh.top}px`"></div>
+                    </template>
+
+                    <div class="absolute inset-x-0"
+                         :style="`top:${DAY_HEADER_H}px; bottom:0;`"
+                         @mouseleave="selecting && endSelectionDay()"
+                    >
+                        <template x-for="cell in dayCells" :key="cell.i">
+                            <div
+                                class="absolute left-12 right-0 border-b border-transparent select-none"
+                                :style="`top:${cell.top}px; height:${cell.h}px;`"
+                                :class="{
+                                    'pointer-events-none':
+                                      cell.min < DAY_OPEN_HOUR*60 ||
+                                      cell.min >= DAY_END_HOUR*60
+                                  }"
+                            ></div>
+                        </template>
+                    </div>
+
+                    <!-- Блоки задач -->
+                    <template x-for="t in dayTasks" :key="t.id">
+                        <div
+                            class="absolute left-24 right-3 rounded-md shadow-sm overflow-hidden"
+                            :style="`top:${t._top}px;height:${t._height}px;background:${t._color}22;border:1px solid ${t._color}55`"
+                            @click.stop="onTaskClick(t, $event)"
+                        >
+                            <div class="px-2 pt-1 text-xs font-medium truncate text-gray-900/90"
+                                 x-text="t?.client?.name || t.message || 'Task'"></div>
+                            <div class="px-2 pb-1 text-[11px] opacity-90"
+                                 x-text="`${t.start_time || t.start || ''} – ${t.end_time || t.end || ''}`"></div>
                         </div>
                     </template>
-                </template>
-
-                <!-- ПОЛУЧАСОВЫЕ тонкие линии -->
-                <template x-for="hh in halfHours" :key="'h'+hh.top">
-                    <div class="absolute left-10 right-0 border-t border-gray-200"
-                         :style="`top:${hh.top}px`"></div>
-                </template>
-
-                <div class="absolute inset-x-0"
-                     :style="`top:${DAY_HEADER_H}px; bottom:0;`"
-                     @mouseleave="selecting && endSelectionDay()"
-                >
-                    <template x-for="cell in dayCells" :key="cell.i">
-                        <div
-                            class="absolute left-12 right-0 border-b border-transparent
-                                cursor-pointer select-none"
-                            :style="`top:${cell.top}px; height:${cell.h}px;`"
-
-                            :class="{
-                                'bg-blue-100/50 ring-1 ring-blue-300': isDaySelected(cell.i),
-                                'pointer-events-none':
-                                  cell.min < DAY_OPEN_HOUR*60 ||
-                                  cell.min >= DAY_END_HOUR*60
-                              }"
-
-                            @mousedown.prevent="startSelectionDay(cell.i)"
-                            @mousemove.prevent="dragSelectionDay(cell.i)"
-                            @mouseup.prevent="endSelectionDay()"
-
-                            @touchstart.prevent="startSelectionDay(cell.i)"
-                            @touchmove.prevent="dragSelectionDay(cell.i)"
-                            @touchend.prevent="endSelectionDay()"
-                        ></div>
-                    </template>
                 </div>
-
-                <!-- Блоки задач -->
-                <template x-for="t in dayTasks" :key="t.id">
-                    <div
-                        class="absolute left-24 right-3 rounded-md shadow-sm overflow-hidden"
-                        :style="`top:${t._top}px;height:${t._height}px;background:${t._color}22;border:1px solid ${t._color}55`">
-                        <div class="px-2 pt-1 text-xs font-medium truncate text-gray-900/90"
-                             x-text="t?.client?.name || t.message || 'Task'"></div>
-                        <div class="px-2 pb-1 text-[11px] opacity-90"
-                             x-text="`${t.start_time || t.start || ''} – ${t.end_time || t.end || ''}`"></div>
-                    </div>
-                </template>
             </div>
         </div>
     </div>
@@ -1753,7 +1745,7 @@
                     await this.hardRefreshMap.call(this, {fit: true});
                     this.pendingMapRefresh = false;
                 } else {
-                    this.dbg('mode:', this.mode, '→ map не перерисовываем сейчас');
+                    //this.dbg('mode:', this.mode, '→ map не перерисовываем сейчас');
                 }
 
                 this.resetLaneCaches();
@@ -1877,16 +1869,38 @@
                         await this.showTechRoute(Array.from(this.selectedTechIds), this.currentDayISO);
                     }
                 }
+
+                await this.$nextTick();
+                this.resetLaneCaches();
             },
 
             async fetchWeek(fromDate, toDate) {
                 this.isLoading = true;
                 try {
                     const tasks = await this.$wire.call('loadTasksForRange', fromDate, toDate);
-                    this.tasks = tasks ?? [];
+                    this.tasks = (tasks ?? []).map(t => {
+                        const dayISO = String(t.day);         // '2025-10-06'
+                        const startHM = String(t.start);      // '19:00:00'  или '19:00'
+                        const endHM   = String(t.end);        // '20:30:00'  или '20:30'
+
+                        // срежем секунды, если пришли
+                        const startHHmm = startHM.slice(0,5); // '19:00'
+                        const endHHmm   = endHM.slice(0,5);   // '20:30'
+
+                        return {
+                            ...t,
+                            day: dayISO,
+                            start_time: startHHmm,
+                            end_time: endHHmm,
+                            startMin: this.hmToMin(startHHmm),
+                            endMin:   this.hmToMin(endHHmm),
+                        };
+                    });
                 } finally {
                     this.isLoading = false;
                     await this.$nextTick();
+
+                    console.log(this.tasks);
 
                     if (this.mode === 'map') {
                         await this.refreshMap(true);
@@ -1937,7 +1951,7 @@
 
             // высота всей области дня
             get dayGridHeight() {
-                return (this.DAY_END_HOUR - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+                return (this.DAY_END_HOUR - this.DAY_START_HOUR) * 60 * this.pxPerMin + 50;
             },
 
             get hours() {
@@ -2076,10 +2090,18 @@
             },
 
             // Получить задачи сотрудника на конкретный день
-            dayTasks(empId, day) {
-                const d = (typeof day === 'string') ? day : (day && day.date ? day.date : null);
+            dayTasks(empId, dayISO) {
+                const d = (typeof this.dayISO === 'string')
+                    ? dayISO
+                    : (dayISO && dayISO.date) ? dayISO.date
+                        : this.currentDayISO;
+
                 if (!d) return [];
-                return this.tasks.filter(t => String(t.technician) === String(empId) && String(t.day) === String(d));
+
+                return this.tasks.filter(t =>
+                    String(t.technician) === String(empId) &&
+                    String(t.day)        === String(d)
+                );
             },
 
             get dayModeTasks() {
