@@ -138,7 +138,7 @@
                     </div>
 
                     {{-- Семь дней --}}
-                    <div class="flex-1 inline-flex relative">
+                    <div class="flex-1 inline-flex relative" wire:ignore>
                         <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
                             <div class="relative flex-shrink-0"
                                  :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
@@ -169,7 +169,7 @@
 
                                 {{-- Задачи --}}
                                 <template x-for="task in dayTasks(employee.id, day)" :key="`t-${task.id}-${employee.id}-${day}`">
-                                    <div x-init="console.log(task);"
+                                    <div
                                         class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1 z-30 border border-emerald-600"
                                         :class="{
                                                     'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
@@ -190,7 +190,9 @@
 
                                                     contextMenu.visible = true;
                                             "
-                                         style="left:120px; top:4px; width:220px; height:56px;"
+                                        :style="drag.task && drag.task.id === task.id
+                                            ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65; top:${drag.previewY}px; height:${rowHeightPx}px;`
+                                            : taskStyle(task)"
                                     >
                                         <div class="flex flex-col">
                                             <span class="truncate" x-text="task.client.name"></span>
@@ -300,16 +302,20 @@
                     </div>
 
                     <!-- Блоки задач -->
-                    <template x-for="t in dayTasks" :key="t.id">
-                        <div
-                            class="absolute left-24 right-3 rounded-md shadow-sm overflow-hidden"
-                            :style="`top:${t._top}px;height:${t._height}px;background:${t._color}22;border:1px solid ${t._color}55`"
+                    <template x-for="t in tasksForDay(currentDayISO)" :key="t.id">
+                        <div x-init="console.log(t);"
+                            class="absolute left-14 right-3 rounded-md shadow-sm overflow-hidden bg-brand-accent border:1px solid"
+                            :class="{
+                                'pointer-events-none opacity-60 bg-brand-accent': isTaskPast(t),
+                                'cursor-pointer': !isTaskPast(t)
+                            }"
+                            :style="`top:${t._top}px;height:${t._height}px;`"
                             @click.stop="onTaskClick(t, $event)"
                         >
-                            <div class="px-2 pt-1 text-xs font-medium truncate text-gray-900/90"
+                            <div class="px-2 pt-1 text-xs font-medium truncate text-gray-50"
                                  x-text="t?.client?.name || t.message || 'Task'"></div>
-                            <div class="px-2 pb-1 text-[11px] opacity-90"
-                                 x-text="`${t.start_time || t.start || ''} – ${t.end_time || t.end || ''}`"></div>
+                            <div class="px-2 pb-1 text-[11px] opacity-90 text-gray-50"
+                                 x-text="`${to12Hour(t.start, t.day)} – ${to12Hour(t.end, t.day)}`"></div>
                         </div>
                     </template>
                 </div>
@@ -1883,13 +1889,19 @@
                 this.resetLaneCaches();
             },
 
+            toISO(d) {
+                const m = this.safeTz(d);   // ваш dayjs.tz + проверка isValid
+                return m ? m.format('YYYY-MM-DD') : null;
+            },
+
             async fetchWeek(fromDate, toDate) {
                 this.isLoading = true;
                 try {
-                    const raw = await this.$wire.call('loadTasksForRange', fromDate, toDate) ?? [];
-                    //const plain = JSON.parse(JSON.stringify(raw));
+                    const from = this.toISO(fromDate);
+                    const to   = this.toISO(toDate);
 
-                    this.tasks = raw ?? []
+                    const tasks = await this.$wire.call('loadTasksForRange', from, to);
+                    this.tasks = tasks ?? [];
                 } finally {
                     this.isLoading = false;
                     await this.$nextTick();
@@ -2712,8 +2724,38 @@
             isInCurrentWeek(dayISO) {
                 return (this.days || []).some(d => d.date === String(dayISO));
             },
+            // константы
+            FMT: 'YYYY-MM-DD HH:mm:ss',
+
+            prepTaskForDay(t, dayISO) {
+                // день начала сетки (например, 06:00)
+                const dayStart = dayjs.tz(`${dayISO} ${String(this.DAY_START_HOUR).padStart(2,'0')}:00:00`, this.FMT, this.APP_TZ);
+                const dayEnd   = dayStart.clone().add((this.DAY_END_HOUR - this.DAY_START_HOUR), 'hour');
+
+                // реальные время старта/финиша
+                const start = dayjs.tz(`${t.day} ${t.start}`, this.FMT, this.APP_TZ);
+                const end   = dayjs.tz(`${t.day} ${t.end}`,   this.FMT, this.APP_TZ);
+
+                // обрезаем по границам рабочего дня
+                const s = start.isBefore(dayStart) ? dayStart : start;
+                const e = end.isAfter(dayEnd) ? dayEnd : end;
+
+                // минуты от начала дня -> px
+                const topMin = Math.max(0, s.diff(dayStart, 'minute'));
+                const hMin   = Math.max(0, e.diff(s, 'minute'));
+
+                return {
+                    ...t,
+                    _top:    topMin * this.pxPerMin,   // pxPerMin = HOUR_PX / 60
+                    _height: Math.max(1, hMin * this.pxPerMin),
+                };
+            },
+
             tasksForDay(dayISO) {
-                return (this.tasks || []).filter(t => String(t.day || '') === String(dayISO));
+                return (this.tasks || [])
+                    .filter(t => String(t.day) === String(dayISO))
+                    .map(t => this.prepTaskForDay(t, dayISO))
+                    .sort((a,b) => dayjs(`2000-01-01 ${a.start}`).diff(dayjs(`2000-01-01 ${b.start}`)));
             },
             groupByTech(tasks) {
                 const by = new Map();
