@@ -138,7 +138,7 @@
                     </div>
 
                     {{-- Семь дней --}}
-                    <div class="flex-1 inline-flex relative" wire:ignore>
+                    <div class="flex-1 inline-flex relative">
                         <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
                             <div class="relative flex-shrink-0"
                                  :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
@@ -169,8 +169,8 @@
 
                                 {{-- Задачи --}}
                                 <template x-for="task in dayTasks(employee.id, day)" :key="`t-${task.id}-${employee.id}-${day}`">
-                                    <div
-                                        class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1"
+                                    <div x-init="console.log(task);"
+                                        class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1 z-30 border border-emerald-600"
                                         :class="{
                                                     'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
                                                     'cursor-pointer': !isTaskPast(task)
@@ -190,9 +190,7 @@
 
                                                     contextMenu.visible = true;
                                             "
-                                        :style="drag.task && drag.task.id === task.id
-                                                    ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65; top:${drag.previewY}px; height:${rowHeightPx}px;`
-                                                    : taskStyle(task)"
+                                         style="left:120px; top:4px; width:220px; height:56px;"
                                     >
                                         <div class="flex flex-col">
                                             <span class="truncate" x-text="task.client.name"></span>
@@ -1636,6 +1634,11 @@
                 if (hh === 0) hh = 12;
                 return `${hh}${am ? 'am' : 'pm'}`;
             },
+            parseTime(dayISO, timeStr) {
+                if (!dayISO || !timeStr) return null;
+                const dt = dayjs.tz(`${dayISO}T${timeStr}`, this.APP_TZ);
+                return dt.isValid() ? dt : null;
+            },
             mondayStart(d) {
                 const m = this.tz(d).startOf('day');
                 const offset = (m.day() + 6) % 7;
@@ -1648,6 +1651,13 @@
                 const m = d ? dayjs.tz(d, this.APP_TZ) : dayjs().tz(this.APP_TZ);
                 return m.isValid() ? m : null;
             },
+            getDayISO(d) {
+                if (!d) return null;
+                if (typeof d === 'string') return d.slice(0, 10);
+                if (typeof d === 'object' && 'date' in d) return String(d.date).slice(0, 10);
+                const m = this.safeTz(d);
+                return m ? m.format('YYYY-MM-DD') : null;
+            },
             startOfWeek(d) {
                 return this.tz(d).startOf('isoWeek');
             },
@@ -1659,7 +1669,6 @@
             },
             nowTs: null,
             clockId: null,
-
             debugMap: true,
 
             resetLaneCaches() {
@@ -1877,30 +1886,13 @@
             async fetchWeek(fromDate, toDate) {
                 this.isLoading = true;
                 try {
-                    const tasks = await this.$wire.call('loadTasksForRange', fromDate, toDate);
-                    this.tasks = (tasks ?? []).map(t => {
-                        const dayISO = String(t.day);         // '2025-10-06'
-                        const startHM = String(t.start);      // '19:00:00'  или '19:00'
-                        const endHM   = String(t.end);        // '20:30:00'  или '20:30'
+                    const raw = await this.$wire.call('loadTasksForRange', fromDate, toDate) ?? [];
+                    //const plain = JSON.parse(JSON.stringify(raw));
 
-                        // срежем секунды, если пришли
-                        const startHHmm = startHM.slice(0,5); // '19:00'
-                        const endHHmm   = endHM.slice(0,5);   // '20:30'
-
-                        return {
-                            ...t,
-                            day: dayISO,
-                            start_time: startHHmm,
-                            end_time: endHHmm,
-                            startMin: this.hmToMin(startHHmm),
-                            endMin:   this.hmToMin(endHHmm),
-                        };
-                    });
+                    this.tasks = raw ?? []
                 } finally {
                     this.isLoading = false;
                     await this.$nextTick();
-
-                    console.log(this.tasks);
 
                     if (this.mode === 'map') {
                         await this.refreshMap(true);
@@ -1996,7 +1988,8 @@
             },
 
             hmToMin(hm) {
-                const [h, m] = String(hm).split(':').map(Number);
+                if (!hm) return 0;
+                const [h, m] = hm.split(':').map(Number);
                 return h * 60 + (m || 0);
             },
 
@@ -2082,25 +2075,21 @@
                 ], true);
             },
 
-            to12Hour(time24, dayStr) {
-                if (!time24 || !dayStr) return '';
-                // time24: 'HH:mm:ss', dayStr: 'YYYY-MM-DD'
-                return dayjs.tz(`${dayStr} ${time24}`, 'YYYY-MM-DD HH:mm:ss', this.APP_TZ)
-                    .format('h:mmA');
+            to12Hour(timeStr, dayISO = this.currentDayISO) {
+                const dt = this.parseTime(dayISO, timeStr);
+                return dt ? dt.format('h:mmA') : '';
             },
 
             // Получить задачи сотрудника на конкретный день
-            dayTasks(empId, dayISO) {
-                const d = (typeof this.dayISO === 'string')
-                    ? dayISO
-                    : (dayISO && dayISO.date) ? dayISO.date
-                        : this.currentDayISO;
+            dayTasks(empId, dayLike) {
+                const iso = this.getDayISO(dayLike) ?? this.currentDayISO;
+                if (!iso) return [];
 
-                if (!d) return [];
+                const emp = String(empId);
 
                 return this.tasks.filter(t =>
-                    String(t.technician) === String(empId) &&
-                    String(t.day)        === String(d)
+                    String(t.technician) === emp &&        // <-- привели обе стороны
+                    String(t.day).slice(0, 10) === String(iso) // на всякий случай «срезали» время
                 );
             },
 
