@@ -89,6 +89,132 @@
                 </button>
             </div>
         </div>
+
+        <!-- Scheduler settings -->
+        <div x-data="calendarSettingsPanel($wire)" class="relative">
+            <!-- Кнопка-шестерёнка -->
+            <button type="button"
+                    class="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600"
+                    title="Calendar settings"
+                    @click="open()">
+                <!-- иконка -->
+                <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd"
+                          d="M11.983 1.58a1 1 0 0 0-1.966 0l-.16.8a7.968 7.968 0 0 0-1.44.594l-.74-.427a1 1 0 1 0-1 1.732l.692.4a8.054 8.054 0 0 0-1.03 1.03l-.4-.692a1 1 0 1 0-1.732 1l.427.74c-.233.46-.429.953-.594 1.44l-.8.16a1 1 0 1 0 0 1.966l.8.16c.165.487.361.98.594 1.44l-.427.74a1 1 0 1 0 1.732 1l.4-.692c.33.384.676.73 1.03 1.03l-.692.4a1 1 0 1 0 1 1.732l.74-.427c.46.233.953.429 1.44.594l.16.8a1 1 0 1 0 1.966 0l.16-.8c.487-.165.98-.361 1.44-.594l.74.427a1 1 0 1 0 1-1.732l-.692-.4c.384-.33.73-.676 1.03-1.03l.4.692a1 1 0 1 0 1.732-1l-.427-.74c.233-.46.429-.953.594-1.44l.8-.16a1 1 0 1 0 0-1.966l-.8-.16a7.968 7.968 0 0 0-.594-1.44l.427-.74a1 1 0 1 0-1.732-1l-.4.692a8.054 8.054 0 0 0-1.03-1.03l.692-.4a1 1 0 1 0-1-1.732l-.74.427a7.968 7.968 0 0 0-1.44-.594l-.16-.8ZM10 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
+                          clip-rule="evenodd"/>
+                </svg>
+            </button>
+
+            <template x-teleport="body">
+                <div x-show="openState" x-transition.opacity class="fixed inset-0 z-[1000]" aria-modal="true" role="dialog"
+                     @keydown.escape.window="close()">
+                    <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+
+                    <div class="relative mx-auto mt-20 w-full max-w-xl rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900 dark:text-slate-100" @click.stop>
+                        <div class="mb-4 flex items-center justify-between">
+                            <h2 class="text-lg font-semibold">Scheduler settings</h2>
+                            <button class="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10" @click="close()" aria-label="Close">
+                                ✕
+                            </button>
+                        </div>
+
+                        <div class="space-y-5">
+                            <!-- Time zone -->
+                            <div>
+                                <label class="mb-1 block text-sm font-medium">Time zone</label>
+                                <select x-model="form.tz"
+                                        class="w-full rounded border-gray-300 text-sm dark:border-slate-700 dark:bg-slate-800">
+                                    <template x-for="z in timezones" :key="z.value">
+                                        <option :value="z.value" x-text="z.label"></option>
+                                    </template>
+                                </select>
+                            </div>
+
+                            <!-- Toggles -->
+                            <div class="space-y-2">
+                                <div class="flex gap-3">
+                                    <label for="toggle-hours-settings" class="relative inline-flex h-6 w-10 cursor-pointer select-none items-center">
+                                        <input
+                                            id="toggle-hours-settings"
+                                            type="checkbox"
+                                            class="peer sr-only"
+                                            aria-label="Toggle"
+                                            x-model="form.onlyBusiness"
+                                        >
+                                        <!-- Трек -->
+                                        <span
+                                            class="absolute inset-0 rounded-full
+                                             bg-slate-600 transition-colors duration-200
+                                             peer-checked:bg-blue-600
+                                             peer-focus-visible:outline peer-focus-visible:outline-2
+                                             peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500
+                                             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></span>
+                                        <!-- Бегунок -->
+                                        <span
+                                            class="relative ml-0.5 h-5 w-5 rounded-full bg-white shadow
+                                             transition-transform duration-200
+                                             translate-x-0 peer-checked:translate-x-4">
+                                        </span>
+                                    </label>
+                                    <span>Only display business hours</span>
+                                </div>
+
+                                <div class="flex gap-3">
+                                    <label for="toggle-holidays-settings" class="relative inline-flex h-6 w-10 cursor-pointer select-none items-center">
+                                        <input
+                                            id="toggle-holidays-settings"
+                                            type="checkbox"
+                                            class="peer sr-only"
+                                            aria-label="Toggle"
+                                            x-model="form.usHolidays"
+                                        >
+                                        <!-- Трек -->
+                                        <span
+                                            class="absolute inset-0 rounded-full
+                                             bg-slate-600 transition-colors duration-200
+                                             peer-checked:bg-blue-600
+                                             peer-focus-visible:outline peer-focus-visible:outline-2
+                                             peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500
+                                             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></span>
+                                        <!-- Бегунок -->
+                                        <span
+                                            class="relative ml-0.5 h-5 w-5 rounded-full bg-white shadow
+                                             transition-transform duration-200
+                                             translate-x-0 peer-checked:translate-x-4">
+                                        </span>
+                                    </label>
+                                    <span>Display US holidays</span>
+                                </div>
+                            </div>
+
+                            <!-- Scheduler items options -->
+                            <div>
+                                <div class="mb-2 text-sm font-medium">Scheduler items options</div>
+                                <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                                    <template x-for="(label, key) in labels" :key="key">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" x-model="form.fields[key]"
+                                                   class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600">
+                                            <span x-text="label"></span>
+                                        </label>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 flex justify-end gap-3">
+                            <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50
+                         dark:border-slate-700 dark:hover:bg-slate-800"
+                                    @click="resetToDefaults()">Reset
+                            </button>
+                            <button class="rounded bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                                    @click="await saveSettings()">Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
     </div>
 
     <div x-show="mode==='schedule' && mapView==='week'">
@@ -222,7 +348,7 @@
                         style="z-index: 5"
                         :style="{
                               top: 0,
-                              height: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin}px`,
+                              height: `${(dayEndHour - dayStartHour) * 60 * pxPerMin}px`,
                             }"
                         @mousedown.stop
                         @click.stop
@@ -235,7 +361,7 @@
                         style="z-index: 5"
                         :style="{
                               top: `${DAY_HEADER_H}px`,
-                              height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 29}px`
+                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 29}px`
                             }"
                         @mousedown.stop
                         @click.stop
@@ -248,8 +374,8 @@
                         class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
                         style="z-index: 5"
                         :style="{
-                              top: `${(DAY_END_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 30}px`,
-                              height: `${(DAY_OPEN_HOUR - DAY_START_HOUR) * 60 * pxPerMin - 28}px`
+                              top: `${(dayEndHour - dayStartHour) * 60 * pxPerMin - 30}px`,
+                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 28}px`
                             }"
                         @mousedown.stop
                         @click.stop
@@ -295,7 +421,7 @@
                                 :class="{
                                     'pointer-events-none':
                                       cell.min < DAY_OPEN_HOUR*60 ||
-                                      cell.min >= DAY_END_HOUR*60
+                                      cell.min >= dayEndHour*60
                                   }"
                             ></div>
                         </template>
@@ -303,8 +429,8 @@
 
                     <!-- Блоки задач -->
                     <template x-for="t in tasksForDay(currentDayISO)" :key="t.id">
-                        <div x-init="console.log(t);"
-                            class="absolute left-14 right-3 rounded-md shadow-sm overflow-hidden bg-brand-accent border:1px solid"
+                        <div
+                            class="absolute left-14 right-3 rounded-md shadow-sm overflow-hidden bg-accent border:1px solid"
                             :class="{
                                 'pointer-events-none opacity-60 bg-brand-accent': isTaskPast(t),
                                 'cursor-pointer': !isTaskPast(t)
@@ -1339,13 +1465,18 @@
                     </svg>
                 </div>
                 <div class="min-w-0">
-                    <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
-                    <div class="text-[10px] text-gray-500"
-                         x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
+                    <template x-if="settings?.fields?.job_number">
+                        <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
+                    </template>
+                    <template x-if="settings?.fields?.date">
+                        <div class="text-[10px] text-gray-500"
+                            x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
+                    </template>
                 </div>
             </div>
 
             <!-- Описание -->
+            <template x-if="settings?.fields?.description">
             <div class="flex items-start gap-2" x-show="popover.job?.description">
                 <div class="shrink-0 mt-0.5" title="Job description">
                     <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
@@ -1353,48 +1484,55 @@
                               stroke-linecap="round"/>
                     </svg>
                 </div>
-                <div class="text-sm text-gray-700 whitespace-pre-wrap" x-text="popover.job?.description"></div>
+                <div class="text-sm text-gray-700 whitespace-pre-wrap" x-text="popover.job?.description  || '—'"></div>
             </div>
+            </template>
 
             <!-- Цена -->
-            <div class="flex items-center gap-2">
-                <div class="shrink-0" title="Price">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path
-                            d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
-                            stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
+            <template x-if="settings?.fields?.amount">
+                <div class="flex items-center gap-2">
+                    <div class="shrink-0" title="Price">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
+                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
                 </div>
-                <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
-            </div>
+            </template>
 
             <!-- Клиент -->
-            <div class="flex items-start gap-2">
-                <div class="shrink-0 mt-0.5" title="Customer">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
-                              stroke-width="1.5" stroke-linecap="round"/>
-                    </svg>
+            <template x-if="settings?.fields?.customer">
+                <div class="flex items-start gap-2">
+                    <div class="shrink-0 mt-0.5" title="Customer">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
+                                      stroke-width="1.5" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm text-gray-700 leading-5">
+                        <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
+                        <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
+                        <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-700 leading-5">
-                    <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
-                    <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
-                    <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
-                </div>
-            </div>
+            </template>
 
             <!-- Техник -->
-            <div class="flex items-center gap-2">
-                <div class="shrink-0" title="Technician">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
-                              stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
+            <template x-if="settings?.fields?.technician">
+                <div class="flex items-center gap-2">
+                    <div class="shrink-0" title="Technician">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
+                                  stroke="currentColor" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="text-sm text-gray-700">
+                        <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-700">
-                    <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
-                </div>
-            </div>
+            </template>
         </div>
     </div>
 </div>
@@ -1503,6 +1641,16 @@
                 this.stopClock();
 
                 this.setWeek(this.tz());
+
+                this.loadSettings();
+                this.applySettings(true);
+
+                this.$watch('settings', () => {}); // (чтобы Alpine держал реактивность)
+                window.addEventListener('cal-settings:changed', (e) => {
+                    this.settings = e.detail;
+                    this.applySettings();
+                });
+
                 this.$watch('tasks', () => this.invalidateLanes());
 
                 /*this.$watch('mapView', () => {
@@ -1632,7 +1780,56 @@
             selStartIdx: null,
             selEndIdx: null,
             dayTimeSlots: [],
+
             APP_TZ: dayjs.tz.guess(),
+            BUSINESS_START: 7,
+            BUSINESS_END: 21.5,
+
+            dayStartHour: 7,
+            dayEndHour: 21.5,
+
+            settings: null,
+
+            loadSettings() {
+                try {
+                    const raw = localStorage.getItem('calendar.settings.v1');
+                    this.settings = raw ? JSON.parse(raw) : {
+                        tz: this.APP_TZ,
+                        onlyBusiness: true,
+                        usHolidays: false,
+                        fields: {
+                            job_number:true, date:true, description:true, customer:true, street:false, zip:false, team:true,
+                            schedule:false, amount:false, phone:false, city_state:false, arrival_window:true, job_tags:false,
+                            technician: true,
+                        }
+                    };
+                } catch (_) {
+                    this.settings = { tz: this.APP_TZ, onlyBusiness:true, usHolidays:false, fields:{} };
+                }
+            },
+
+            async applySettings(initial = false) {
+                // 1) TZ
+                this.APP_TZ = this.settings?.tz || this.APP_TZ;
+                if (dayjs.tz && dayjs.tz.setDefault) {
+                    dayjs.tz.setDefault(this.APP_TZ);
+                }
+
+                // 2) Диапазон видимых часов
+                if (this.settings?.onlyBusiness) {
+                    this.dayStartHour = this.BUSINESS_START;
+                    this.dayEndHour   = this.BUSINESS_END;
+                } else {
+                    this.dayStartHour = this.DAY_START_HOUR;
+                    this.dayEndHour   = this.DAY_END_HOUR;
+                }
+
+                await this.$nextTick();
+                this.resetLaneCaches();
+
+                // 4) Перерисовать / перезагрузить задачи в текущем виде
+                if (!initial) { await this.fetchForCurrentView?.(); }
+            },
 
             to12h(h) {
                 const am = h < 12;
@@ -1955,13 +2152,13 @@
 
             // высота всей области дня
             get dayGridHeight() {
-                return (this.DAY_END_HOUR - this.DAY_START_HOUR) * 60 * this.pxPerMin + 50;
+                return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 50;
             },
 
             get hours() {
                 const out = [];
-                for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++) {
-                    const top = (h - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+                for (let h = this.dayStartHour; h <= this.dayEndHour; h++) {
+                    const top = (h - this.dayStartHour) * 60 * this.pxPerMin;
                     out.push({
                         h,
                         label: this.to12h(h),
@@ -1974,8 +2171,8 @@
 
             get halfHours() {
                 const out = [];
-                for (let h = this.DAY_START_HOUR; h < this.DAY_END_HOUR; h++) {
-                    const top = ((h - this.DAY_START_HOUR) * 60 + 30) * this.pxPerMin;
+                for (let h = this.dayStartHour; h < this.dayEndHour; h++) {
+                    const top = ((h - this.dayStartHour) * 60 + 30) * this.pxPerMin;
                     out.push({top});
                 }
                 return out;
@@ -1987,7 +2184,7 @@
                     : this.tz().startOf('day');
 
                 const slots = [];
-                for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++) {
+                for (let h = this.dayStartHour; h <= this.dayEndHour; h++) {
                     const t = base.hour(h).minute(0).second(0);
                     slots.push({
                         label: t.format('hA'),
@@ -2828,13 +3025,13 @@
             icons: {
                 dotBlue: L.divIcon({
                     className: 'job-dot',
-                    html: '<div style="width:10px;height:10px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 2px #fff"></div>',
+                    html: '<div style="width:14px;height:14px;border-radius:50%;background:#2563eb;box-shadow:0 0 0 2px #fff"></div>',
                     iconSize: [10, 10],
                     iconAnchor: [5, 5]
                 }),
                 dotBlueBig: L.divIcon({
                     className: 'job-dot-big',
-                    html: '<div style="width:16px;height:16px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 2px #2563eb;"></div>',
+                    html: '<div style="width:22px;height:22px;border-radius:50%;background:#2563eb;border:2px solid #fff;box-shadow:0 0 0 2px #2563eb;"></div>',
                     iconSize: [16, 16],
                     iconAnchor: [8, 8]
                 }),
@@ -3333,6 +3530,47 @@
                 this.updateToolbarVisibility();    // сразу прячем в неделе
             },
 
+            totalForItems(items = []) {
+                return items.reduce((sum, i) => {
+                    const qty  = Number(i.qty ?? 0);
+                    const p    = Number(i.unit_price ?? i.price ?? 0);
+                    const tot  = Number(i.total ?? (qty * p));
+                    return sum + (isFinite(tot) ? tot : 0);
+                }, 0);
+            },
+            formatTimeRange(t) {
+                // t.day = 'YYYY-MM-DD', t.start/end = 'HH:mm:ss'
+                // Используйте ваши dayjs/this.tz/... если нужно TZ
+                const start = `${t.day} ${t.start ?? ''}`.trim();
+                const end   = `${t.day} ${t.end ?? ''}`.trim();
+                // Если есть ваши функции форматирования — используйте их
+                const s12 = this.to12Hour ? this.to12Hour(t.start, t.day) : (t.start ?? '');
+                const e12 = this.to12Hour ? this.to12Hour(t.end,   t.day) : (t.end ?? '');
+                return { formatted: `${s12} – ${e12}`, start12: s12, end12: e12, start, end };
+            },
+            techNamesOf(t) {
+                const list = this.employees || [];
+                const tech = t?.technician;
+
+                // если массив id
+                if (Array.isArray(tech)) {
+                    const ids = new Set(tech.map(x => String(x)));
+                    return list
+                        .filter(e => ids.has(String(e.id)))
+                        .map(e => e?.name)
+                        .filter(Boolean)
+                        .join(', ');
+                }
+
+                // одиночный id (число/строка) или объект с id
+                const id = typeof tech === 'object' && tech !== null ? tech.id : tech;
+                const emp = list.find(e => String(e.id) === String(id));
+                return emp?.name ?? '';
+            },
+            showField(key) {
+                return !!(this.settings?.fields?.[key]);
+            },
+
             updateToolbarVisibility() {
                 const wrap = this._toolbarWrap;
                 if (!wrap) return;
@@ -3362,7 +3600,12 @@
                 return points.map(p => `${p.lat},${p.lng}`).join('|');
             },
 
-            makePopupEl(t, formatted, formatTime, totalSum, techNames) {
+            makePopupEl(t) {
+                console.log(t);
+                const {formatted} = this.formatTimeRange(t);
+                const totalSum = this.totalForItems(t.items ?? []);
+                const techNames = this.techNamesOf(t);
+
                 const root = document.createElement('div');
                 root.className = 'text-xs';
 
@@ -3378,14 +3621,24 @@
                     root.appendChild(d);
                 };
 
-                txt('div', `Job #${t.id ?? ''}`, 'font-semibold');
-                txt('div', `${formatted} ${formatTime}`, 'mt-0 mb-2 text-gray-500 text-[10px]');
-                txt('div', t.message ?? '');
-                line(`<b>Price: </b>$${(totalSum ?? 0).toLocaleString()}`);
-                line(`<b>Client: </b>${t.client?.name ?? ''}`);
-                txt('div', t.client?.address ?? '');
-                line(`<b>Phone: </b>${t.client?.phone ?? ''}`);
-                line(`<b>Technician: </b>${techNames ?? ''}`);
+                if (this.showField('job_number')) {
+                    txt('div', `Job #${t.id ?? ''}`, 'font-semibold');
+                }
+                if (this.showField('date')) {
+                    txt('div', `${formatted}`, 'mt-0 mb-2 text-gray-500 text-[10px]');
+                }
+                if (t.message) txt('div', t.message, '');
+                if (this.showField('price')) {
+                    line(`<b>Price: </b>$${(totalSum ?? 0).toLocaleString()}`);
+                }
+                if (this.showField('customer')) {
+                    line(`<b>Client: </b>${t.client?.name ?? ''}`);
+                    txt('div', t.client?.address ?? '');
+                    line(`<b>Phone: </b>${t.client?.phone ?? ''}`);
+                }
+                if (this.showField('technician')){
+                    line(`<b>Technician: </b>${techNames ?? ''}`);
+                }
                 return root;
             },
             makeStopIcon(n) {
@@ -3511,7 +3764,7 @@
                         .sort((a, b) => (a.start || '').localeCompare(b.start || ''));
 
                     // для дебага
-                    this.dbg?.('[ROUTE] week', this.weekStart, '->', this.days?.[6]?.date, 'dayISO=', dayISO, 'tasks=', techTasks.length);
+                    //this.dbg?.('[ROUTE] week', this.weekStart, '->', this.days?.[6]?.date, 'dayISO=', dayISO, 'tasks=', techTasks.length);
 
                     const points = techTasks.sort((a, b) => (a.start || '').localeCompare(b.start || ''))
                         .map(t => ({
@@ -3772,6 +4025,80 @@
                 this.menuVisible = false;
                 this.invalidateLanes();
                 this.clearSelection();
+            },
+        }
+    }
+
+    function calendarSettingsPanel($wire = null) {
+        return {
+            openState: false,
+            storageKey: 'calendar.settings.v1',
+            timezones: [
+                {value: 'America/New_York', label: '(GMT-04:00) Eastern Time - New York'},
+                {value: 'America/Chicago', label: '(GMT-05:00) Central Time - Chicago'},
+                {value: 'America/Denver', label: '(GMT-06:00) Mountain Time - Denver'},
+                {value: 'America/Los_Angeles', label: '(GMT-07:00) Pacific Time - Los Angeles'}
+            ],
+            labels: {
+                job_number: 'Job number',
+                description: 'Description',
+                customer: 'Customer',
+                street: 'Street',
+                zip: 'Zip',
+                team: 'Team',
+                schedule: 'Schedule',
+                amount: 'Amount',
+                phone: 'Phone',
+                city_state: 'City, State',
+                arrival_window: 'Arrival window',
+                job_tags: 'Job tags',
+                date: 'Date',
+                technician: 'Technician'
+            },
+            form: {
+                tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'),
+                onlyBusiness: true,
+                usHolidays: false,
+                fields: {
+                    job_number: false, date: true, description: false, customer: true, street: false, zip: false, team: true,
+                    schedule: false, amount: false, phone: false, city_state: false, arrival_window: true, job_tags: false,
+                    technician: true,
+                }
+            },
+            init() { this.load(); },
+            open() { this.openState = true; this.$nextTick(() => document.querySelector('[role="dialog"] select')?.focus()); },
+            close() { this.openState = false; },
+            load() {
+                try { const raw = localStorage.getItem(this.storageKey);
+                    if (raw) this.form = {...this.form, ...JSON.parse(raw)};
+                } catch (_) {}
+            },
+            async saveSettings() {
+                try {
+                    // шлём только нужные ключи
+                    const payload = {
+                        tz:           this.settings?.tz ?? null,
+                        onlyBusiness: !!this.settings?.onlyBusiness,
+                        fields:       this.settings?.fields ?? {},
+                    };
+
+                    const saved = await this.$wire.saveSchedulerSettings(payload);
+
+                    // обновляем локальные настройки тем, что пришло с бэка
+                    this.settings = saved || this.settings;
+
+                    // применяем и перерисовываем
+                    await this.applySettings(false);
+
+                    this.settingsOpen = false; // закрыть модалку
+                } catch (e) {
+                    console.error('Failed to save settings', e);
+                }
+            },
+            resetToDefaults() {
+                localStorage.removeItem(this.storageKey);
+                this.form = this.$data.form;
+                this.load();
             },
         }
     }

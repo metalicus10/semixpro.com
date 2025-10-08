@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Task;
+use App\Models\UserSetting;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,7 @@ class ManagerSchedule extends Component
     public $employees = [];
     public $customerSearch = '';
     public $customerResults = [];
+    public array $settings = [];
 
     public $tasks;
     public $weekTasks;
@@ -69,8 +71,27 @@ class ManagerSchedule extends Component
         ],
     ];
 
+    private const DEFAULT_SCHEDULER_SETTINGS = [
+        'tz' => null,
+        'onlyBusiness' => false,
+        'fields' => [
+            'job_number' => true,
+            'date' => true,
+            'description' => true,
+            'customer' => true,
+            'schedule' => true,
+            'phone'    => true,
+            'price'    => true,
+            'team'     => true,
+            'arrival_window' => true,
+            'technician' => true,
+        ],
+    ];
+
     public function mount()
     {
+        $this->settings = $this->loadSchedulerSettings();
+
         $startOfWeek = Carbon::now()->startOfWeek();
         for ($i = 0; $i < 7; $i++) {
             $this->days[] = $startOfWeek->copy()->addDays($i)->toDateString();
@@ -86,6 +107,46 @@ class ManagerSchedule extends Component
         $this->timeSlots[] = $end->format('g:i A');
 
         $this->loadTasks();
+    }
+
+    private function loadSchedulerSettings(): array
+    {
+        $userId = Auth::id();
+        $row = UserSetting::query()->where('user_id', $userId)->first();
+
+        $fromDb = $row?->scheduler_settings ?? [];
+
+        // Мягкое слияние: дополняем недостающие ключи дефолтами
+        $merged = array_replace_recursive(self::DEFAULT_SCHEDULER_SETTINGS, $fromDb);
+
+        // sanity: убедимся что есть 'fields'-массив
+        $merged['fields'] = is_array($merged['fields']) ? $merged['fields'] : self::DEFAULT_SCHEDULER_SETTINGS['fields'];
+
+        return $merged;
+    }
+
+    public function saveSchedulerSettings(array $payload): array
+    {
+        $userId = Auth::id();
+
+        // валидация «мягкая», чтобы не падать из-за неожиданных ключей
+        $validated = [
+            'tz'           => isset($payload['tz']) ? (string) $payload['tz'] : null,
+            'onlyBusiness' => (bool) ($payload['onlyBusiness'] ?? false),
+            'fields'       => array_merge(self::DEFAULT_SCHEDULER_SETTINGS['fields'], (array) ($payload['fields'] ?? [])),
+        ];
+
+        $row = UserSetting::firstOrCreate(['user_id' => $userId]);
+
+        // сливаем с тем, что уже есть (если вдруг сохраняем неполный набор)
+        $current = $row->scheduler_settings ?? [];
+        $row->scheduler_settings = array_replace_recursive(self::DEFAULT_SCHEDULER_SETTINGS, $current, $validated);
+        $row->save();
+
+        // вернём то, чем реально будем пользоваться на фронте
+        $this->settings = $this->loadSchedulerSettings();
+
+        return $this->settings;
     }
 
     public function loadTasksForRange(string $from, string $to)
