@@ -24,3 +24,4 @@ yarn-error.log
 /.osp/
 /storage/app/public/images/
 /storage/app/private/livewire-tmp/
+/storage/logs/
