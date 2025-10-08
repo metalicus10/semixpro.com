@@ -208,7 +208,7 @@
                                     @click="resetToDefaults()">Reset
                             </button>
                             <button class="rounded bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
-                                    @click="await saveSettings()">Done
+                                    @click="await saveSettings">Done
                             </button>
                         </div>
                     </div>
@@ -224,7 +224,7 @@
             {{-- Заголовок --}}
             <div class="inline-flex items-center border-b border-b-gray-400">
                 {{-- Первая узкая ячейка для таймзоны или иконки --}}
-                <div class="sticky left-0 z-30 w-32 h-[61px] flex-shrink-0 p-2 text-sm font-medium text-center bg-gray-50 day-right-border">
+                <div class="sticky flex justify-center items-center left-0 z-30 w-32 h-[61px] flex-shrink-0 p-0 text-sm font-medium text-center bg-gray-50 day-right-border">
                     GMT -04
                 </div>
                 {{-- Дни недели с часами --}}
@@ -292,6 +292,18 @@
                                         </div>
                                     </template>
                                 </div>
+
+                                <!-- holiday overlay -->
+                                <template x-if="settings.usHolidays && holidays.has(day.date)">
+                                    <div class="absolute inset-0 pointer-events-none">
+                                        <div class="w-full h-full bg-orange-100/40"></div>
+                                        <!-- тонкая полоска сверху с названием праздника -->
+                                        <div class="absolute left-0 top-0 right-0 h-5 text-[11px] text-gray-700 bg-orange-200/80 px-1 flex items-center"
+                                             :title="holidays.get(day.date)">
+                                            <span x-text="holidays.get(day.date)"></span>
+                                        </div>
+                                    </div>
+                                </template>
 
                                 {{-- Задачи --}}
                                 <template x-for="task in dayTasks(employee.id, day)" :key="`t-${task.id}-${employee.id}-${day}`">
@@ -382,6 +394,13 @@
                         @touchstart.stop
                         title="Недоступно для создания задач"
                     ></div>
+
+                    <template x-if="settings.usHolidays && holidays.has(currentDayISO)">
+                        <div class="sticky top-0 z-20 bg-orange-200/80 text-gray-800 text-xs px-2 py-1 border-b border-orange-300"
+                             :title="holidays.get(currentDayISO)">
+                            <span x-text="holidays.get(currentDayISO)"></span>
+                        </div>
+                    </template>
 
                     <div class="flex sticky items-center top-0 z-10 h-[30px] w-full bg-gray-300 day-grid-top-panel-border">
                         <div class="flex w-[50px] text-[9px] justify-center items-center px-0">GMT-04</div>
@@ -1704,6 +1723,7 @@
             defaultTimeSlots: @entangle('defaultTimeSlots'),
             baseCount: @entangle('timeSlotsBaseCount'),
             tasks: @entangle('tasks'),
+            settings: @entangle('settings'),
             now: new Date(),
             slotWidthPx: 30,
             rowHeightPx: 60,
@@ -1788,12 +1808,13 @@
             dayStartHour: 7,
             dayEndHour: 21.5,
 
-            settings: null,
+            holidays: new Map(),
+            loadedHolidayYears: new Set(),
 
             loadSettings() {
                 try {
-                    const raw = localStorage.getItem('calendar.settings.v1');
-                    this.settings = raw ? JSON.parse(raw) : {
+                    const raw = this.settings;
+                    /*this.settings = raw ? JSON.parse(raw) : {
                         tz: this.APP_TZ,
                         onlyBusiness: true,
                         usHolidays: false,
@@ -1802,7 +1823,7 @@
                             schedule:false, amount:false, phone:false, city_state:false, arrival_window:true, job_tags:false,
                             technician: true,
                         }
-                    };
+                    };*/
                 } catch (_) {
                     this.settings = { tz: this.APP_TZ, onlyBusiness:true, usHolidays:false, fields:{} };
                 }
@@ -1829,6 +1850,30 @@
 
                 // 4) Перерисовать / перезагрузить задачи в текущем виде
                 if (!initial) { await this.fetchForCurrentView?.(); }
+                await this.loadHolidaysForCurrentView();
+            },
+
+            async loadHolidaysForCurrentView() {
+                if (!this.settings.usHolidays) {
+                    this.holidays = new Map();
+                    return;
+                }
+
+                // диапазон как вы уже делаете для задач
+                let from, to;
+                if (this.view === 'day') {
+                    const d = this.currentDayISO || this.tz().format('YYYY-MM-DD');
+                    from = d; to = d;
+                } else {
+                    const s = this.weekStart ? this.tz(this.weekStart) : this.startOfWeek(this.tz());
+                    from = s.startOf('day').format('YYYY-MM-DD');
+                    to   = s.add(6,'day').endOf('day').format('YYYY-MM-DD');
+                }
+
+                const rows = await this.$wire.call('loadHolidaysForRange', from, to);
+                const map = new Map();
+                for (const h of (rows || [])) map.set(h.date, h.name);
+                this.holidays = map;
             },
 
             to12h(h) {
@@ -2084,6 +2129,7 @@
 
                 await this.$nextTick();
                 this.resetLaneCaches();
+                await this.loadHolidaysForCurrentView();
             },
 
             toISO(d) {
@@ -2741,7 +2787,7 @@
 
             onSubmit(jobModalForm) {
                 if (validateJobModalForm(jobModalForm)) {
-                    this.$wire.saveJob(jobModalForm);
+                    this.$wire.call('saveJob', jobModalForm);
                 }
             },
 
@@ -2762,7 +2808,7 @@
                     return;
                 }
 
-                this.$wire.createCustomer(customer);
+                this.$wire.call('createCustomer', customer);
                 this.showAddCustomerModal = false;
                 this.jobModalForm.new_customer = {name: '', email: '', phone: '', address: ''};
             },
@@ -3859,7 +3905,7 @@
                             return;
                         }
                         // дергаем Livewire
-                        this.suggestions = await this.$wire.searchAddress(this.query);
+                        this.suggestions = await this.$wire.call('searchAddress', this.query);
                         this.open = true;
                     },
 
@@ -3891,7 +3937,7 @@
                             payload.address_lng = null;
                         }
 
-                        await this.$wire.createCustomer(payload);
+                        await this.$wire.call('createCustomer', payload);
                         this.showAddCustomerModal = false;
                     },
 
@@ -4032,7 +4078,7 @@
     function calendarSettingsPanel($wire = null) {
         return {
             openState: false,
-            storageKey: 'calendar.settings.v1',
+            storageKey: 'scheduler.settings.v1',
             timezones: [
                 {value: 'America/New_York', label: '(GMT-04:00) Eastern Time - New York'},
                 {value: 'America/Chicago', label: '(GMT-05:00) Central Time - Chicago'},
@@ -4069,7 +4115,7 @@
             open() { this.openState = true; this.$nextTick(() => document.querySelector('[role="dialog"] select')?.focus()); },
             close() { this.openState = false; },
             load() {
-                try { const raw = localStorage.getItem(this.storageKey);
+                try { const raw = this.settings;
                     if (raw) this.form = {...this.form, ...JSON.parse(raw)};
                 } catch (_) {}
             },
@@ -4077,13 +4123,18 @@
                 try {
                     // шлём только нужные ключи
                     const payload = {
-                        tz:           this.settings?.tz ?? null,
-                        onlyBusiness: !!this.settings?.onlyBusiness,
-                        fields:       this.settings?.fields ?? {},
+                        tz: this.form.tz,
+                        onlyBusiness: !!this.form.onlyBusiness,
+                        usHolidays:  !!this.form.usHolidays,
+                        fields: { ...this.form.fields },
                     };
 
-                    const saved = await this.$wire.saveSchedulerSettings(payload);
+                    console.log('payload ->', payload);
 
+                    const saved = await this.$wire.call('saveSchedulerSettings', payload);
+                    console.debug(saved)
+
+                    this.settings = JSON.parse(JSON.stringify(payload));
                     // обновляем локальные настройки тем, что пришло с бэка
                     this.settings = saved || this.settings;
 

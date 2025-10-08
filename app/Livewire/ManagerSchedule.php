@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Part;
 use App\Models\Task;
 use App\Models\UserSetting;
+use Carbon\CarbonPeriod;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use App\Models\Technician;
+use Yasumi\Yasumi;
 
 class ManagerSchedule extends Component
 {
@@ -74,6 +76,7 @@ class ManagerSchedule extends Component
     private const DEFAULT_SCHEDULER_SETTINGS = [
         'tz' => null,
         'onlyBusiness' => false,
+        'usHolidays' => false,
         'fields' => [
             'job_number' => true,
             'date' => true,
@@ -90,7 +93,7 @@ class ManagerSchedule extends Component
 
     public function mount()
     {
-        $this->settings = $this->loadSchedulerSettings();
+        $this->settings = $this->loadSchedulerSettings() ?? self::DEFAULT_SCHEDULER_SETTINGS;
 
         $startOfWeek = Carbon::now()->startOfWeek();
         for ($i = 0; $i < 7; $i++) {
@@ -133,6 +136,7 @@ class ManagerSchedule extends Component
         $validated = [
             'tz'           => isset($payload['tz']) ? (string) $payload['tz'] : null,
             'onlyBusiness' => (bool) ($payload['onlyBusiness'] ?? false),
+            'usHolidays'   => (bool) ($payload['usHolidays'] ?? false),
             'fields'       => array_merge(self::DEFAULT_SCHEDULER_SETTINGS['fields'], (array) ($payload['fields'] ?? [])),
         ];
 
@@ -880,6 +884,45 @@ class ManagerSchedule extends Component
     {
         Task::findOrFail($taskId)->delete();
         $this->loadTasks();
+    }
+
+    public function loadHolidaysForRange(string $fromIso, string $toIso): array
+    {
+        // ожидание YYYY-MM-DD
+        $from = Carbon::createFromFormat('Y-m-d', $fromIso)->startOfDay();
+        $to   = Carbon::createFromFormat('Y-m-d', $toIso)->endOfDay();
+
+        // На всякий случай ограничим «разумный» период (например, 2 года)
+        if ($to->diffInDays($from) > 800) {
+            $to = (clone $from)->addDays(800);
+        }
+
+        $out = [];
+        $cache = [];
+
+        foreach (CarbonPeriod::create($from, $to) as $d) {
+            $y = (int)$d->format('Y');
+            if (!isset($cache[$y])) {
+                // страна USA
+                $cache[$y] = Yasumi::create('USA', $y);
+            }
+            $provider = $cache[$y];
+
+            // isHoliday() может вернуть объект/boolean в зависимости от версии,
+            // поэтому аккуратно достанем название, если есть.
+            if ($provider->isHoliday($d)) {
+                $holiday = $provider->getHoliday($d);
+                // $holiday может быть null если провайдер не нашёл конкретный объект,
+                // но isHoliday вернул true. Подстрахуемся.
+                $name = $holiday ? $holiday->getName() : 'Holiday';
+                $out[] = [
+                    'date' => $d->format('Y-m-d'),
+                    'name' => (string)$name,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     public function render()

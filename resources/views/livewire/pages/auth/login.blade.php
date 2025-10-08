@@ -27,7 +27,7 @@ new #[Layout('layouts.guest')] class extends Component {
             Auth::logout();
 
             // Перенаправляем обратно на страницу входа
-            $this->redirect(route('/')); // или ваш маршрут для страницы логина
+            $this->redirect(route('login'), navigate: true);
             return; // Прерываем дальнейшее выполнение
         }
 
@@ -35,14 +35,17 @@ new #[Layout('layouts.guest')] class extends Component {
 
         if(Auth::user()->hasAccess('platform.index')){
             $this->redirectIntended(default: route('platform.index', absolute: false), navigate: true);
-        }
-        if (Auth::user()->hasAccess('manager')){
+            return;
+        } elseif (Auth::user()->hasAccess('manager')){
             $this->redirectIntended(default: route('manager.manager', absolute: false), navigate: true);
-        }
-        if (Auth::user()->hasAccess('technician')){
+            return;
+        } elseif (Auth::user()->hasAccess('technician')){
             $this->redirectIntended(default: route('technician.technician', absolute: false), navigate: true);
+            return;
         }
 
+        $this->redirect(route('login'), navigate: true);
+        dd(Auth::user()->roles->pluck('slug'));
     }
 };
 ?>

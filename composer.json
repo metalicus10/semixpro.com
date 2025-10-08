@@ -5,7 +5,8 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": ">=8.2",
+        "azuyalabs/yasumi": "^2.8",
         "barryvdh/laravel-dompdf": "^3.0",
         "intervention/image": "^3.11",
         "laravel/framework": "^11.9",
