@@ -20,6 +20,7 @@ use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use App\Models\Technician;
+use Yasumi\Holiday as YasumiHoliday;
 use Yasumi\Yasumi;
 
 class ManagerSchedule extends Component
@@ -907,17 +908,20 @@ class ManagerSchedule extends Component
                 $cache[$y] = Yasumi::create('USA', $y);
             }
             $provider = $cache[$y];
+            $name = 'Holiday';
 
-            // isHoliday() может вернуть объект/boolean в зависимости от версии,
-            // поэтому аккуратно достанем название, если есть.
             if ($provider->isHoliday($d)) {
-                $holiday = $provider->getHoliday($d);
-                // $holiday может быть null если провайдер не нашёл конкретный объект,
-                // но isHoliday вернул true. Подстрахуемся.
-                $name = $holiday ? $holiday->getName() : 'Holiday';
+                $on = $provider->on($d);
+
+                $names = array_map(
+                fn(YasumiHoliday $h) => $h->getName(['en_US']),
+                    iterator_to_array($on)
+                );
+                $name = implode(', ', $names);
+
                 $out[] = [
                     'date' => $d->format('Y-m-d'),
-                    'name' => (string)$name,
+                    'name' => $name,
                 ];
             }
         }

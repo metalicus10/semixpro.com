@@ -11,10 +11,10 @@
         <div class="flex items-center gap-2">
             <button type="button"
                     class="px-2 py-1 rounded-3xl bg-white hover:bg-[#e7fdef] border-2 border-brand-accent font-bold text-[12px] text-brand-accent"
-                    @click="goToday(); $dispatch('week:changed')">Today
+                    @click="goToday">Today
             </button>
             <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="prev(); $dispatch('week:changed')">
+                    @click="prev">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                      xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M15 4.5L7.5 12L15 19.5"
@@ -23,7 +23,7 @@
                 </svg>
             </button>
             <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="next(); $dispatch('week:changed')">
+                    @click="next">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
                      xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                     <path d="M9 4.5L16.5 12L9 19.5"
@@ -91,12 +91,12 @@
         </div>
 
         <!-- Scheduler settings -->
-        <div x-data="calendarSettingsPanel($wire)" class="relative">
+        <div class="relative">
             <!-- Кнопка-шестерёнка -->
             <button type="button"
                     class="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600"
                     title="Calendar settings"
-                    @click="open()">
+                    @click="openSettings">
                 <!-- иконка -->
                 <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor" aria-hidden="true">
                     <path fill-rule="evenodd"
@@ -106,14 +106,14 @@
             </button>
 
             <template x-teleport="body">
-                <div x-show="openState" x-transition.opacity class="fixed inset-0 z-[1000]" aria-modal="true" role="dialog"
-                     @keydown.escape.window="close()">
+                <div x-show="schedulerSettingsOpenState" x-transition.opacity class="fixed inset-0 z-[1000]" aria-modal="true" role="dialog"
+                     @keydown.escape.window="closeSettings">
                     <div class="absolute inset-0 bg-black/50" @click="close()"></div>
 
                     <div class="relative mx-auto mt-20 w-full max-w-xl rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900 dark:text-slate-100" @click.stop>
                         <div class="mb-4 flex items-center justify-between">
                             <h2 class="text-lg font-semibold">Scheduler settings</h2>
-                            <button class="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10" @click="close()" aria-label="Close">
+                            <button class="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10" @click="closeSettings" aria-label="Close">
                                 ✕
                             </button>
                         </div>
@@ -205,7 +205,7 @@
                         <div class="mt-6 flex justify-end gap-3">
                             <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50
                          dark:border-slate-700 dark:hover:bg-slate-800"
-                                    @click="resetToDefaults()">Reset
+                                    @click="resetToDefaults">Reset
                             </button>
                             <button class="rounded bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                                     @click="await saveSettings">Done
@@ -251,7 +251,7 @@
             </div>
 
             {{-- Строки сотрудников --}}
-            <template x-for="employee in employees" :key="employee.id">
+            <template x-for="(employee, empIdx) in employees" :key="employee.id">
                 <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
                     {{-- Колонка с аватаром и именем --}}
                     <div class="sticky left-0 z-20 w-32 h-[61px] flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50 day-right-border">
@@ -298,10 +298,12 @@
                                     <div class="absolute inset-0 pointer-events-none">
                                         <div class="w-full h-full bg-orange-100/40"></div>
                                         <!-- тонкая полоска сверху с названием праздника -->
-                                        <div class="absolute left-0 top-0 right-0 h-5 text-[11px] text-gray-700 bg-orange-200/80 px-1 flex items-center"
-                                             :title="holidays.get(day.date)">
-                                            <span x-text="holidays.get(day.date)"></span>
-                                        </div>
+                                        <template x-if="empIdx === 0">
+                                            <div class="absolute left-0 top-0 h-5 px-2 text-[11px] text-gray-700
+                                                bg-orange-200/80 z-10 flex items-center">
+                                                <span x-text="holidayName(day.date)"></span>
+                                            </div>
+                                        </template>
                                     </div>
                                 </template>
 
@@ -397,8 +399,8 @@
 
                     <template x-if="settings.usHolidays && holidays.has(currentDayISO)">
                         <div class="sticky top-0 z-20 bg-orange-200/80 text-gray-800 text-xs px-2 py-1 border-b border-orange-300"
-                             :title="holidays.get(currentDayISO)">
-                            <span x-text="holidays.get(currentDayISO)"></span>
+                             :title="holidayName(currentDayISO)">
+                            <span x-text="holidayName(currentDayISO)"></span>
                         </div>
                     </template>
 
@@ -1811,22 +1813,79 @@
             holidays: new Map(),
             loadedHolidayYears: new Set(),
 
+            schedulerSettingsOpenState: false,
+            storageKey: 'scheduler.settings.v1',
+            timezones: [
+                {value: 'America/New_York', label: '(GMT-04:00) Eastern Time - New York'},
+                {value: 'America/Chicago', label: '(GMT-05:00) Central Time - Chicago'},
+                {value: 'America/Denver', label: '(GMT-06:00) Mountain Time - Denver'},
+                {value: 'America/Los_Angeles', label: '(GMT-07:00) Pacific Time - Los Angeles'}
+            ],
+            labels: {
+                job_number: 'Job number',
+                description: 'Description',
+                customer: 'Customer',
+                street: 'Street',
+                zip: 'Zip',
+                team: 'Team',
+                schedule: 'Schedule',
+                amount: 'Amount',
+                phone: 'Phone',
+                city_state: 'City, State',
+                arrival_window: 'Arrival window',
+                job_tags: 'Job tags',
+                date: 'Date',
+                technician: 'Technician'
+            },
+            form: {},
+            openSettings() { this.schedulerSettingsOpenState = true; this.$nextTick(() => document.querySelector('[role="dialog"] select')?.focus());},
+            closeSettings() { this.schedulerSettingsOpenState = false; },
             loadSettings() {
+                const self = this;
+                const defaults = {
+                    tz: this.APP_TZ,
+                    onlyBusiness: true,
+                    usHolidays: false,
+                    fields: {},
+                };
+                const raw = this.settings || {};
+                this.form = {
+                    ...defaults,
+                    ...raw,
+                    fields: { ...defaults.fields, ...(raw.fields || {}) },
+                    onlyBusiness: !!raw.onlyBusiness,
+                    usHolidays: !!raw.usHolidays,
+                };
+            },
+            async saveSettings() {
+                const self = this;
                 try {
-                    const raw = this.settings;
-                    /*this.settings = raw ? JSON.parse(raw) : {
-                        tz: this.APP_TZ,
-                        onlyBusiness: true,
-                        usHolidays: false,
-                        fields: {
-                            job_number:true, date:true, description:true, customer:true, street:false, zip:false, team:true,
-                            schedule:false, amount:false, phone:false, city_state:false, arrival_window:true, job_tags:false,
-                            technician: true,
-                        }
-                    };*/
-                } catch (_) {
-                    this.settings = { tz: this.APP_TZ, onlyBusiness:true, usHolidays:false, fields:{} };
+                    // шлём только нужные ключи
+                    const payload = {
+                        tz: self.form.tz,
+                        onlyBusiness: !!self.form.onlyBusiness,
+                        usHolidays:  !!self.form.usHolidays,
+                        fields: { ...self.form.fields },
+                    };
+
+                    const saved = await this.$wire.call('saveSchedulerSettings', payload);
+
+                    self.settings = JSON.parse(JSON.stringify(payload));
+                    // обновляем локальные настройки тем, что пришло с бэка
+                    self.settings = saved || self.settings;
+
+                    // применяем и перерисовываем
+                    await this.applySettings(false);
+
+                    this.closeSettings(); // закрыть модалку
+                } catch (e) {
+                    console.error('Failed to save settings', e);
                 }
+            },
+            resetToDefaults() {
+                localStorage.removeItem(this.storageKey);
+                this.form = this.$data.form;
+                this.loadSettings();
             },
 
             async applySettings(initial = false) {
@@ -1874,6 +1933,10 @@
                 const map = new Map();
                 for (const h of (rows || [])) map.set(h.date, h.name);
                 this.holidays = map;
+            },
+
+            holidayName(dayISO) {
+                return this.holidays.get(dayISO) || 'Holiday';
             },
 
             to12h(h) {
@@ -2048,14 +2111,8 @@
                 }
             },
 
-            prev() {
-                if (this.view === 'day') return this.moveDay(-1);
-                return this.moveWeek(-1);
-            },
-            next() {
-                if (this.view === 'day') return this.moveDay(1);
-                return this.moveWeek(1);
-            },
+            prev() { return this.view === 'day' ? this.moveDay(-1) : this.moveWeek(-1); },
+            next() { return this.view === 'day' ? this.moveDay(1)  : this.moveWeek(1);  },
 
             get headerLabel() {
                 if (this.view === 'day') {
@@ -2068,19 +2125,13 @@
             },
 
             async moveWeek(delta) {
-                if (this.view === 'day') {
-                    const base = this.mondayStart(this.weekStart || this.currentDayISO || this.tz());
-                    await this.setWeek(base.add(delta, 'week'));
-                } else {
-                    const base = this.safeTz(this.weekStart) || this.startOfWeek(this.tz());
-                    await this.setWeek(this.startOfWeek(base.add(delta, 'week')));
-                }
-                await this.fetchForCurrentView();
+                const base = this.view === 'day'
+                    ? this.mondayStart(this.weekStart || this.currentDayISO || this.tz())
+                    : (this.safeTz(this.weekStart) || this.startOfWeek(this.tz()));
 
-                /*const start = dayjs.tz
-                    ? dayjs.tz(this.weekStart, 'YYYY-MM-DD', this.APP_TZ)
-                    : dayjs(this.weekStart, 'YYYY-MM-DD');
-                this.setWeek(start.add(delta, 'week'));*/
+                await this.setWeek(this.startOfWeek(base.add(delta, 'week')));
+                this.$dispatch('week:changed', { start: this.startOfWeek(this.tz()) });
+                await this.fetchForCurrentView();
             },
 
             async goToday() {
@@ -2110,26 +2161,39 @@
                 return !!cur && cur.isSame(this.tz(), 'day');
             },
 
+            loadSeq: 0,
+            isFetching: false,
+
             async fetchForCurrentView() {
-                if (this.view === 'day') {
-                    const d = this.currentDayISO ? this.tz(this.currentDayISO) : this.tz();
-                    await this.fetchWeek(d.startOf('day'), d.endOf('day'));
-                } else {
-                    const s = this.weekStart ? this.tz(this.weekStart) : this.startOfWeek(this.tz());
-                    await this.fetchWeek(s.startOf('day'), s.add(6, 'day').endOf('day'));
-                }
+                const seq = ++this.loadSeq;
+                if (this.isFetching) return;
+                this.isFetching = true;
 
-                // если сейчас открыт режим карты — перерисуем
-                if (this.mode === 'map') {
-                    await this.hardRefreshMap(true);
-                    if (this.routingEnabled && this.selectedTechIds.size) {
-                        await this.showTechRoute(Array.from(this.selectedTechIds), this.currentDayISO);
+                try {
+                    if (this.view === 'day') {
+                        const d = this.currentDayISO ? this.tz(this.currentDayISO) : this.tz();
+                        await this.fetchWeek(d.startOf('day'), d.endOf('day'));
+                    } else {
+                        const s = this.weekStart ? this.tz(this.weekStart) : this.startOfWeek(this.tz());
+                        await this.fetchWeek(s.startOf('day'), s.add(6, 'day').endOf('day'));
                     }
-                }
 
-                await this.$nextTick();
-                this.resetLaneCaches();
-                await this.loadHolidaysForCurrentView();
+                    // если за время ожидания стартовал еще один fetch — прерываем пост-обработку
+                    if (seq !== this.loadSeq) return;
+
+                    if (this.mode === 'map') {
+                        await this.hardRefreshMap(true);
+                        if (this.routingEnabled && this.selectedTechIds.size) {
+                            await this.showTechRoute([...this.selectedTechIds], this.currentDayISO);
+                        }
+                    }
+
+                    await this.$nextTick();
+                    this.resetLaneCaches();
+                    await this.loadHolidaysForCurrentView();
+                } finally {
+                    if (seq === this.loadSeq) this.isFetching = false;
+                }
             },
 
             toISO(d) {
@@ -4071,85 +4135,6 @@
                 this.menuVisible = false;
                 this.invalidateLanes();
                 this.clearSelection();
-            },
-        }
-    }
-
-    function calendarSettingsPanel($wire = null) {
-        return {
-            openState: false,
-            storageKey: 'scheduler.settings.v1',
-            timezones: [
-                {value: 'America/New_York', label: '(GMT-04:00) Eastern Time - New York'},
-                {value: 'America/Chicago', label: '(GMT-05:00) Central Time - Chicago'},
-                {value: 'America/Denver', label: '(GMT-06:00) Mountain Time - Denver'},
-                {value: 'America/Los_Angeles', label: '(GMT-07:00) Pacific Time - Los Angeles'}
-            ],
-            labels: {
-                job_number: 'Job number',
-                description: 'Description',
-                customer: 'Customer',
-                street: 'Street',
-                zip: 'Zip',
-                team: 'Team',
-                schedule: 'Schedule',
-                amount: 'Amount',
-                phone: 'Phone',
-                city_state: 'City, State',
-                arrival_window: 'Arrival window',
-                job_tags: 'Job tags',
-                date: 'Date',
-                technician: 'Technician'
-            },
-            form: {
-                tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York'),
-                onlyBusiness: true,
-                usHolidays: false,
-                fields: {
-                    job_number: false, date: true, description: false, customer: true, street: false, zip: false, team: true,
-                    schedule: false, amount: false, phone: false, city_state: false, arrival_window: true, job_tags: false,
-                    technician: true,
-                }
-            },
-            init() { this.load(); },
-            open() { this.openState = true; this.$nextTick(() => document.querySelector('[role="dialog"] select')?.focus()); },
-            close() { this.openState = false; },
-            load() {
-                try { const raw = this.settings;
-                    if (raw) this.form = {...this.form, ...JSON.parse(raw)};
-                } catch (_) {}
-            },
-            async saveSettings() {
-                try {
-                    // шлём только нужные ключи
-                    const payload = {
-                        tz: this.form.tz,
-                        onlyBusiness: !!this.form.onlyBusiness,
-                        usHolidays:  !!this.form.usHolidays,
-                        fields: { ...this.form.fields },
-                    };
-
-                    console.log('payload ->', payload);
-
-                    const saved = await this.$wire.call('saveSchedulerSettings', payload);
-                    console.debug(saved)
-
-                    this.settings = JSON.parse(JSON.stringify(payload));
-                    // обновляем локальные настройки тем, что пришло с бэка
-                    this.settings = saved || this.settings;
-
-                    // применяем и перерисовываем
-                    await this.applySettings(false);
-
-                    this.settingsOpen = false; // закрыть модалку
-                } catch (e) {
-                    console.error('Failed to save settings', e);
-                }
-            },
-            resetToDefaults() {
-                localStorage.removeItem(this.storageKey);
-                this.form = this.$data.form;
-                this.load();
             },
         }
     }
