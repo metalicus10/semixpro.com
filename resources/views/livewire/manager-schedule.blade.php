@@ -1,323 +1,338 @@
 {{-- resources/views/livewire/job-scheduler.blade.php --}}
-<div
-    x-data="scheduler()"
-    @mouseup.window="$event.button === 0 && endSelection()"
-    @unique-slot-error.window="alert($event.detail[0].message)"
-    @interval-overlap-error.window="alert($event.detail[0].message)"
-    class="overflow-x-auto bg-white text-gray-800 border"
+<div x-data="viewportPanel()" x-ref="panel"
+     class="overflow-auto"
+     :style="`height:${h}px`">
 
->
-    <div class="sticky top-0 z-40 flex items-center justify-between px-3 py-2">
-        <div class="flex items-center gap-2">
-            <button type="button"
-                    class="px-2 py-1 rounded-3xl bg-white hover:bg-[#e7fdef] border-2 border-brand-accent font-bold text-[12px] text-brand-accent"
-                    @click="goToday">Today
-            </button>
-            <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="prev">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M15 4.5L7.5 12L15 19.5"
-                          stroke="currentColor" stroke-width="2.25"
-                          stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <button type="button" class="px-2 py-1 rounded hover:shadow"
-                    @click="next">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M9 4.5L16.5 12L9 19.5"
-                          stroke="currentColor" stroke-width="2.25"
-                          stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </button>
-            <!-- Диапазон дат недели -->
-            <div class="text-sm font-medium text-gray-700 font-[LufgaSemiBold]"
-                 x-text="headerLabel">
-            </div>
-            <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'Current week' : ''"></span>
-        </div>
+    <div
+        x-data="scheduler()"
+        @mouseup.window="$event.button === 0 && endSelection()"
+        @unique-slot-error.window="alert($event.detail[0].message)"
+        @interval-overlap-error.window="alert($event.detail[0].message)"
+        class="bg-white text-gray-800 border"
 
-        <div class="flex items-center gap-2">
-            <button @click="showCalendar; destroyMap()"
-                    x-bind:class="mode === 'schedule' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
-                    class="px-3 py-1 rounded"
-            >
-                <span class="ms-2">Calendar</span>
-            </button>
-            <button @click="showMap"
-                    x-bind:class="mode === 'map' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
-                    class="px-3 py-1 rounded"
-            >
-                <span class="ms-2">Map</span>
-            </button>
-        </div>
-
-        <!-- правый блок шапки, рядом с выводом диапазона недели -->
-        <div class="relative" x-data="{ open:false }">
-            <button
-                @click="open = !open"
-                class="px-3 py-1 rounded-2xl bg-white border-2 border-brand-accent font-bold text-[12px] text-brand-accent hover:bg-[#e7fdef]"
-                :class="{ 'bg-blue-600 text-white': mapView === 'day' }"
-            >
-                <span class="text-brand-accent" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
-                <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-brand-accent font-bold" viewBox="0 0 20 20"
-                     fill="currentColor">
-                    <path
-                        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/>
-                </svg>
-            </button>
-
-            <div
-                x-show="open" x-transition
-                @click.outside="open=false" @keydown.escape.window="open=false"
-                class="absolute flex flex-col right-0 mt-1 w-40 rounded-lg bg-white shadow z-50"
-            >
-                <button
-                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
-                    :class="mapView === 'week' ? 'bg-blue-50 text-blue-700' : ''"
-                    @click="setMapView('week'); open=false"
-                >
-                    Week
+    >
+        <div class="sticky top-0 z-40 flex items-center justify-between px-3 py-2 bg-white shadow-md">
+            <div class="flex items-center gap-2">
+                <button type="button"
+                        class="px-2 py-1 rounded-3xl bg-white hover:bg-[#e7fdef] border-2 border-brand-accent font-bold text-[12px] text-brand-accent"
+                        @click="goToday; $dispatch('week:changed')">Today
                 </button>
-                <button
-                    class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
-                    :class="mapView === 'day' ? 'bg-blue-50 text-blue-700' : ''"
-                    @click="setMapView('day'); open=false"
+                <button type="button" class="px-2 py-1 rounded hover:shadow"
+                        @click="prev; $dispatch('week:changed')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M15 4.5L7.5 12L15 19.5"
+                              stroke="currentColor" stroke-width="2.25"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <button type="button" class="px-2 py-1 rounded hover:shadow"
+                        @click="next; $dispatch('week:changed')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M9 4.5L16.5 12L9 19.5"
+                              stroke="currentColor" stroke-width="2.25"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+                <!-- Диапазон дат недели -->
+                <div class="text-sm font-medium text-gray-700 font-[LufgaSemiBold]"
+                     x-text="headerLabel">
+                </div>
+                <span class="ml-3 text-sm text-gray-500" x-text="isCurrentWeek() ? 'Current week' : ''"></span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button @click="showCalendar; destroyMap()"
+                        x-bind:class="mode === 'schedule' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
+                        class="px-3 py-1 rounded"
                 >
-                    Day
+                    <span class="ms-2">Calendar</span>
+                </button>
+                <button @click="showMap"
+                        x-bind:class="mode === 'map' ? 'bg-brand-accent text-white' : 'bg-gray-100'"
+                        class="px-3 py-1 rounded"
+                >
+                    <span class="ms-2">Map</span>
                 </button>
             </div>
-        </div>
 
-        <!-- Scheduler settings -->
-        <div class="relative">
-            <!-- Кнопка-шестерёнка -->
-            <button type="button"
-                    class="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600"
-                    title="Calendar settings"
-                    @click="openSettings">
-                <!-- иконка -->
-                <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor" aria-hidden="true">
-                    <path fill-rule="evenodd"
-                          d="M11.983 1.58a1 1 0 0 0-1.966 0l-.16.8a7.968 7.968 0 0 0-1.44.594l-.74-.427a1 1 0 1 0-1 1.732l.692.4a8.054 8.054 0 0 0-1.03 1.03l-.4-.692a1 1 0 1 0-1.732 1l.427.74c-.233.46-.429.953-.594 1.44l-.8.16a1 1 0 1 0 0 1.966l.8.16c.165.487.361.98.594 1.44l-.427.74a1 1 0 1 0 1.732 1l.4-.692c.33.384.676.73 1.03 1.03l-.692.4a1 1 0 1 0 1 1.732l.74-.427c.46.233.953.429 1.44.594l.16.8a1 1 0 1 0 1.966 0l.16-.8c.487-.165.98-.361 1.44-.594l.74.427a1 1 0 1 0 1-1.732l-.692-.4c.384-.33.73-.676 1.03-1.03l.4.692a1 1 0 1 0 1.732-1l-.427-.74c.233-.46.429-.953.594-1.44l.8-.16a1 1 0 1 0 0-1.966l-.8-.16a7.968 7.968 0 0 0-.594-1.44l.427-.74a1 1 0 1 0-1.732-1l-.4.692a8.054 8.054 0 0 0-1.03-1.03l.692-.4a1 1 0 1 0-1-1.732l-.74.427a7.968 7.968 0 0 0-1.44-.594l-.16-.8ZM10 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
-                          clip-rule="evenodd"/>
-                </svg>
-            </button>
+            <!-- правый блок шапки, рядом с выводом диапазона недели -->
+            <div class="relative" x-data="{ open:false }">
+                <button
+                    @click="open = !open"
+                    class="px-3 py-1 rounded-2xl bg-white border-2 border-brand-accent font-bold text-[12px] text-brand-accent hover:bg-[#e7fdef]"
+                    :class="{ 'bg-blue-600 text-white': mapView === 'day' }"
+                >
+                    <span class="text-brand-accent" x-text="mapView === 'day' ? 'Day' : 'Week'"></span>
+                    <svg class="inline -mt-0.5 ml-1 h-4 w-4 opacity-70 text-brand-accent font-bold" viewBox="0 0 20 20"
+                         fill="currentColor">
+                        <path
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"/>
+                    </svg>
+                </button>
 
-            <template x-teleport="body">
-                <div x-show="schedulerSettingsOpenState" x-transition.opacity class="fixed inset-0 z-[1000]" aria-modal="true" role="dialog"
-                     @keydown.escape.window="closeSettings">
-                    <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+                <div
+                    x-show="open" x-transition
+                    @click.outside="open=false" @keydown.escape.window="open=false"
+                    class="absolute flex flex-col right-0 mt-1 w-40 rounded-lg bg-white shadow z-50"
+                >
+                    <button
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
+                        :class="mapView === 'week' ? 'bg-blue-50 text-blue-700' : ''"
+                        @click="setMapView('week'); open=false"
+                    >
+                        Week
+                    </button>
+                    <button
+                        class="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 rounded-lg"
+                        :class="mapView === 'day' ? 'bg-blue-50 text-blue-700' : ''"
+                        @click="setMapView('day'); open=false"
+                    >
+                        Day
+                    </button>
+                </div>
+            </div>
 
-                    <div class="relative mx-auto mt-20 w-full max-w-xl rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900 dark:text-slate-100" @click.stop>
-                        <div class="mb-4 flex items-center justify-between">
-                            <h2 class="text-lg font-semibold">Scheduler settings</h2>
-                            <button class="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10" @click="closeSettings" aria-label="Close">
-                                ✕
-                            </button>
-                        </div>
+            <!-- Scheduler settings -->
+            <div class="relative">
+                <!-- Кнопка-шестерёнка -->
+                <button type="button"
+                        class="ml-3 inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700 shadow hover:bg-gray-50 dark:bg-slate-800 dark:text-slate-200 dark:border-slate-600"
+                        title="Calendar settings"
+                        @click="openSettings">
+                    <!-- иконка -->
+                    <svg viewBox="0 0 20 20" class="h-5 w-5" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                              d="M11.983 1.58a1 1 0 0 0-1.966 0l-.16.8a7.968 7.968 0 0 0-1.44.594l-.74-.427a1 1 0 1 0-1 1.732l.692.4a8.054 8.054 0 0 0-1.03 1.03l-.4-.692a1 1 0 1 0-1.732 1l.427.74c-.233.46-.429.953-.594 1.44l-.8.16a1 1 0 1 0 0 1.966l.8.16c.165.487.361.98.594 1.44l-.427.74a1 1 0 1 0 1.732 1l.4-.692c.33.384.676.73 1.03 1.03l-.692.4a1 1 0 1 0 1 1.732l.74-.427c.46.233.953.429 1.44.594l.16.8a1 1 0 1 0 1.966 0l.16-.8c.487-.165.98-.361 1.44-.594l.74.427a1 1 0 1 0 1-1.732l-.692-.4c.384-.33.73-.676 1.03-1.03l.4.692a1 1 0 1 0 1.732-1l-.427-.74c.233-.46.429-.953.594-1.44l.8-.16a1 1 0 1 0 0-1.966l-.8-.16a7.968 7.968 0 0 0-.594-1.44l.427-.74a1 1 0 1 0-1.732-1l-.4.692a8.054 8.054 0 0 0-1.03-1.03l.692-.4a1 1 0 1 0-1-1.732l-.74.427a7.968 7.968 0 0 0-1.44-.594l-.16-.8ZM10 7a3 3 0 1 1 0 6 3 3 0 0 1 0-6Z"
+                              clip-rule="evenodd"/>
+                    </svg>
+                </button>
 
-                        <div class="space-y-5">
-                            <!-- Time zone -->
-                            <div>
-                                <label class="mb-1 block text-sm font-medium">Time zone</label>
-                                <select x-model="form.tz"
-                                        class="w-full rounded border-gray-300 text-sm dark:border-slate-700 dark:bg-slate-800">
-                                    <template x-for="z in timezones" :key="z.value">
-                                        <option :value="z.value" x-text="z.label"></option>
-                                    </template>
-                                </select>
+                <template x-teleport="body">
+                    <div x-show="schedulerSettingsOpenState" x-transition.opacity class="fixed inset-0 z-[1000]"
+                         aria-modal="true" role="dialog"
+                         @keydown.escape.window="closeSettings">
+                        <div class="absolute inset-0 bg-black/50" @click="close()"></div>
+
+                        <div
+                            class="relative mx-auto mt-20 w-full max-w-xl rounded-lg bg-white p-5 shadow-xl dark:bg-slate-900 dark:text-slate-100"
+                            @click.stop>
+                            <div class="mb-4 flex items-center justify-between">
+                                <h2 class="text-lg font-semibold">Scheduler settings</h2>
+                                <button class="rounded p-1 hover:bg-black/5 dark:hover:bg-white/10"
+                                        @click="closeSettings" aria-label="Close">
+                                    ✕
+                                </button>
                             </div>
 
-                            <!-- Toggles -->
-                            <div class="space-y-2">
-                                <div class="flex gap-3">
-                                    <label for="toggle-hours-settings" class="relative inline-flex h-6 w-10 cursor-pointer select-none items-center">
-                                        <input
-                                            id="toggle-hours-settings"
-                                            type="checkbox"
-                                            class="peer sr-only"
-                                            aria-label="Toggle"
-                                            x-model="form.onlyBusiness"
-                                        >
-                                        <!-- Трек -->
-                                        <span
-                                            class="absolute inset-0 rounded-full
+                            <div class="space-y-5">
+                                <!-- Time zone -->
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium">Time zone</label>
+                                    <select x-model="form.tz"
+                                            class="w-full rounded border-gray-300 text-sm dark:border-slate-700 dark:bg-slate-800">
+                                        <template x-for="z in timezones" :key="z.value">
+                                            <option :value="z.value" x-text="z.label"></option>
+                                        </template>
+                                    </select>
+                                </div>
+
+                                <!-- Toggles -->
+                                <div class="space-y-2">
+                                    <div class="flex gap-3">
+                                        <label for="toggle-hours-settings"
+                                               class="relative inline-flex h-6 w-10 cursor-pointer select-none items-center">
+                                            <input
+                                                id="toggle-hours-settings"
+                                                type="checkbox"
+                                                class="peer sr-only"
+                                                aria-label="Toggle"
+                                                x-model="form.onlyBusiness"
+                                            >
+                                            <!-- Трек -->
+                                            <span
+                                                class="absolute inset-0 rounded-full
                                              bg-slate-600 transition-colors duration-200
                                              peer-checked:bg-blue-600
                                              peer-focus-visible:outline peer-focus-visible:outline-2
                                              peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500
                                              peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></span>
-                                        <!-- Бегунок -->
-                                        <span
-                                            class="relative ml-0.5 h-5 w-5 rounded-full bg-white shadow
+                                            <!-- Бегунок -->
+                                            <span
+                                                class="relative ml-0.5 h-5 w-5 rounded-full bg-white shadow
                                              transition-transform duration-200
                                              translate-x-0 peer-checked:translate-x-4">
                                         </span>
-                                    </label>
-                                    <span>Only display business hours</span>
-                                </div>
-
-                                <div class="flex gap-3">
-                                    <label for="toggle-holidays-settings" class="relative inline-flex h-6 w-10 cursor-pointer select-none items-center">
-                                        <input
-                                            id="toggle-holidays-settings"
-                                            type="checkbox"
-                                            class="peer sr-only"
-                                            aria-label="Toggle"
-                                            x-model="form.usHolidays"
-                                        >
-                                        <!-- Трек -->
-                                        <span
-                                            class="absolute inset-0 rounded-full
-                                             bg-slate-600 transition-colors duration-200
-                                             peer-checked:bg-blue-600
-                                             peer-focus-visible:outline peer-focus-visible:outline-2
-                                             peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500
-                                             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></span>
-                                        <!-- Бегунок -->
-                                        <span
-                                            class="relative ml-0.5 h-5 w-5 rounded-full bg-white shadow
-                                             transition-transform duration-200
-                                             translate-x-0 peer-checked:translate-x-4">
-                                        </span>
-                                    </label>
-                                    <span>Display US holidays</span>
-                                </div>
-                            </div>
-
-                            <!-- Scheduler items options -->
-                            <div>
-                                <div class="mb-2 text-sm font-medium">Scheduler items options</div>
-                                <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                                    <template x-for="(label, key) in labels" :key="key">
-                                        <label class="flex items-center gap-2">
-                                            <input type="checkbox" x-model="form.fields[key]"
-                                                   class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600">
-                                            <span x-text="label"></span>
                                         </label>
-                                    </template>
+                                        <span>Only display business hours</span>
+                                    </div>
+
+                                    <div class="flex gap-3">
+                                        <label for="toggle-holidays-settings"
+                                               class="relative inline-flex h-6 w-10 cursor-pointer select-none items-center">
+                                            <input
+                                                id="toggle-holidays-settings"
+                                                type="checkbox"
+                                                class="peer sr-only"
+                                                aria-label="Toggle"
+                                                x-model="form.usHolidays"
+                                            >
+                                            <!-- Трек -->
+                                            <span
+                                                class="absolute inset-0 rounded-full
+                                             bg-slate-600 transition-colors duration-200
+                                             peer-checked:bg-blue-600
+                                             peer-focus-visible:outline peer-focus-visible:outline-2
+                                             peer-focus-visible:outline-offset-2 peer-focus-visible:outline-blue-500
+                                             peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></span>
+                                            <!-- Бегунок -->
+                                            <span
+                                                class="relative ml-0.5 h-5 w-5 rounded-full bg-white shadow
+                                             transition-transform duration-200
+                                             translate-x-0 peer-checked:translate-x-4">
+                                        </span>
+                                        </label>
+                                        <span>Display US holidays</span>
+                                    </div>
+                                </div>
+
+                                <!-- Scheduler items options -->
+                                <div>
+                                    <div class="mb-2 text-sm font-medium">Scheduler items options</div>
+                                    <div class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                                        <template x-for="(label, key) in labels" :key="key">
+                                            <label class="flex items-center gap-2">
+                                                <input type="checkbox" x-model="form.fields[key]"
+                                                       class="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600">
+                                                <span x-text="label"></span>
+                                            </label>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="mt-6 flex justify-end gap-3">
-                            <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50
+                            <div class="mt-6 flex justify-end gap-3">
+                                <button class="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50
                          dark:border-slate-700 dark:hover:bg-slate-800"
-                                    @click="resetToDefaults">Reset
-                            </button>
-                            <button class="rounded bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                                        @click="resetToDefaults">Reset
+                                </button>
+                                <button
+                                    class="rounded bg-emerald-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
                                     @click="await saveSettings">Done
-                            </button>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </template>
-        </div>
-    </div>
-
-    <div x-show="mode==='schedule' && mapView==='week'">
-        <div class="overflow-x-auto pb-[10px]">
-            <!-- Глобальный оверлей спиннера -->
-
-            {{-- Заголовок --}}
-            <div class="inline-flex items-center border-b border-b-gray-400">
-                {{-- Первая узкая ячейка для таймзоны или иконки --}}
-                <div class="sticky flex justify-center items-center left-0 z-30 w-32 h-[61px] flex-shrink-0 p-0 text-sm font-medium text-center bg-gray-50 day-right-border">
-                    GMT -04
-                </div>
-                {{-- Дни недели с часами --}}
-                <div class="flex-1 inline-flex">
-                    <template x-for="day in days" :key="day.date">
-                        <div class="flex flex-col">
-                            {{-- Дата --}}
-                            <div
-                                class="h-5 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
-                                <span x-text="day.label"></span>
-                            </div>
-                            {{-- Часы --}}
-                            <div class="flex">
-                                <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx">
-                                    <div
-                                        class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
-                                        <span x-text="slotLabel"></span>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </template>
-                </div>
+                </template>
             </div>
+        </div>
 
-            {{-- Строки сотрудников --}}
-            <template x-for="(employee, empIdx) in employees" :key="employee.id">
-                <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
-                    {{-- Колонка с аватаром и именем --}}
-                    <div class="sticky left-0 z-20 w-32 h-[61px] flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50 day-right-border">
-                        <img
-                            :src="employee.avatar"
-                            alt=""
-                            class="w-8 h-8 rounded-full object-cover"
-                        />
-                        <span class="text-sm font-medium truncate" x-text="employee.name"></span>
+        <div x-show="mode==='schedule' && mapView==='week'">
+            <div class="overflow-x-auto pb-[10px]">
+                <!-- Глобальный оверлей спиннера -->
+
+                {{-- Заголовок --}}
+                <div class="inline-flex items-center border-b border-b-gray-400">
+                    {{-- Первая узкая ячейка для таймзоны или иконки --}}
+                    <div
+                        class="flex justify-center items-center left-0 z-30 w-32 h-[61px] flex-shrink-0 p-0 text-sm font-medium text-center bg-gray-50 day-right-border">
+                        GMT -04
                     </div>
-
-                    {{-- Семь дней --}}
-                    <div class="flex-1 inline-flex relative" wire:ignore>
-                        <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
-                            <div class="relative flex-shrink-0"
-                                 :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
-                                 :class="{ 'day-left-border': days[0] !== day }" :data-day="day.date" :data-emp="employee.id">
-                                {{-- Фоновые ячейки часов --}}
-                                <div class="grid"
-                                     :style="`grid-template-columns: repeat(${wrapCols}, ${slotWidthPx}px);`">
-                                    <template x-for="(slotIdx, i) in flatSlots(employee.id, day)"
-                                              :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`">
-                                        <div x-data="{ slotIdx: slotIdx }"
-                                             :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`"
-                                             wire:key="cell-${employee.id}-${day.date}-${i}-${lanesVersion}"
-                                             class="h-15 border-r border-r-gray-300"
-                                             :class="{
-                                                      'bg-blue-100': isSelected(employee.id, day, slotIdx),
-                                                      'bg-gray-100 pointer-events-none': isPast(day, slotIdx),
-                                                    }"
-                                             @mousedown.prevent="$event.button === 0
-                                                      && !isPast(day, slotIdx)
-                                                      && startSelection(employee.id, day, slotIdx)"
-                                             @mouseenter.prevent="$event.buttons === 1
-                                                      && !isPast(day, slotIdx)
-                                                      && !dragSelection(employee.id, day, slotIdx)"
-                                             @contextmenu.prevent="onContextMenu($event, employee, day, slotIdx)">
+                    {{-- Дни недели с часами --}}
+                    <div class="flex-1 inline-flex">
+                        <template x-for="day in days" :key="day.date">
+                            <div class="flex flex-col">
+                                {{-- Дата --}}
+                                <div
+                                    class="h-5 flex items-center justify-center font-semibold text-sm border-b border-b-gray-300">
+                                    <span x-text="day.label"></span>
+                                </div>
+                                {{-- Часы --}}
+                                <div class="flex">
+                                    <template x-for="(slotLabel, idx) in defaultTimeSlots" :key="idx">
+                                        <div
+                                            class="w-[30px] h-8 flex-shrink-0 text-center text-[10px] border-r border-r-gray-300 last:border-r-0">
+                                            <span x-text="slotLabel"></span>
                                         </div>
                                     </template>
                                 </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
 
-                                <!-- holiday overlay -->
-                                <template x-if="settings.usHolidays && holidays.has(day.date)">
-                                    <div class="absolute inset-0 pointer-events-none">
-                                        <div class="w-full h-full bg-orange-100/40"></div>
-                                        <!-- тонкая полоска сверху с названием праздника -->
-                                        <template x-if="empIdx === 0">
-                                            <div class="absolute left-0 top-0 h-5 px-2 text-[11px] text-gray-700
-                                                bg-orange-200/80 z-10 flex items-center">
-                                                <span x-text="holidayName(day.date)"></span>
+                {{-- Строки сотрудников --}}
+                <template x-for="(employee, empIdx) in employees" :key="employee.id">
+                    <div class="inline-flex items-start border-b border-b-gray-300 group" :data-emp="employee.id">
+                        {{-- Колонка с аватаром и именем --}}
+                        <div
+                            class="sticky left-0 z-20 w-32 h-[61px] flex-shrink-0 flex items-center p-2 space-x-2 bg-gray-50 day-right-border">
+                            <img
+                                :src="employee.avatar"
+                                alt=""
+                                class="w-8 h-8 rounded-full object-cover"
+                            />
+                            <span class="text-sm font-medium truncate" x-text="employee.name"></span>
+                        </div>
+
+                        {{-- Семь дней --}}
+                        <div class="flex-1 inline-flex relative" wire:ignore>
+                            <template x-for="day in days" :key="`${day.date}-${lanesVersion}`">
+                                <div class="relative flex-shrink-0"
+                                     :style="`width:${wrapCols * slotWidthPx}px; height:${containerHeight(employee.id, day)}px`"
+                                     :class="{ 'day-left-border': days[0] !== day }" :data-day="day.date"
+                                     :data-emp="employee.id">
+                                    {{-- Фоновые ячейки часов --}}
+                                    <div class="grid"
+                                         :style="`grid-template-columns: repeat(${wrapCols}, ${slotWidthPx}px);`">
+                                        <template x-for="(slotIdx, i) in flatSlots(employee.id, day)"
+                                                  :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`">
+                                            <div x-data="{ slotIdx: slotIdx }"
+                                                 :key="`${employee.id}-${day.date}-${i}-${slotIdx}-${lanesVersion}`"
+                                                 wire:key="cell-${employee.id}-${day.date}-${i}-${lanesVersion}"
+                                                 class="h-15 border-r border-r-gray-300"
+                                                 :class="{
+                                                      'bg-blue-100': isSelected(employee.id, day, slotIdx),
+                                                      'bg-gray-100 pointer-events-none': isPast(day, slotIdx),
+                                                    }"
+                                                 @mousedown.prevent="$event.button === 0
+                                                      && !isPast(day, slotIdx)
+                                                      && startSelection(employee.id, day, slotIdx)"
+                                                 @mouseenter.prevent="$event.buttons === 1
+                                                      && !isPast(day, slotIdx)
+                                                      && !dragSelection(employee.id, day, slotIdx)"
+                                                 @contextmenu.prevent="onContextMenu($event, employee, day, slotIdx)">
                                             </div>
                                         </template>
                                     </div>
-                                </template>
 
-                                {{-- Задачи --}}
-                                <template x-for="task in dayTasks(employee.id, day)" :key="`t-${task.id}-${employee.id}-${day}`">
-                                    <div
-                                        class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1 z-30 border border-emerald-600"
-                                        :class="{
+                                    <!-- holiday overlay -->
+                                    <template x-if="settings.usHolidays && holidays.has(day.date)">
+                                        <div class="absolute inset-0 pointer-events-none">
+                                            <div class="w-full h-full bg-orange-100/40"></div>
+                                            <!-- тонкая полоска сверху с названием праздника -->
+                                            <template x-if="empIdx === 0">
+                                                <div class="absolute left-0 top-0 h-5 px-2 text-[11px] text-gray-700
+                                                bg-orange-200/80 z-10 flex items-center">
+                                                    <span x-text="holidayName(day.date)"></span>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
+
+                                    {{-- Задачи --}}
+                                    <template x-for="task in dayTasks(employee.id, day)"
+                                              :key="`t-${task.id}-${employee.id}-${day}`">
+                                        <div
+                                            class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1 z-30 border border-emerald-600"
+                                            :class="{
                                                     'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
                                                     'cursor-pointer': !isTaskPast(task)
                                                 }"
-                                        @click.stop="onTaskClick(task, $event)"
-                                        @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
-                                        @contextmenu.prevent.stop="
+                                            @click.stop="onTaskClick(task, $event)"
+                                            @mousedown.prevent="!isTaskPast(task) && startDrag(task, $event)"
+                                            @contextmenu.prevent.stop="
                                                 suppressTaskClick = true;
                                                     contextMenu.x = $event.clientX;
                                                     contextMenu.y = $event.clientY;
@@ -330,39 +345,49 @@
 
                                                     contextMenu.visible = true;
                                             "
-                                        :style="drag.task && drag.task.id === task.id
+                                            :style="drag.task && drag.task.id === task.id
                                             ? `left:${drag.previewX}px; width:${drag.widthPx}px; opacity:.65; top:${drag.previewY}px; height:${rowHeightPx}px;`
                                             : taskStyle(task)"
-                                    >
-                                        <div class="flex flex-col">
-                                            <span class="truncate" x-text="task.client.name"></span>
-                                            <span class="whitespace-wrap"
-                                                  x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
+                                        >
+                                            <div class="flex flex-col">
+                                                <span class="truncate" x-text="task.client.name"></span>
+                                                <span class="whitespace-wrap"
+                                                      x-text="`${to12Hour(task.start, task.day)} – ${to12Hour(task.end, task.day)}`"></span>
+                                            </div>
                                         </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
                     </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- ДНЕВНАЯ СЕТКА -->
+        <div x-show="mode==='schedule' && mapView==='day'">
+            <template x-if="settings.usHolidays && holidays.has(currentDayISO)">
+                <div
+                    class="top-0 z-20 bg-orange-200/80 text-gray-800 text-xs px-2 py-1 border-b border-orange-300"
+                    :title="holidayName(currentDayISO)">
+                    <span x-text="holidayName(currentDayISO)"></span>
                 </div>
             </template>
-        </div>
-    </div>
 
-    <!-- ДНЕВНАЯ СЕТКА -->
-    <div x-show="mode==='schedule' && mapView==='day'">
-        <div x-data="viewportPanel()" x-ref="panel"
-             class="overflow-auto"
-             :style="`height:${h}px`">
-            <div id="dayGrid" class="relative bg-white pb-10"
+            <div class="flex items-center top-0 z-10 h-[20px] w-full border-b border-gray-300 day-grid-top-panel-border">
+                <div class="flex w-[50px] h-full text-[9px] justify-center items-center px-0 border-r border-gray-300">GMT-04</div>
+                <div class="flex-1"></div>
+            </div>
+
+            <div id="dayGrid" class="relative bg-white pb-5"
                  :style="`height:${dayGridHeight}px`">
-                <div class="relative" :style="`min-height:${dayGridHeight + 80}px`">
+                <div class="relative" :style="`min-height:${dayGridHeight}px`">
                     <div
-                        class="absolute left-12 top-0 bottom-0 border-2 border-gray-200/60 cursor-not-allowed"
+                        class="absolute left-[49px] top-0 bottom-0 border-r border-gray-300 cursor-not-allowed"
                         style="z-index: 5"
                         :style="{
                               top: 0,
-                              height: `${(dayEndHour - dayStartHour) * 60 * pxPerMin}px`,
+                              height: `${(dayEndHour - dayStartHour) * 60 * pxPerMin + 30}px`,
                             }"
                         @mousedown.stop
                         @click.stop
@@ -371,11 +396,11 @@
 
                     <!-- маска 6:00–7:00 -->
                     <div
-                        class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
+                        class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
                         style="z-index: 5"
                         :style="{
-                              top: `${DAY_HEADER_H}px`,
-                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 29}px`
+                              top: 0,
+                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 30}px`
                             }"
                         @mousedown.stop
                         @click.stop
@@ -385,29 +410,17 @@
 
                     <!-- маска 9:30PM – 10:00PM -->
                     <div
-                        class="absolute left-12 right-0 bg-gray-200/60 cursor-not-allowed"
+                        class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
                         style="z-index: 5"
                         :style="{
-                              top: `${(dayEndHour - dayStartHour) * 60 * pxPerMin - 30}px`,
-                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 28}px`
+                              top: `${(dayEndHour - dayStartHour) * 60 * pxPerMin - 0}px`,
+                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 30}px`
                             }"
                         @mousedown.stop
                         @click.stop
                         @touchstart.stop
                         title="Недоступно для создания задач"
                     ></div>
-
-                    <template x-if="settings.usHolidays && holidays.has(currentDayISO)">
-                        <div class="sticky top-0 z-20 bg-orange-200/80 text-gray-800 text-xs px-2 py-1 border-b border-orange-300"
-                             :title="holidayName(currentDayISO)">
-                            <span x-text="holidayName(currentDayISO)"></span>
-                        </div>
-                    </template>
-
-                    <div class="flex sticky items-center top-0 z-10 h-[30px] w-full bg-gray-300 day-grid-top-panel-border">
-                        <div class="flex w-[50px] text-[9px] justify-center items-center px-0">GMT-04</div>
-                        <div class="flex-1"></div>
-                    </div>
 
                     <!-- ЧАСОВЫЕ линии + подпись -->
                     <template x-for="slot in hours" :key="slot.h">
@@ -431,14 +444,13 @@
                              :style="`top:${hh.top}px`"></div>
                     </template>
 
-                    <div class="absolute inset-x-0"
-                         :style="`top:${DAY_HEADER_H}px; bottom:0;`"
+                    <div class="absolute inset-x-0" :style="`top:0; bottom:0;height:960px;`"
                          @mouseleave="selecting && endSelectionDay()"
                     >
                         <template x-for="cell in dayCells" :key="cell.i">
                             <div
                                 class="absolute left-12 right-0 border-b border-transparent select-none"
-                                :style="`top:${cell.top}px; height:${cell.h}px;`"
+                                :style="`top:${cell.top}px; height:${cell.h + 2}px;`"
                                 :class="{
                                     'pointer-events-none':
                                       cell.min < DAY_OPEN_HOUR*60 ||
@@ -467,32 +479,32 @@
                     </template>
                 </div>
             </div>
+
         </div>
-    </div>
 
-    {{-- Спиннер --}}
-    <div>
-        <template x-if="isLoading">
-            <div class="fixed inset-0 z-50 grid place-items-center bg-black/35 backdrop-blur-sm">
-                <div class="flex items-center gap-3 rounded-xl bg-white/90 px-5 py-3 shadow-xl">
-                    <svg class="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                        <path class="opacity-75" fill="currentColor"
-                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
-                    </svg>
-                    <span class="text-sm font-medium text-gray-700">Loading…</span>
+        {{-- Спиннер --}}
+        <div>
+            <template x-if="isLoading">
+                <div class="fixed inset-0 z-50 grid place-items-center bg-black/35 backdrop-blur-sm">
+                    <div class="flex items-center gap-3 rounded-xl bg-white/90 px-5 py-3 shadow-xl">
+                        <svg class="h-6 w-6 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor"
+                                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700">Loading…</span>
+                    </div>
                 </div>
-            </div>
-        </template>
-    </div>
+            </template>
+        </div>
 
-    <div x-show="mode === 'map'" class="h-full rounded border overflow-hidden z-5"
-         x-init="$watch('mode', v => { if (v === 'map') $nextTick(() => window.dispatchEvent(new Event('map:shown'))) })"
-         id="jobsMap">
-        <div class="relative h-[calc(100vh-140px)] min-h-[420px]">
-            {{-- Карта --}}
-            <div wire:ignore
-                 x-init="
+        <div x-show="mode === 'map'" class="h-full rounded border overflow-hidden z-5"
+             x-init="$watch('mode', v => { if (v === 'map') $nextTick(() => window.dispatchEvent(new Event('map:shown'))) })"
+             id="jobsMap">
+            <div class="relative h-[calc(100vh-140px)] min-h-[420px]">
+                {{-- Карта --}}
+                <div wire:ignore
+                     x-init="
                         window.addEventListener('week:changed', async () => {
                             if (mode === 'map') {
                                 await nextFrame();
@@ -500,219 +512,221 @@
                             }
                         });
                      "
-                 class="absolute inset-0 rounded border overflow-hidden z-10 h-full w-full" id="jobsMap" x-ref="jobsMap"
-                 x-transition></div>
+                     class="absolute inset-0 rounded border overflow-hidden z-10 h-full w-full" id="jobsMap"
+                     x-ref="jobsMap"
+                     x-transition></div>
+            </div>
         </div>
-    </div>
 
-    <!-- Контекстное меню таймлайна -->
-    <div
-        x-show="menuVisible"
-        @click.away="closeMenu()"
-        class="absolute z-[9999] bg-white shadow border rounded w-40"
-        :style="`top: ${menuY}px; left: ${menuX}px;`"
-    >
-        <button
-            @click="openJobModal('createJob', sel); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+        <!-- Контекстное меню таймлайна -->
+        <div
+            x-show="menuVisible"
+            @click.away="closeMenu()"
+            class="absolute z-[9999] bg-white shadow border rounded w-40"
+            :style="`top: ${menuY}px; left: ${menuX}px;`"
         >
-            <span class="font-medium">+Job</span>
-        </button>
-        <button
-            @click="openJobModal('createEstimate'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <!-- … SVG … -->
-            <span class="font-medium">+Estimate</span>
-        </button>
-        <button
-            @click="openJobModal('createEvent'); closeMenu()"
-            class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
-        >
-            <!-- … SVG … -->
-            <span class="font-medium">+Event</span>
-        </button>
-    </div>
+            <button
+                @click="openJobModal('createJob', sel); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <span class="font-medium">+Job</span>
+            </button>
+            <button
+                @click="openJobModal('createEstimate'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <!-- … SVG … -->
+                <span class="font-medium">+Estimate</span>
+            </button>
+            <button
+                @click="openJobModal('createEvent'); closeMenu()"
+                class="flex items-center gap-2 w-full px-4 py-1 text-left hover:bg-blue-50 rounded transition"
+            >
+                <!-- … SVG … -->
+                <span class="font-medium">+Event</span>
+            </button>
+        </div>
 
-    <!-- Контекстное меню задачи -->
-    <div
-        x-show="contextMenu.visible"
-        :style="`top:${contextMenu.y}px; left:${contextMenu.x}px`"
-        class="fixed z-50 bg-white border rounded shadow-lg animate-fade-in"
-        @click.away="contextMenu.visible = false"
-    >
-        <button
-            class="block w-full px-4 py-2 hover:bg-gray-100 text-left"
-            @click="
+        <!-- Контекстное меню задачи -->
+        <div
+            x-show="contextMenu.visible"
+            :style="`top:${contextMenu.y}px; left:${contextMenu.x}px`"
+            class="fixed z-50 bg-white border rounded shadow-lg animate-fade-in"
+            @click.away="contextMenu.visible = false"
+        >
+            <button
+                class="block w-full px-4 py-2 hover:bg-gray-100 text-left"
+                @click="
                             contextMenu.visible = false;
                             openJobModal('edit', sel, contextMenu);
                         "
-        >Изменить
-        </button>
-        <button
-            class="block w-full px-4 py-2 hover:bg-gray-100 text-left text-red-600"
-            @click="
+            >Изменить
+            </button>
+            <button
+                class="block w-full px-4 py-2 hover:bg-gray-100 text-left text-red-600"
+                @click="
                             contextMenu.visible = false;
                             taskToDelete = contextMenu.task;
                             confirmDeleteOpen = true;
                         "
-        >Удалить
-        </button>
-    </div>
-
-    <!-- Подтверждение удаления задачи -->
-    <div
-        x-show="confirmDeleteOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
-    >
-        <div class="bg-white rounded shadow-lg p-8 w-full max-w-sm">
-            <div class="mb-4 text-lg">Вы уверены, что хотите удалить задачу?</div>
-            <div class="flex justify-end space-x-4">
-                <button class="px-4 py-2" @click="confirmDeleteOpen = false">Отмена</button>
-                <button class="px-4 py-2 bg-red-600 text-white rounded"
-                        @click="deleteTask(taskToDelete)"
-                >Да
-                </button>
-            </div>
+            >Удалить
+            </button>
         </div>
-    </div>
 
-    <!-- AddCustomerModal -->
-    <div x-data="addCustomer()" x-on:customer-validation-error.window="onErrors($event.detail.errors)"
-         x-show="showAddCustomerModal"
-         x-transition
-         class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-         style="display: none;"
-    >
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
-             @click.away="showAddCustomerModal = false">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold">Add new customer</h2>
-                <button type="button" @click="showAddCustomerModal = false"
-                        class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;
-                </button>
-            </div>
-            <template x-if="customerError">
-                <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
-            </template>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Name*</label>
-                <input type="text" x-model="name" required
-                       class="w-full border rounded px-3 py-2 text-sm">
-            </div>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Email</label>
-                <input type="email" x-model="email" required
-                       class="w-full border rounded px-3 py-2 text-sm">
-            </div>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Phone</label>
-                <input type="text" x-model="phone" required
-                       class="w-full border rounded px-3 py-2 text-sm">
-            </div>
-            <div class="mb-3">
-                <label class="block text-sm font-medium mb-1">Address</label>
-                <div class="relative">
-                    <input type="text"
-                           class="w-full border rounded px-3 py-2 text-sm"
-                           placeholder="Start typing address…"
-                           x-model="query"
-                           @input.debounce.400ms="findSuggestions"
-                           @focus="open = true"
-                           @keydown.escape="open = false; resetSelection()"
-                           @blur="setTimeout(()=>open=false,150)">
-
-                    <!-- dropdown -->
-                    <template x-if="open && suggestions.length">
-                        <ul class="absolute z-20 left-0 right-0 bg-white border mt-1 rounded shadow max-h-60 overflow-auto">
-                            <template x-for="(s, i) in suggestions" :key="s.id">
-                                <li @mousedown.prevent="selectSuggestion(s)"
-                                    class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                                    x-text="s.label"></li>
-                            </template>
-                        </ul>
-                    </template>
+        <!-- Подтверждение удаления задачи -->
+        <div
+            x-show="confirmDeleteOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+        >
+            <div class="bg-white rounded shadow-lg p-8 w-full max-w-sm">
+                <div class="mb-4 text-lg">Вы уверены, что хотите удалить задачу?</div>
+                <div class="flex justify-end space-x-4">
+                    <button class="px-4 py-2" @click="confirmDeleteOpen = false">Отмена</button>
+                    <button class="px-4 py-2 bg-red-600 text-white rounded"
+                            @click="deleteTask(taskToDelete)"
+                    >Да
+                    </button>
                 </div>
-
-                <!-- скрытые поля, которые пойдут в createCustomer -->
-                <input type="hidden" x-model="selected.id">
-                <input type="hidden" x-model="selected.name">
-                <input type="hidden" x-model="selected.email">
-                <input type="hidden" x-model="selected.phone">
-                <input type="hidden" x-model="selected.lat">
-                <input type="hidden" x-model="selected.lng">
-            </div>
-            <div class="flex justify-end gap-2 mt-4">
-                <button type="button" @click="showAddCustomerModal = false"
-                        class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
-                </button>
-                <button type="button" @click="submit"
-                        class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-                    Add
-                </button>
             </div>
         </div>
-    </div>
 
-    <div x-show="jobModalOpen"
-         class="fixed inset-0 z-[45] flex items-center justify-center bg-black bg-opacity-40">
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
-            <div class="flex justify-between items-center border-b pb-4 mb-6">
-                <h2 class="text-xl font-semibold" x-text="jobModalType === 'edit' ? 'Edit job' : 'New job'"></h2>
-                <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
-                </button>
-            </div>
+        <!-- AddCustomerModal -->
+        <div x-data="addCustomer()" x-on:customer-validation-error.window="onErrors($event.detail.errors)"
+             x-show="showAddCustomerModal"
+             x-transition
+             class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+             style="display: none;"
+        >
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+                 @click.away="showAddCustomerModal = false">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">Add new customer</h2>
+                    <button type="button" @click="showAddCustomerModal = false"
+                            class="text-gray-400 hover:text-gray-700 text-2xl leading-none">&times;
+                    </button>
+                </div>
+                <template x-if="customerError">
+                    <div class="mb-2 text-red-600 text-xs" x-text="customerError"></div>
+                </template>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Name*</label>
+                    <input type="text" x-model="name" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Email</label>
+                    <input type="email" x-model="email" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Phone</label>
+                    <input type="text" x-model="phone" required
+                           class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-sm font-medium mb-1">Address</label>
+                    <div class="relative">
+                        <input type="text"
+                               class="w-full border rounded px-3 py-2 text-sm"
+                               placeholder="Start typing address…"
+                               x-model="query"
+                               @input.debounce.400ms="findSuggestions"
+                               @focus="open = true"
+                               @keydown.escape="open = false; resetSelection()"
+                               @blur="setTimeout(()=>open=false,150)">
 
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Left Column -->
-                <div class="w-full lg:w-1/3 space-y-6">
-                    <div class="bg-gray-50 rounded-lg border p-4 w-full max-w-[400px]">
-                        <div class="font-medium text-sm mb-1 flex items-center gap-1">
-                            <svg class="w-4 h-4"/>
-                            Customer
-                        </div>
-                        <div class="relative">
-                            <input type="text" x-model="jobModalForm.customer_query"
-                                   @input.live.debounce.500ms="searchCustomers"
-                                   @focus="showCustomerModal = true"
-                                   @blur="setTimeout(() => showCustomerModal = false, 500)"
-                                   class="w-full rounded px-2 py-1 text-sm border"
-                                   placeholder="Name, email, phone, or address"/>
-                            <!-- Список найденных клиентов -->
-                            <div x-show="showCustomerModal && jobModalForm.results.length"
-                                 class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
-                                <template x-for="customer in jobModalForm.results">
-                                    <div
-                                        @click="selectCustomer(customer)"
-                                        class="block px-2 py-1 hover:bg-gray-100 cursor-pointer"
-                                        x-text="customer.name + ' ' + (customer.email || '')"
-                                    >
-                                    </div>
+                        <!-- dropdown -->
+                        <template x-if="open && suggestions.length">
+                            <ul class="absolute z-20 left-0 right-0 bg-white border mt-1 rounded shadow max-h-60 overflow-auto">
+                                <template x-for="(s, i) in suggestions" :key="s.id">
+                                    <li @mousedown.prevent="selectSuggestion(s)"
+                                        class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                        x-text="s.label"></li>
                                 </template>
-                            </div>
-                            <div
-                                x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
-                                class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">
-                                Ничего не найдено
-                            </div>
-
-                        </div>
-                        <button type="button" class="text-blue-600 text-xs mt-2" @click="showAddCustomerModal = true">
-                            + New customer
-                        </button>
+                            </ul>
+                        </template>
                     </div>
 
-                    <!-- Schedule -->
-                    <div class="border p-4 rounded space-y-4">
-                        <label class="block text-sm font-medium">Schedule</label>
-                        <div class="flex flex-col gap-2 items-start">
-                            <div class="flex justify-between items-center">
-                                <label class="block text-xs text-gray-500 mb-1 w-10">From</label>
-                                <div class="flex gap-2 items-center">
-                                    <input type="date" x-model="jobModalForm.schedule_from_date"
-                                           class="border rounded px-2 py-1">
-                                    <div
-                                        x-data="{
+                    <!-- скрытые поля, которые пойдут в createCustomer -->
+                    <input type="hidden" x-model="selected.id">
+                    <input type="hidden" x-model="selected.name">
+                    <input type="hidden" x-model="selected.email">
+                    <input type="hidden" x-model="selected.phone">
+                    <input type="hidden" x-model="selected.lat">
+                    <input type="hidden" x-model="selected.lng">
+                </div>
+                <div class="flex justify-end gap-2 mt-4">
+                    <button type="button" @click="showAddCustomerModal = false"
+                            class="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">Cancel
+                    </button>
+                    <button type="button" @click="submit"
+                            class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div x-show="jobModalOpen"
+             class="fixed inset-0 z-[45] flex items-center justify-center bg-black bg-opacity-40">
+            <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
+                <div class="flex justify-between items-center border-b pb-4 mb-6">
+                    <h2 class="text-xl font-semibold" x-text="jobModalType === 'edit' ? 'Edit job' : 'New job'"></h2>
+                    <button @click="jobModalOpen = false" class="text-gray-500 hover:text-red-500 text-2xl">&times;
+                    </button>
+                </div>
+
+                <div class="flex flex-col lg:flex-row gap-6">
+                    <!-- Left Column -->
+                    <div class="w-full lg:w-1/3 space-y-6">
+                        <div class="bg-gray-50 rounded-lg border p-4 w-full max-w-[400px]">
+                            <div class="font-medium text-sm mb-1 flex items-center gap-1">
+                                <svg class="w-4 h-4"/>
+                                Customer
+                            </div>
+                            <div class="relative">
+                                <input type="text" x-model="jobModalForm.customer_query"
+                                       @input.live.debounce.500ms="searchCustomers"
+                                       @focus="showCustomerModal = true"
+                                       @blur="setTimeout(() => showCustomerModal = false, 500)"
+                                       class="w-full rounded px-2 py-1 text-sm border"
+                                       placeholder="Name, email, phone, or address"/>
+                                <!-- Список найденных клиентов -->
+                                <div x-show="showCustomerModal && jobModalForm.results.length"
+                                     class="absolute top-full min-w-full max-w-full bg-white z-30 border rounded shadow mt-1">
+                                    <template x-for="customer in jobModalForm.results">
+                                        <div
+                                            @click="selectCustomer(customer)"
+                                            class="block px-2 py-1 hover:bg-gray-100 cursor-pointer"
+                                            x-text="customer.name + ' ' + (customer.email || '')"
+                                        >
+                                        </div>
+                                    </template>
+                                </div>
+                                <div
+                                    x-show="showCustomerModal && jobModalForm.customer_query.length > 1 && jobModalForm.results.length === 0"
+                                    class="block hover:bg-gray-100 px-2 py-1 text-gray-400 bg-white z-30 border shadow rounded mt-1">
+                                    Ничего не найдено
+                                </div>
+
+                            </div>
+                            <button type="button" class="text-blue-600 text-xs mt-2"
+                                    @click="showAddCustomerModal = true">
+                                + New customer
+                            </button>
+                        </div>
+
+                        <!-- Schedule -->
+                        <div class="border p-4 rounded space-y-4">
+                            <label class="block text-sm font-medium">Schedule</label>
+                            <div class="flex flex-col gap-2 items-start">
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-xs text-gray-500 mb-1 w-10">From</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="date" x-model="jobModalForm.schedule_from_date"
+                                               class="border rounded px-2 py-1">
+                                        <div
+                                            x-data="{
                                                             show: false,
                                                             hour: 9,
                                                             minute: '00',
@@ -735,65 +749,66 @@
                                                             }
                                                         }"
 
-                                        x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
-                                        @time-changed.window="updateTime($event.detail)"
-                                        class="relative w-36"
-                                    >
-                                        <button type="button"
-                                                @click="show = !show"
-                                                class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
+                                            x-effect="setFromExternal(jobModalForm.schedule_from_time12)"
+                                            @time-changed.window="updateTime($event.detail)"
+                                            class="relative w-36"
                                         >
-                                            <span x-text="value"></span>
-                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <path d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="show"
-                                             @click.away="show = false"
-                                             class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
-                                             style="min-width: 210px"
-                                        >
-                                            <!-- Часы -->
-                                            <select x-model="hour"
-                                                    class="w-[60px] border rounded p-1">
-                                                <template x-for="h in 12" :key="h">
-                                                    <option :value="h" x-text="h"></option>
-                                                </template>
-                                            </select>
-                                            <!-- Минуты -->
-                                            <select x-model="minute"
-                                                    class="w-[60px] border rounded p-1">
-                                                <template x-for="m in [0, 30]" :key="m">
-                                                    <option :value="m.toString().padStart(2, '0')"
-                                                            x-text="m.toString().padStart(2, '0')"></option>
-                                                </template>
-                                            </select>
-                                            <!-- AM/PM -->
-                                            <select x-model="ampm" class="w-[60px] border rounded p-1">
-                                                <option>AM</option>
-                                                <option>PM</option>
-                                            </select>
-                                            <button
-                                                @click="setValue(hour, minute, ampm)"
-                                                class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
-                                                OK
+                                            <button type="button"
+                                                    @click="show = !show"
+                                                    class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
+                                            >
+                                                <span x-text="value"></span>
+                                                <svg class="w-4 h-4 ml-2 text-gray-400" fill="none"
+                                                     stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <path d="M19 9l-7 7-7-7"/>
+                                                </svg>
                                             </button>
-                                        </div>
-                                    </div>
 
-                                    <input type="hidden" x-model="jobModalForm.schedule_from_time12"
-                                           name="schedule_from_time12">
+                                            <div x-show="show"
+                                                 @click.away="show = false"
+                                                 class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
+                                                 style="min-width: 210px"
+                                            >
+                                                <!-- Часы -->
+                                                <select x-model="hour"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="h in 12" :key="h">
+                                                        <option :value="h" x-text="h"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- Минуты -->
+                                                <select x-model="minute"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="m in [0, 30]" :key="m">
+                                                        <option :value="m.toString().padStart(2, '0')"
+                                                                x-text="m.toString().padStart(2, '0')"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- AM/PM -->
+                                                <select x-model="ampm" class="w-[60px] border rounded p-1">
+                                                    <option>AM</option>
+                                                    <option>PM</option>
+                                                </select>
+                                                <button
+                                                    @click="setValue(hour, minute, ampm)"
+                                                    class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" x-model="jobModalForm.schedule_from_time12"
+                                               name="schedule_from_time12">
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="flex justify-between items-center">
-                                <label class="block text-xs text-gray-500 mb-1 w-10">To</label>
-                                <div class="flex gap-2 items-center">
-                                    <input type="date" x-model="jobModalForm.schedule_to_date"
-                                           class="border rounded px-2 py-1">
-                                    <div
-                                        x-data="{
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-xs text-gray-500 mb-1 w-10">To</label>
+                                    <div class="flex gap-2 items-center">
+                                        <input type="date" x-model="jobModalForm.schedule_to_date"
+                                               class="border rounded px-2 py-1">
+                                        <div
+                                            x-data="{
                                                             show: false,
                                                             hour: 9,
                                                             minute: '00',
@@ -817,108 +832,109 @@
                                                             }
                                                         }"
 
-                                        x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
-                                        @time-changed.window="updateTime($event.detail)"
-                                        class="relative w-36"
-                                    >
-                                        <button type="button"
-                                                @click="show = !show"
-                                                class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
+                                            x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
+                                            @time-changed.window="updateTime($event.detail)"
+                                            class="relative w-36"
                                         >
-                                            <span x-text="value"></span>
-                                            <svg class="w-4 h-4 ml-2 text-gray-400" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <path d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-
-                                        <div x-show="show"
-                                             @click.away="show = false"
-                                             class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
-                                             style="min-width: 210px"
-                                        >
-                                            <!-- Часы -->
-                                            <select x-model="hour"
-                                                    class="w-[60px] border rounded p-1">
-                                                <template x-for="h in 12" :key="h">
-                                                    <option :value="h" x-text="h"></option>
-                                                </template>
-                                            </select>
-                                            <!-- Минуты -->
-                                            <select x-model="minute" class="w-[60px] border rounded p-1">
-                                                <template x-for="m in [0, 30]" :key="m">
-                                                    <option :value="m.toString().padStart(2, '0')"
-                                                            x-text="m.toString().padStart(2, '0')"></option>
-                                                </template>
-                                            </select>
-                                            <!-- AM/PM -->
-                                            <select x-model="ampm" class="w-[60px] border rounded p-1">
-                                                <option>AM</option>
-                                                <option>PM</option>
-                                            </select>
-                                            <button
-                                                @click="setValue(hour, minute, ampm)"
-                                                class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
-                                                OK
+                                            <button type="button"
+                                                    @click="show = !show"
+                                                    class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
+                                            >
+                                                <span x-text="value"></span>
+                                                <svg class="w-4 h-4 ml-2 text-gray-400" fill="none"
+                                                     stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <path d="M19 9l-7 7-7-7"/>
+                                                </svg>
                                             </button>
-                                        </div>
-                                    </div>
 
-                                    <input type="hidden" x-model="jobModalForm.schedule_to_time12"
-                                           name="schedule_to_time12">
+                                            <div x-show="show"
+                                                 @click.away="show = false"
+                                                 class="absolute flex justify-between z-10 bg-white rounded shadow-md mt-1 p-2 gap-2"
+                                                 style="min-width: 210px"
+                                            >
+                                                <!-- Часы -->
+                                                <select x-model="hour"
+                                                        class="w-[60px] border rounded p-1">
+                                                    <template x-for="h in 12" :key="h">
+                                                        <option :value="h" x-text="h"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- Минуты -->
+                                                <select x-model="minute" class="w-[60px] border rounded p-1">
+                                                    <template x-for="m in [0, 30]" :key="m">
+                                                        <option :value="m.toString().padStart(2, '0')"
+                                                                x-text="m.toString().padStart(2, '0')"></option>
+                                                    </template>
+                                                </select>
+                                                <!-- AM/PM -->
+                                                <select x-model="ampm" class="w-[60px] border rounded p-1">
+                                                    <option>AM</option>
+                                                    <option>PM</option>
+                                                </select>
+                                                <button
+                                                    @click="setValue(hour, minute, ampm)"
+                                                    class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">
+                                                    OK
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" x-model="jobModalForm.schedule_to_time12"
+                                               name="schedule_to_time12">
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="mb-4">
-                            <label class="block text-xs text-gray-500 mb-1">Employee</label>
-                            <div class="relative">
-                                <input type="text"
-                                       x-model="jobModalForm.employees_query"
-                                       @input.debounce.300ms="searchEmployees"
-                                       @focus="showEmployeesDropdown = true"
-                                       @blur="setTimeout(() => showEmployeesDropdown = false, 200)"
-                                       placeholder="Dispatch employee by name or tag"
-                                       class="w-full border rounded px-3 py-2 text-sm"
-                                >
-                                <!-- ВЫПАДАЮЩИЙ СПИСОК -->
-                                <div
-                                    x-show="showEmployeesDropdown && jobModalForm.employees_results.length > 0"
-                                    class="absolute z-30 mt-1 bg-white w-full rounded border shadow"
-                                >
-                                    <template x-for="employee in jobModalForm.employees_results" :key="employee.id">
-                                        <div @click="addEmployee(employee)"
-                                             class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
+                            <div class="mb-4">
+                                <label class="block text-xs text-gray-500 mb-1">Employee</label>
+                                <div class="relative">
+                                    <input type="text"
+                                           x-model="jobModalForm.employees_query"
+                                           @input.debounce.300ms="searchEmployees"
+                                           @focus="showEmployeesDropdown = true"
+                                           @blur="setTimeout(() => showEmployeesDropdown = false, 200)"
+                                           placeholder="Dispatch employee by name or tag"
+                                           class="w-full border rounded px-3 py-2 text-sm"
+                                    >
+                                    <!-- ВЫПАДАЮЩИЙ СПИСОК -->
+                                    <div
+                                        x-show="showEmployeesDropdown && jobModalForm.employees_results.length > 0"
+                                        class="absolute z-30 mt-1 bg-white w-full rounded border shadow"
+                                    >
+                                        <template x-for="employee in jobModalForm.employees_results" :key="employee.id">
+                                            <div @click="addEmployee(employee)"
+                                                 class="px-3 py-2 hover:bg-gray-100 cursor-pointer flex items-center">
+                                                <span x-text="employee.name"></span>
+                                                <span class="ml-2 text-xs text-gray-400" x-text="employee.tag"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <!-- ВЫБРАННЫЕ СОТРУДНИКИ -->
+                                <div class="flex flex-wrap mt-2 gap-2">
+                                    <template x-for="(employee, idx) in jobModalForm.employees" :key="employee.id">
+                                        <div class="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
                                             <span x-text="employee.name"></span>
-                                            <span class="ml-2 text-xs text-gray-400" x-text="employee.tag"></span>
+                                            <button class="ml-2 text-gray-500 hover:text-red-500"
+                                                    @click="removeEmployee(idx)">
+                                                &times;
+                                            </button>
                                         </div>
                                     </template>
                                 </div>
                             </div>
-                            <!-- ВЫБРАННЫЕ СОТРУДНИКИ -->
-                            <div class="flex flex-wrap mt-2 gap-2">
-                                <template x-for="(employee, idx) in jobModalForm.employees" :key="employee.id">
-                                    <div class="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
-                                        <span x-text="employee.name"></span>
-                                        <button class="ml-2 text-gray-500 hover:text-red-500"
-                                                @click="removeEmployee(idx)">
-                                            &times;
-                                        </button>
-                                    </div>
-                                </template>
+
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
+                                <label class="text-sm">Notify customer</label>
                             </div>
                         </div>
-
-                        <div class="flex items-center gap-2">
-                            <input type="checkbox" x-model="jobModalForm.notify_customer" class="form-checkbox">
-                            <label class="text-sm">Notify customer</label>
-                        </div>
                     </div>
-                </div>
 
-                <!-- Center Column -->
-                <div class="w-full lg:w-2/3 space-y-6">
-                    <div class="border p-4 rounded"
-                         x-data="{
+                    <!-- Center Column -->
+                    <div class="w-full lg:w-2/3 space-y-6">
+                        <div class="border p-4 rounded"
+                             x-data="{
                                         money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
                                         openList(it){
                                             if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
@@ -1037,167 +1053,44 @@
                                             this.recalcItemsTotal();
                                         },
                                     }"
-                    >
-                        <label class="block text-sm font-medium mb-2">Job items</label>
-                        <!-- Services -->
-                        <button
-                            @click="addItem('service')"
-                            class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                            type="button"
                         >
-                            + Add service
-                        </button>
-                        <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
-                                  :key="item.id">
-                            <div class="mb-4 space-y-2 border-b pb-2">
-                                <div class="flex flex-row justify-between w-full">
-                                    <div class="flex w-4/5">
-                                        <!-- Drag-handle, если нужен -->
-                                        <div class="flex items-start text-gray-400 cursor-move">
-                                            <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <circle cx="5" cy="7" r="1.5"/>
-                                                <circle cx="5" cy="12" r="1.5"/>
-                                                <circle cx="5" cy="17" r="1.5"/>
-                                                <circle cx="12" cy="7" r="1.5"/>
-                                                <circle cx="12" cy="12" r="1.5"/>
-                                                <circle cx="12" cy="17" r="1.5"/>
-                                            </svg>
-                                        </div>
-
-                                        <!-- Service fields (имя, qty, price и т.д.) -->
-                                        <div class="flex flex-col bg-white rounded w-full ">
-                                            <div class="flex gap-2 mb-2 w-full">
-
-                                                <!-- Service Name + Tax -->
-                                                <div class="flex-1 flex flex-col w-3/5">
-                                                    <label class="sr-only">Service name</label>
-                                                    <div class="relative flex items-center">
-                                                        <input x-model="item.name" type="text"
-                                                               placeholder="Item name"
-                                                               class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
-                                                        <label
-                                                            class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
-                                                            Tax
-                                                            <input type="checkbox" x-model="item.tax"
-                                                                   class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
-                                                        </label>
-                                                    </div>
-                                                </div>
-
-                                                <div class="flex w-2/5 gap-1">
-                                                    <!-- Qty -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                               x-model="item.qty" type="number" step="1" min="0"
-                                                               placeholder=" " @input="recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`qty-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Qty
-                                                        </label>
-                                                    </div>
-
-                                                    <!-- Unit price -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                               x-model="item.unit_price" type="number"
-                                                               step="0.01"
-                                                               min="0" @input="recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`uprice-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit price
-                                                        </label>
-                                                    </div>
-                                                </div>
+                            <label class="block text-sm font-medium mb-2">Job items</label>
+                            <!-- Services -->
+                            <button
+                                @click="addItem('service')"
+                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                type="button"
+                            >
+                                + Add service
+                            </button>
+                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
+                                      :key="item.id">
+                                <div class="mb-4 space-y-2 border-b pb-2">
+                                    <div class="flex flex-row justify-between w-full">
+                                        <div class="flex w-4/5">
+                                            <!-- Drag-handle, если нужен -->
+                                            <div class="flex items-start text-gray-400 cursor-move">
+                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <circle cx="5" cy="7" r="1.5"/>
+                                                    <circle cx="5" cy="12" r="1.5"/>
+                                                    <circle cx="5" cy="17" r="1.5"/>
+                                                    <circle cx="12" cy="7" r="1.5"/>
+                                                    <circle cx="12" cy="12" r="1.5"/>
+                                                    <circle cx="12" cy="17" r="1.5"/>
+                                                </svg>
                                             </div>
-                                            <!-- Вторая строка: Описание и Unit Cost -->
-                                            <div class="flex gap-2 w-full">
-                                                <div class="flex-1 w-3/5">
-                                                    <textarea x-model="item.description" placeholder="Description (optional)" rows="1"
-                                                              class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto">
-                                                    </textarea>
-                                                </div>
-                                                <div class="relative flex flex-col w-2/5">
-                                                    <input :id="`ucost-${index}`" x-model="item.unit_cost"
-                                                           type="number" step="0.1"
-                                                           min="0" @input="recalcItemsTotal()"
-                                                           class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                    <label :for="`ucost-${index}`"
-                                                           class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                            peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                        Unit cost
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-row items-start w-1/5">
-                                        <!-- Итоговая цена -->
-                                        <div class="p-2 text-right text-sm min-w-[70px]">
-                                            <span x-text="formatMoney(item.total)"></span>
-                                        </div>
 
-                                        <!-- Удалить -->
-                                        <button @click="removeItem(item.id)"
-                                                class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                tabindex="-1">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                <path d="M6 6l12 12M6 18L18 6"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
+                                            <!-- Service fields (имя, qty, price и т.д.) -->
+                                            <div class="flex flex-col bg-white rounded w-full ">
+                                                <div class="flex gap-2 mb-2 w-full">
 
-                        <!-- Materials -->
-                        <button
-                            @click="addItem('material')"
-                            class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                            type="button"
-                        >
-                            + Add material
-                        </button>
-                        <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
-                                  :key="item.key">
-                            <div class="mb-4 space-y-2 border-b pb-2">
-                                <!-- Material fields (имя, qty, price и т.д.) -->
-                                <div class="flex flex-row justify-between w-full">
-                                    <div class="flex w-4/5">
-                                        <!-- Drag-handle, если нужен -->
-                                        <div class="flex items-start text-gray-400 cursor-move">
-                                            <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                 viewBox="0 0 24 24">
-                                                <circle cx="5" cy="7" r="1.5"/>
-                                                <circle cx="5" cy="12" r="1.5"/>
-                                                <circle cx="5" cy="17" r="1.5"/>
-                                                <circle cx="12" cy="7" r="1.5"/>
-                                                <circle cx="12" cy="12" r="1.5"/>
-                                                <circle cx="12" cy="17" r="1.5"/>
-                                            </svg>
-                                        </div>
-
-                                        <div class="flex flex-col bg-white rounded w-full ">
-                                            <div class="flex gap-2 mb-2 w-full">
-
-                                                <!-- Material Name + Tax -->
-                                                <div class="flex-1 flex flex-col w-3/5">
-                                                    <label class="sr-only">Material name</label>
-                                                    <div class="relative flex flex-col" @click.outside="hideList(item)">
-                                                        <div class="relative flex flex-row">
+                                                    <!-- Service Name + Tax -->
+                                                    <div class="flex-1 flex flex-col w-3/5">
+                                                        <label class="sr-only">Service name</label>
+                                                        <div class="relative flex items-center">
                                                             <input x-model="item.name" type="text"
-                                                                   placeholder="Material name"
-                                                                   @input.debounce.300ms="autocomplete(item)"
-                                                                   @focus="openList(item)"
-                                                                   @blur="deferClose(item)"
-                                                                   @keydown.escape.prevent="hideList(item)"
-                                                                   @keydown.arrow-down.prevent="move(item,1)"
-                                                                   @keydown.arrow-up.prevent="move(item,-1)"
-                                                                   @keydown.enter.prevent="choose(index)"
+                                                                   placeholder="Item name"
                                                                    class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
                                                             <label
                                                                 class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
@@ -1206,9 +1099,134 @@
                                                                        class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
                                                             </label>
                                                         </div>
-                                                        <!-- Chip "Linked to part" -->
-                                                        <div x-show="item.part_id"
-                                                             class="mt-1 flex items-center gap-2 text-xs">
+                                                    </div>
+
+                                                    <div class="flex w-2/5 gap-1">
+                                                        <!-- Qty -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                   x-model="item.qty" type="number" step="1" min="0"
+                                                                   placeholder=" " @input="recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`qty-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Qty
+                                                            </label>
+                                                        </div>
+
+                                                        <!-- Unit price -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                   x-model="item.unit_price" type="number"
+                                                                   step="0.01"
+                                                                   min="0" @input="recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`uprice-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Unit price
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- Вторая строка: Описание и Unit Cost -->
+                                                <div class="flex gap-2 w-full">
+                                                    <div class="flex-1 w-3/5">
+                                                    <textarea x-model="item.description"
+                                                              placeholder="Description (optional)" rows="1"
+                                                              class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto">
+                                                    </textarea>
+                                                    </div>
+                                                    <div class="relative flex flex-col w-2/5">
+                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                               type="number" step="0.1"
+                                                               min="0" @input="recalcItemsTotal()"
+                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                        <label :for="`ucost-${index}`"
+                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                            peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                            Unit cost
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-row items-start w-1/5">
+                                            <!-- Итоговая цена -->
+                                            <div class="p-2 text-right text-sm min-w-[70px]">
+                                                <span x-text="formatMoney(item.total)"></span>
+                                            </div>
+
+                                            <!-- Удалить -->
+                                            <button @click="removeItem(item.id)"
+                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                    tabindex="-1">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                    <path d="M6 6l12 12M6 18L18 6"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Materials -->
+                            <button
+                                @click="addItem('material')"
+                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                type="button"
+                            >
+                                + Add material
+                            </button>
+                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
+                                      :key="item.key">
+                                <div class="mb-4 space-y-2 border-b pb-2">
+                                    <!-- Material fields (имя, qty, price и т.д.) -->
+                                    <div class="flex flex-row justify-between w-full">
+                                        <div class="flex w-4/5">
+                                            <!-- Drag-handle, если нужен -->
+                                            <div class="flex items-start text-gray-400 cursor-move">
+                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                     viewBox="0 0 24 24">
+                                                    <circle cx="5" cy="7" r="1.5"/>
+                                                    <circle cx="5" cy="12" r="1.5"/>
+                                                    <circle cx="5" cy="17" r="1.5"/>
+                                                    <circle cx="12" cy="7" r="1.5"/>
+                                                    <circle cx="12" cy="12" r="1.5"/>
+                                                    <circle cx="12" cy="17" r="1.5"/>
+                                                </svg>
+                                            </div>
+
+                                            <div class="flex flex-col bg-white rounded w-full ">
+                                                <div class="flex gap-2 mb-2 w-full">
+
+                                                    <!-- Material Name + Tax -->
+                                                    <div class="flex-1 flex flex-col w-3/5">
+                                                        <label class="sr-only">Material name</label>
+                                                        <div class="relative flex flex-col"
+                                                             @click.outside="hideList(item)">
+                                                            <div class="relative flex flex-row">
+                                                                <input x-model="item.name" type="text"
+                                                                       placeholder="Material name"
+                                                                       @input.debounce.300ms="autocomplete(item)"
+                                                                       @focus="openList(item)"
+                                                                       @blur="deferClose(item)"
+                                                                       @keydown.escape.prevent="hideList(item)"
+                                                                       @keydown.arrow-down.prevent="move(item,1)"
+                                                                       @keydown.arrow-up.prevent="move(item,-1)"
+                                                                       @keydown.enter.prevent="choose(index)"
+                                                                       class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
+                                                                <label
+                                                                    class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
+                                                                    Tax
+                                                                    <input type="checkbox" x-model="item.tax"
+                                                                           class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
+                                                                </label>
+                                                            </div>
+                                                            <!-- Chip "Linked to part" -->
+                                                            <div x-show="item.part_id"
+                                                                 class="mt-1 flex items-center gap-2 text-xs">
                                                                                         <span
                                                                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                                                                                             <svg class="w-3.5 h-3.5"
@@ -1226,43 +1244,43 @@
                                                                                                 x-text="item.part_id"></span>
                                                                                         </span>
 
-                                                            <button type="button"
-                                                                    @click="unlinkPart(item)"
-                                                                    class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
-                                                                Unlink
-                                                            </button>
-                                                        </div>
+                                                                <button type="button"
+                                                                        @click="unlinkPart(item)"
+                                                                        class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
+                                                                    Unlink
+                                                                </button>
+                                                            </div>
 
-                                                        <!-- выпадающий список -->
-                                                        <div x-show="item.search.open" x-transition.opacity
-                                                             @mousedown.prevent
-                                                             class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
-                                                            <template x-if="item.search.loading">
-                                                                <div class="px-3 py-2 text-sm text-gray-500">
-                                                                    Searching…
-                                                                </div>
-                                                            </template>
+                                                            <!-- выпадающий список -->
+                                                            <div x-show="item.search.open" x-transition.opacity
+                                                                 @mousedown.prevent
+                                                                 class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
+                                                                <template x-if="item.search.loading">
+                                                                    <div class="px-3 py-2 text-sm text-gray-500">
+                                                                        Searching…
+                                                                    </div>
+                                                                </template>
 
-                                                            <template x-for="(p, idx) in item.search.results"
-                                                                      :key="p.id">
-                                                                <div @click="choose(idx)"
-                                                                     :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
-                                                                    <div class="flex items-center gap-2">
-                                                                        <template x-if="p.image">
-                                                                            <img
-                                                                                :src="'{{ asset('storage') }}' + p.image"
-                                                                                alt="p.name"
-                                                                                class="w-9 h-9 rounded object-cover border">
-                                                                        </template>
-                                                                        <template
-                                                                            x-if="!p.image && p.nomenclature.image">
-                                                                            <img
-                                                                                :src="'{{ asset('storage') }}' + p.nomenclature.image"
-                                                                                :alt="p.name"
-                                                                                class="w-9 h-9 rounded object-cover border">
-                                                                        </template>
-                                                                        <template
-                                                                            x-if="!p.image && !p.nomenclature.image">
+                                                                <template x-for="(p, idx) in item.search.results"
+                                                                          :key="p.id">
+                                                                    <div @click="choose(idx)"
+                                                                         :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
+                                                                        <div class="flex items-center gap-2">
+                                                                            <template x-if="p.image">
+                                                                                <img
+                                                                                    :src="'{{ asset('storage') }}' + p.image"
+                                                                                    alt="p.name"
+                                                                                    class="w-9 h-9 rounded object-cover border">
+                                                                            </template>
+                                                                            <template
+                                                                                x-if="!p.image && p.nomenclature.image">
+                                                                                <img
+                                                                                    :src="'{{ asset('storage') }}' + p.nomenclature.image"
+                                                                                    :alt="p.name"
+                                                                                    class="w-9 h-9 rounded object-cover border">
+                                                                            </template>
+                                                                            <template
+                                                                                x-if="!p.image && !p.nomenclature.image">
                                                                                         <span class="w-[50px] h-[50px]">
                                                                                             <div>
                                                                                                 <svg
@@ -1295,269 +1313,271 @@
                                                                                                 </svg>
                                                                                             </div>
                                                                                         </span>
-                                                                        </template>
-                                                                        <div class="min-w-0">
-                                                                            <div class="flex items-center gap-2">
+                                                                            </template>
+                                                                            <div class="min-w-0">
+                                                                                <div class="flex items-center gap-2">
                                                                                             <span
                                                                                                 class="font-medium truncate"
                                                                                                 x-text="p.name"></span>
-                                                                                <span class="text-xs text-gray-500"
-                                                                                      x-text="p.sku ?? ''"></span>
-                                                                            </div>
-                                                                            <div
-                                                                                class="flex items-center gap-2 text-xs">
+                                                                                    <span class="text-xs text-gray-500"
+                                                                                          x-text="p.sku ?? ''"></span>
+                                                                                </div>
+                                                                                <div
+                                                                                    class="flex items-center gap-2 text-xs">
                                                                                             <span class="text-gray-600"
                                                                                                   x-text="money(p.price)"></span>
-                                                                                <!-- бейдж наличия -->
-                                                                                <span
-                                                                                    :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
-                                                                                    class="px-1.5 py-0.5 rounded">
+                                                                                    <!-- бейдж наличия -->
+                                                                                    <span
+                                                                                        :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                                                                                        class="px-1.5 py-0.5 rounded">
                                                                                                 <span
                                                                                                     x-show="p.available>0">In stock: <span
                                                                                                         x-text="p.available"></span></span>
                                                                                                 <span
                                                                                                     x-show="p.available<=0">Out of stock</span>
                                                                                             </span>
-                                                                                <template x-if="p.reserved > 0">
+                                                                                    <template x-if="p.reserved > 0">
                                                                                                 <span
                                                                                                     class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
                                                                                                     Reserved <span
                                                                                                         class="ml-1"
                                                                                                         x-text="p.reserved"></span>
                                                                                                 </span>
-                                                                                </template>
+                                                                                    </template>
+                                                                                </div>
                                                                             </div>
                                                                         </div>
                                                                     </div>
-                                                                </div>
-                                                            </template>
+                                                                </template>
 
-                                                            <div
-                                                                x-show="!item.search.loading && item.search.results.length===0"
-                                                                class="px-3 py-2 text-sm text-gray-500">
-                                                                No matches. Press Enter to keep custom name.
+                                                                <div
+                                                                    x-show="!item.search.loading && item.search.results.length===0"
+                                                                    class="px-3 py-2 text-sm text-gray-500">
+                                                                    No matches. Press Enter to keep custom name.
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <div class="flex w-2/5 gap-1">
-                                                    <!-- Qty -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                               x-model="item.qty" type="number" step="1" min="0"
-                                                               placeholder=""
-                                                               @input="onQtyInput(item); recalcItemsTotal()"
-                                                               :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
-                                                               :max="item.part_id ? (item.stock ?? 0) : null"
-                                                               @blur="onQtyInput(item); recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
-                                                           x-text="item.warn.qty"></p>
-                                                        <label :for="`qty-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                    <div class="flex w-2/5 gap-1">
+                                                        <!-- Qty -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                   x-model="item.qty" type="number" step="1" min="0"
+                                                                   placeholder=""
+                                                                   @input="onQtyInput(item); recalcItemsTotal()"
+                                                                   :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
+                                                                   :max="item.part_id ? (item.stock ?? 0) : null"
+                                                                   @blur="onQtyInput(item); recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
+                                                               x-text="item.warn.qty"></p>
+                                                            <label :for="`qty-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                                     peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Qty
-                                                        </label>
-                                                    </div>
+                                                                Qty
+                                                            </label>
+                                                        </div>
 
-                                                    <!-- Unit price -->
-                                                    <div class="relative flex flex-col w-full">
-                                                        <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                               x-model="item.unit_price" type="number"
-                                                               step="0.01" min="0"
-                                                               @input="recalcItemsTotal()"
-                                                               :readonly="item.priceLocked"
-                                                               :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
-                                                               title="Цена берётся из выбранной запчасти"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`uprice-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                        <!-- Unit price -->
+                                                        <div class="relative flex flex-col w-full">
+                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                   x-model="item.unit_price" type="number"
+                                                                   step="0.01" min="0"
+                                                                   @input="recalcItemsTotal()"
+                                                                   :readonly="item.priceLocked"
+                                                                   :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
+                                                                   title="Цена берётся из выбранной запчасти"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`uprice-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                                     peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit price
-                                                        </label>
+                                                                Unit price
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <!-- Вторая строка: Описание и Unit Cost -->
-                                            <div class="flex gap-2 w-full">
-                                                <div class="flex-1 w-3/5">
+                                                <!-- Вторая строка: Описание и Unit Cost -->
+                                                <div class="flex gap-2 w-full">
+                                                    <div class="flex-1 w-3/5">
                                                                     <textarea x-model="item.description"
                                                                               placeholder="Description (optional)"
                                                                               rows="1"
                                                                               class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
-                                                </div>
-                                                <div class="relative flex flex-col w-2/5">
-                                                    <input :id="`ucost-${index}`" x-model="item.unit_cost"
-                                                           type="number" step="0.1"
-                                                           min="0" @input="recalcItemsTotal()"
-                                                           class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                    <label :for="`ucost-${index}`"
-                                                           class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                    </div>
+                                                    <div class="relative flex flex-col w-2/5">
+                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                               type="number" step="0.1"
+                                                               min="0" @input="recalcItemsTotal()"
+                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                        <label :for="`ucost-${index}`"
+                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                             peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                        Unit cost
-                                                    </label>
+                                                            Unit cost
+                                                        </label>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div class="flex flex-row items-start w-1/5">
-                                        <!-- Итоговая цена -->
-                                        <div class="p-2 text-right text-sm min-w-[70px]">
-                                            <span x-text="formatMoney(item.total)"></span>
-                                        </div>
+                                        <div class="flex flex-row items-start w-1/5">
+                                            <!-- Итоговая цена -->
+                                            <div class="p-2 text-right text-sm min-w-[70px]">
+                                                <span x-text="formatMoney(item.total)"></span>
+                                            </div>
 
-                                        <!-- Удалить -->
-                                        <button @click="removeItem(item.id)"
-                                                class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                tabindex="-1">
-                                            <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                <path d="M6 6l12 12M6 18L18 6"/>
-                                            </svg>
-                                        </button>
+                                            <!-- Удалить -->
+                                            <button @click="removeItem(item.id)"
+                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                    tabindex="-1">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                    <path d="M6 6l12 12M6 18L18 6"/>
+                                                </svg>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
+                            </template>
+                        </div>
+
+                        <div class="border p-4 rounded space-y-4">
+                            <div class="flex justify-between text-sm">
+                                <span>Subtotal</span>
+                                <span x-text="subtotal()"></span>
                             </div>
-                        </template>
-                    </div>
+                            <div class="flex justify-between text-sm">
+                                <span>Tax</span>
+                                <span x-text="taxTotal()"></span>
+                            </div>
+                            <div class="flex justify-between font-semibold text-base">
+                                <span>Total</span>
+                                <span x-text="total()"></span>
+                            </div>
+                        </div>
 
-                    <div class="border p-4 rounded space-y-4">
-                        <div class="flex justify-between text-sm">
-                            <span>Subtotal</span>
-                            <span x-text="subtotal()"></span>
-                        </div>
-                        <div class="flex justify-between text-sm">
-                            <span>Tax</span>
-                            <span x-text="taxTotal()"></span>
-                        </div>
-                        <div class="flex justify-between font-semibold text-base">
-                            <span>Total</span>
-                            <span x-text="total()"></span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
-                        </button>
-                        <template x-if="jobModalForm.message !== null">
+                        <div>
+                            <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
+                            </button>
+                            <template x-if="jobModalForm.message !== null">
                                         <textarea x-model="jobModalForm.message"
                                                   class="w-full border rounded mt-2 px-3 py-2 text-sm"
                                                   placeholder="Add a message..."></textarea>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end mt-6">
+                    <button @click="onSubmit(jobModalForm); jobModalOpen = false"
+                            :disabled="saving || !validateJobModalForm(jobModalForm) || hasQtyErrors"
+                            :class="{'opacity-50 pointer-events-none': saving || !validateJobModalForm(jobModalForm) || hasQtyErrors}">
+                        <span x-show="!saving">Save job</span>
+                        <span x-show="saving">Saving…</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay для клика вне -->
+        <div
+            x-show="popover.open"
+            x-transition.opacity
+            @click="closePopover()"
+            class="fixed inset-0 z-40"
+        ></div>
+
+        <!-- Сам попап -->
+        <div
+            x-show="popover.open"
+            x-transition
+            @keydown.escape.window="closePopover()"
+            @click.outside="closePopover()"
+            class="fixed z-50 w-[360px] max-w-[90vw] bg-white rounded-xl shadow-2xl border border-gray-200"
+            :style="`left:${popover.x}px; top:${popover.y}px`"
+        >
+            <div class="p-4 space-y-3">
+                <!-- Заголовок -->
+                <div class="flex items-start gap-2">
+                    <div class="shrink-0 mt-0.5">
+                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 7h14M5 12h14M5 17h8" stroke="currentColor" stroke-width="1.5"
+                                  stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div class="min-w-0">
+                        <template x-if="settings?.fields?.job_number">
+                            <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
+                        </template>
+                        <template x-if="settings?.fields?.date">
+                            <div class="text-[10px] text-gray-500"
+                                 x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
                         </template>
                     </div>
                 </div>
-            </div>
 
-            <div class="flex justify-end mt-6">
-                <button @click="onSubmit(jobModalForm); jobModalOpen = false"
-                        :disabled="saving || !validateJobModalForm(jobModalForm) || hasQtyErrors"
-                        :class="{'opacity-50 pointer-events-none': saving || !validateJobModalForm(jobModalForm) || hasQtyErrors}">
-                    <span x-show="!saving">Save job</span>
-                    <span x-show="saving">Saving…</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Overlay для клика вне -->
-    <div
-        x-show="popover.open"
-        x-transition.opacity
-        @click="closePopover()"
-        class="fixed inset-0 z-40"
-    ></div>
-
-    <!-- Сам попап -->
-    <div
-        x-show="popover.open"
-        x-transition
-        @keydown.escape.window="closePopover()"
-        @click.outside="closePopover()"
-        class="fixed z-50 w-[360px] max-w-[90vw] bg-white rounded-xl shadow-2xl border border-gray-200"
-        :style="`left:${popover.x}px; top:${popover.y}px`"
-    >
-        <div class="p-4 space-y-3">
-            <!-- Заголовок -->
-            <div class="flex items-start gap-2">
-                <div class="shrink-0 mt-0.5">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M5 7h14M5 12h14M5 17h8" stroke="currentColor" stroke-width="1.5"
-                              stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="min-w-0">
-                    <template x-if="settings?.fields?.job_number">
-                        <div class="font-semibold text-gray-900 truncate" x-text="popover.job?.title"></div>
-                    </template>
-                    <template x-if="settings?.fields?.date">
-                        <div class="text-[10px] text-gray-500"
-                            x-text="dayjs(popover.job?.day).format('MMM D YYYY')+' '+formatTime(popover.job?.start, popover.job?.end)"></div>
-                    </template>
-                </div>
-            </div>
-
-            <!-- Описание -->
-            <template x-if="settings?.fields?.description">
-            <div class="flex items-start gap-2" x-show="popover.job?.description">
-                <div class="shrink-0 mt-0.5" title="Job description">
-                    <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                        <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.5"
-                              stroke-linecap="round"/>
-                    </svg>
-                </div>
-                <div class="text-sm text-gray-700 whitespace-pre-wrap" x-text="popover.job?.description  || '—'"></div>
-            </div>
-            </template>
-
-            <!-- Цена -->
-            <template x-if="settings?.fields?.amount">
-                <div class="flex items-center gap-2">
-                    <div class="shrink-0" title="Price">
-                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                            <path
-                                d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
-                                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
+                <!-- Описание -->
+                <template x-if="settings?.fields?.description">
+                    <div class="flex items-start gap-2" x-show="popover.job?.description">
+                        <div class="shrink-0 mt-0.5" title="Job description">
+                            <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                                <path d="M4 6h16M4 12h10M4 18h7" stroke="currentColor" stroke-width="1.5"
+                                      stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="text-sm text-gray-700 whitespace-pre-wrap"
+                             x-text="popover.job?.description  || '—'"></div>
                     </div>
-                    <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
-                </div>
-            </template>
+                </template>
 
-            <!-- Клиент -->
-            <template x-if="settings?.fields?.customer">
-                <div class="flex items-start gap-2">
-                    <div class="shrink-0 mt-0.5" title="Customer">
-                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                            <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
+                <!-- Цена -->
+                <template x-if="settings?.fields?.amount">
+                    <div class="flex items-center gap-2">
+                        <div class="shrink-0" title="Price">
+                            <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M12 3v18M8 7c0-1.657 1.79-3 4-3 1.657 0 3 .895 3 2s-1 2-3 2-4 1-4 3 1.79 3 4 3 3-.895 3-2"
+                                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <div class="text-sm font-medium text-gray-900" x-text="formatMoney(popover.job?.price)"></div>
+                    </div>
+                </template>
+
+                <!-- Клиент -->
+                <template x-if="settings?.fields?.customer">
+                    <div class="flex items-start gap-2">
+                        <div class="shrink-0 mt-0.5" title="Customer">
+                            <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                                <path d="M15 7a3 3 0 11-6 0 3 3 0 016 0zM4 20a8 8 0 1116 0" stroke="currentColor"
                                       stroke-width="1.5" stroke-linecap="round"/>
-                        </svg>
+                            </svg>
+                        </div>
+                        <div class="text-sm text-gray-700 leading-5">
+                            <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
+                            <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
+                            <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
+                        </div>
                     </div>
-                    <div class="text-sm text-gray-700 leading-5">
-                        <div class="font-medium text-gray-900" x-text="popover.job?.client?.name"></div>
-                        <div class="text-gray-600" x-text="popover.job?.client?.address"></div>
-                        <div class="text-gray-600" x-text="popover.job?.client?.phone"></div>
-                    </div>
-                </div>
-            </template>
+                </template>
 
-            <!-- Техник -->
-            <template x-if="settings?.fields?.technician">
-                <div class="flex items-center gap-2">
-                    <div class="shrink-0" title="Technician">
-                        <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
-                                  stroke="currentColor" stroke-width="1.5"/>
-                        </svg>
+                <!-- Техник -->
+                <template x-if="settings?.fields?.technician">
+                    <div class="flex items-center gap-2">
+                        <div class="shrink-0" title="Technician">
+                            <svg class="w-5 h-5 text-gray-500" viewBox="0 0 24 24" fill="none">
+                                <path
+                                    d="M12 6a3 3 0 110 6 3 3 0 010-6zm0 7c-3.866 0-7 2.239-7 5v1h14v-1c0-2.761-3.134-5-7-5z"
+                                    stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                        </div>
+                        <div class="text-sm text-gray-700">
+                            <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
+                        </div>
                     </div>
-                    <div class="text-sm text-gray-700">
-                        <span class="font-medium text-gray-900" x-text="popover.job?.technician?.name"></span>
-                    </div>
-                </div>
-            </template>
+                </template>
+            </div>
         </div>
     </div>
 </div>
-
 <script>
     window.GEOAPIFY_KEY = "{{ config('services.geoapify.key') }}";
 
@@ -1652,71 +1672,6 @@
 
     function scheduler() {
         return {
-            init() {
-                if (!this.currentDayISO) this.currentDayISO = this.tz().format('YYYY-MM-DD');
-                if (!this.weekStart) this.weekStart = this.startOfWeek(this.tz()).format('YYYY-MM-DD');
-
-                this.invalidateLanes = () => {
-                    this._lanesCache = {};
-                };
-                this.stopClock();
-
-                this.setWeek(this.tz());
-
-                this.loadSettings();
-                this.applySettings(true);
-
-                this.$watch('settings', () => {}); // (чтобы Alpine держал реактивность)
-                window.addEventListener('cal-settings:changed', (e) => {
-                    this.settings = e.detail;
-                    this.applySettings();
-                });
-
-                this.$watch('tasks', () => this.invalidateLanes());
-
-                /*this.$watch('mapView', () => {
-                    if (this.mapView === 'day') this.$nextTick(() => this.renderDayGrid());
-                });*/
-
-                this.fetchForCurrentView().finally(() => {
-                    this.startClock();
-                });
-
-                window.addEventListener('map:shown', () => {
-                    try {
-                        // когда вкладка «Map» показана — подровняем и перерисуем
-                        window.Alpine.store?.manager?.dbg('event: map:shown');
-                    } catch {
-                    }
-                });
-
-                window.addEventListener('customer-created', event => {
-                    const data = event.detail[0];
-                    this.jobModalForm.customer_query = data.name + (data.email ? ' (' + data.email + ')' : '');
-                    this.jobModalForm.customer_id = data.id;
-                    this.jobModalForm.selectedCustomer = data;
-                    this.showCustomerModal = false;
-                    this.customerError = '';
-                });
-
-                window.addEventListener('search-customers-result', e => {
-                    this.jobModalForm.results = Array.isArray(e.detail[0]) ? e.detail.flat() : e.detail;
-                });
-
-                window.addEventListener('customer-selected', (event) => {
-                    this.jobModalForm.selectedCustomer = event.detail;
-                    this.jobModalForm.customer_query = event.detail.name + (event.detail.email ? ' (' + event.detail.email + ')' : '');
-                    this.jobModalForm.customer_id = event.detail.id;
-                    this.showCustomerModal = false;
-                });
-
-                window.addEventListener('tasks-refetch', () => {
-                    const from = this.days[0].date;
-                    const to = this.days[6].date;
-                    this.fetchWeek(from, to);
-                });
-            },
-
             _onDragHandler: null,
             _onDropHandler: null,
 
@@ -1797,6 +1752,7 @@
             DAY_END_HOUR: 22,
             DAY_OPEN_HOUR: 7,
             DAY_HEADER_H: 30,
+            HOLIDAY_H: 30,
             pxPerMin: 1,
             selecting: false,
             selStartIdx: null,
@@ -1804,11 +1760,14 @@
             dayTimeSlots: [],
 
             APP_TZ: dayjs.tz.guess(),
-            BUSINESS_START: 7,
+            BUSINESS_START: 6,
             BUSINESS_END: 21.5,
 
-            dayStartHour: 7,
-            dayEndHour: 21.5,
+            dayStartHour: 6,
+            dayEndHour: 22,
+
+            _reqId: 0,
+            _fetching: false,
 
             holidays: new Map(),
             loadedHolidayYears: new Set(),
@@ -1838,10 +1797,86 @@
                 technician: 'Technician'
             },
             form: {},
-            openSettings() { this.schedulerSettingsOpenState = true; this.$nextTick(() => document.querySelector('[role="dialog"] select')?.focus());},
-            closeSettings() { this.schedulerSettingsOpenState = false; },
+
+            init() {
+                this.invalidateLanes = () => {
+                    this._lanesCache = {};
+                };
+                this.stopClock();
+
+                this.setWeek(this.tz());
+
+                this.loadSettings();
+                this.applySettings(true);
+
+                this.$watch('settings', () => {
+                }); // (чтобы Alpine держал реактивность)
+                window.addEventListener('cal-settings:changed', (e) => {
+                    this.settings = e.detail;
+                    this.applySettings();
+                });
+
+                this.$watch('weekStart', () => this.queueFetch());
+                this.$watch('currentDayISO', () => this.queueFetch());
+                this.$watch('view', () => this.queueFetch());
+                this.$watch('settings.usHolidays', () => this.queueFetch());
+
+                if (!this.currentDayISO) this.currentDayISO = this.tz().format('YYYY-MM-DD');
+                if (!this.weekStart) this.weekStart = this.startOfWeek(this.tz()).format('YYYY-MM-DD');
+
+                this.$watch('tasks', () => this.invalidateLanes());
+
+                /*this.$watch('mapView', () => {
+                    if (this.mapView === 'day') this.$nextTick(() => this.renderDayGrid());
+                });*/
+
+                this.fetchForCurrentView().finally(() => {
+                    this.startClock();
+                });
+
+                window.addEventListener('map:shown', () => {
+                    try {
+                        // когда вкладка «Map» показана — подровняем и перерисуем
+                        window.Alpine.store?.manager?.dbg('event: map:shown');
+                    } catch {
+                    }
+                });
+
+                window.addEventListener('customer-created', event => {
+                    const data = event.detail[0];
+                    this.jobModalForm.customer_query = data.name + (data.email ? ' (' + data.email + ')' : '');
+                    this.jobModalForm.customer_id = data.id;
+                    this.jobModalForm.selectedCustomer = data;
+                    this.showCustomerModal = false;
+                    this.customerError = '';
+                });
+
+                window.addEventListener('search-customers-result', e => {
+                    this.jobModalForm.results = Array.isArray(e.detail[0]) ? e.detail.flat() : e.detail;
+                });
+
+                window.addEventListener('customer-selected', (event) => {
+                    this.jobModalForm.selectedCustomer = event.detail;
+                    this.jobModalForm.customer_query = event.detail.name + (event.detail.email ? ' (' + event.detail.email + ')' : '');
+                    this.jobModalForm.customer_id = event.detail.id;
+                    this.showCustomerModal = false;
+                });
+
+                window.addEventListener('tasks-refetch', () => {
+                    const from = this.days[0].date;
+                    const to = this.days[6].date;
+                    this.fetchWeek(from, to);
+                });
+            },
+
+            openSettings() {
+                this.schedulerSettingsOpenState = true;
+                this.$nextTick(() => document.querySelector('[role="dialog"] select')?.focus());
+            },
+            closeSettings() {
+                this.schedulerSettingsOpenState = false;
+            },
             loadSettings() {
-                const self = this;
                 const defaults = {
                     tz: this.APP_TZ,
                     onlyBusiness: true,
@@ -1852,7 +1887,7 @@
                 this.form = {
                     ...defaults,
                     ...raw,
-                    fields: { ...defaults.fields, ...(raw.fields || {}) },
+                    fields: {...defaults.fields, ...(raw.fields || {})},
                     onlyBusiness: !!raw.onlyBusiness,
                     usHolidays: !!raw.usHolidays,
                 };
@@ -1864,8 +1899,8 @@
                     const payload = {
                         tz: self.form.tz,
                         onlyBusiness: !!self.form.onlyBusiness,
-                        usHolidays:  !!self.form.usHolidays,
-                        fields: { ...self.form.fields },
+                        usHolidays: !!self.form.usHolidays,
+                        fields: {...self.form.fields},
                     };
 
                     const saved = await this.$wire.call('saveSchedulerSettings', payload);
@@ -1898,17 +1933,19 @@
                 // 2) Диапазон видимых часов
                 if (this.settings?.onlyBusiness) {
                     this.dayStartHour = this.BUSINESS_START;
-                    this.dayEndHour   = this.BUSINESS_END;
+                    this.dayEndHour = this.BUSINESS_END;
                 } else {
                     this.dayStartHour = this.DAY_START_HOUR;
-                    this.dayEndHour   = this.DAY_END_HOUR;
+                    this.dayEndHour = this.DAY_END_HOUR;
                 }
 
                 await this.$nextTick();
                 this.resetLaneCaches();
 
                 // 4) Перерисовать / перезагрузить задачи в текущем виде
-                if (!initial) { await this.fetchForCurrentView?.(); }
+                if (!initial) {
+                    await this.fetchForCurrentView?.();
+                }
                 await this.loadHolidaysForCurrentView();
             },
 
@@ -1922,11 +1959,12 @@
                 let from, to;
                 if (this.view === 'day') {
                     const d = this.currentDayISO || this.tz().format('YYYY-MM-DD');
-                    from = d; to = d;
+                    from = d;
+                    to = d;
                 } else {
                     const s = this.weekStart ? this.tz(this.weekStart) : this.startOfWeek(this.tz());
                     from = s.startOf('day').format('YYYY-MM-DD');
-                    to   = s.add(6,'day').endOf('day').format('YYYY-MM-DD');
+                    to = s.add(6, 'day').endOf('day').format('YYYY-MM-DD');
                 }
 
                 const rows = await this.$wire.call('loadHolidaysForRange', from, to);
@@ -1937,6 +1975,11 @@
 
             holidayName(dayISO) {
                 return this.holidays.get(dayISO) || 'Holiday';
+            },
+
+            get topOffset() {
+                const hasHoliday = this.settings.usHolidays && this.holidays.has(this.currentDayISO);
+                return this.DAY_HEADER_H + (hasHoliday ? this.HOLIDAY_H : 0);
             },
 
             to12h(h) {
@@ -2051,11 +2094,6 @@
                 });
                 this.ensureCurrentDayIsInWeek();
 
-                /*this.currentDayISO =
-                    (cur.isValid() && cur.isBetween(start, end, 'day', '[]'))
-                        ? cur.format('YYYY-MM-DD')
-                        : start.format('YYYY-MM-DD');*/
-
                 if (this.fetchWeek) {
                     await this.fetchWeek(this.days[0].date, this.days[6].date);
                     this.pendingMapRefresh = true;
@@ -2071,6 +2109,10 @@
                 this.resetLaneCaches();
             },
 
+            queueFetch: Alpine.debounce(function () {
+                this.fetchForCurrentView();
+            }, 0),
+
             toDate(d) {
                 const m = this.safeTz(d);
                 return m ? new Date(m.valueOf()) : new Date();
@@ -2079,7 +2121,7 @@
             get dayCells() {
                 const out = [];
                 const startMin = this.DAY_START_HOUR * 60;
-                const endMin   = this.DAY_END_HOUR   * 60;
+                const endMin = this.DAY_END_HOUR * 60;
                 let idx = 0;
 
                 for (let m = startMin; m < endMin; m += 30, idx++) {
@@ -2111,8 +2153,12 @@
                 }
             },
 
-            prev() { return this.view === 'day' ? this.moveDay(-1) : this.moveWeek(-1); },
-            next() { return this.view === 'day' ? this.moveDay(1)  : this.moveWeek(1);  },
+            prev() {
+                return this.view === 'day' ? this.moveDay(-1) : this.moveWeek(-1);
+            },
+            next() {
+                return this.view === 'day' ? this.moveDay(1) : this.moveWeek(1);
+            },
 
             get headerLabel() {
                 if (this.view === 'day') {
@@ -2130,8 +2176,7 @@
                     : (this.safeTz(this.weekStart) || this.startOfWeek(this.tz()));
 
                 await this.setWeek(this.startOfWeek(base.add(delta, 'week')));
-                this.$dispatch('week:changed', { start: this.startOfWeek(this.tz()) });
-                await this.fetchForCurrentView();
+                this.$dispatch('week:changed', {start: this.startOfWeek(this.tz())});
             },
 
             async goToday() {
@@ -2161,13 +2206,11 @@
                 return !!cur && cur.isSame(this.tz(), 'day');
             },
 
-            loadSeq: 0,
-            isFetching: false,
-
             async fetchForCurrentView() {
-                const seq = ++this.loadSeq;
-                if (this.isFetching) return;
-                this.isFetching = true;
+                if (this._fetching) return;
+                const req = ++this._reqId;
+                this._fetching = true;
+                this.isLoading = true;
 
                 try {
                     if (this.view === 'day') {
@@ -2179,7 +2222,7 @@
                     }
 
                     // если за время ожидания стартовал еще один fetch — прерываем пост-обработку
-                    if (seq !== this.loadSeq) return;
+                    if (req !== this._reqId) return;
 
                     if (this.mode === 'map') {
                         await this.hardRefreshMap(true);
@@ -2192,7 +2235,9 @@
                     this.resetLaneCaches();
                     await this.loadHolidaysForCurrentView();
                 } finally {
-                    if (seq === this.loadSeq) this.isFetching = false;
+                    if (req === this._reqId) this.isLoading = false;
+                    this._fetching = false;
+                    await this.$nextTick();
                 }
             },
 
@@ -2205,7 +2250,7 @@
                 this.isLoading = true;
                 try {
                     const from = this.toISO(fromDate);
-                    const to   = this.toISO(toDate);
+                    const to = this.toISO(toDate);
 
                     const tasks = await this.$wire.call('loadTasksForRange', from, to);
                     this.tasks = tasks ?? [];
@@ -2240,8 +2285,7 @@
             moveDay(delta) {
                 const cur = this.currentDayISO ? this.tz(this.currentDayISO) : this.tz();
                 this.currentDayISO = cur.add(delta, 'day').format('YYYY-MM-DD');
-                //this.renderDayGrid();
-                this.fetchForCurrentView();
+                //this.fetchForCurrentView();
             },
 
             get daySlots() {
@@ -2262,7 +2306,7 @@
 
             // высота всей области дня
             get dayGridHeight() {
-                return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 50;
+                return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 30;
             },
 
             get hours() {
@@ -2478,16 +2522,16 @@
                 const b = Math.max(this.selStartIdx, this.selEndIdx);
 
                 const startMinutesFromOpen = a * 30;
-                const endMinutesFromOpen   = (b + 1) * 30;
+                const endMinutesFromOpen = (b + 1) * 30;
 
                 // абсолютные минуты от полуночи
                 const absStartMin = this.DAY_START_HOUR * 60 + startMinutesFromOpen;
-                const absEndMin   = this.DAY_START_HOUR * 60 + endMinutesFromOpen;
+                const absEndMin = this.DAY_START_HOUR * 60 + endMinutesFromOpen;
 
                 // перерасчёт в «часы:мин» текущего дня (dayjs)
                 const d = this.tz(this.currentDayISO ?? this.tz());
                 const start = d.hour(0).minute(0).second(0).add(absStartMin, 'minute');
-                const end   = d.hour(0).minute(0).second(0).add(absEndMin, 'minute');
+                const end = d.hour(0).minute(0).second(0).add(absEndMin, 'minute');
 
                 // здесь делайте то же, что делаете в неделе (создание задачи / модалка)
                 // this.createTaskFromSelection(start, end) ...
@@ -3036,12 +3080,12 @@
 
             prepTaskForDay(t, dayISO) {
                 // день начала сетки (например, 06:00)
-                const dayStart = dayjs.tz(`${dayISO} ${String(this.DAY_START_HOUR).padStart(2,'0')}:00:00`, this.FMT, this.APP_TZ);
-                const dayEnd   = dayStart.clone().add((this.DAY_END_HOUR - this.DAY_START_HOUR), 'hour');
+                const dayStart = dayjs.tz(`${dayISO} ${String(this.DAY_START_HOUR).padStart(2, '0')}:00:00`, this.FMT, this.APP_TZ);
+                const dayEnd = dayStart.clone().add((this.DAY_END_HOUR - this.DAY_START_HOUR), 'hour');
 
                 // реальные время старта/финиша
                 const start = dayjs.tz(`${t.day} ${t.start}`, this.FMT, this.APP_TZ);
-                const end   = dayjs.tz(`${t.day} ${t.end}`,   this.FMT, this.APP_TZ);
+                const end = dayjs.tz(`${t.day} ${t.end}`, this.FMT, this.APP_TZ);
 
                 // обрезаем по границам рабочего дня
                 const s = start.isBefore(dayStart) ? dayStart : start;
@@ -3049,11 +3093,11 @@
 
                 // минуты от начала дня -> px
                 const topMin = Math.max(0, s.diff(dayStart, 'minute'));
-                const hMin   = Math.max(0, e.diff(s, 'minute'));
+                const hMin = Math.max(0, e.diff(s, 'minute'));
 
                 return {
                     ...t,
-                    _top:    topMin * this.pxPerMin,   // pxPerMin = HOUR_PX / 60
+                    _top: topMin * this.pxPerMin,   // pxPerMin = HOUR_PX / 60
                     _height: Math.max(1, hMin * this.pxPerMin),
                 };
             },
@@ -3062,7 +3106,7 @@
                 return (this.tasks || [])
                     .filter(t => String(t.day) === String(dayISO))
                     .map(t => this.prepTaskForDay(t, dayISO))
-                    .sort((a,b) => dayjs(`2000-01-01 ${a.start}`).diff(dayjs(`2000-01-01 ${b.start}`)));
+                    .sort((a, b) => dayjs(`2000-01-01 ${a.start}`).diff(dayjs(`2000-01-01 ${b.start}`)));
             },
             groupByTech(tasks) {
                 const by = new Map();
@@ -3642,9 +3686,9 @@
 
             totalForItems(items = []) {
                 return items.reduce((sum, i) => {
-                    const qty  = Number(i.qty ?? 0);
-                    const p    = Number(i.unit_price ?? i.price ?? 0);
-                    const tot  = Number(i.total ?? (qty * p));
+                    const qty = Number(i.qty ?? 0);
+                    const p = Number(i.unit_price ?? i.price ?? 0);
+                    const tot = Number(i.total ?? (qty * p));
                     return sum + (isFinite(tot) ? tot : 0);
                 }, 0);
             },
@@ -3652,11 +3696,11 @@
                 // t.day = 'YYYY-MM-DD', t.start/end = 'HH:mm:ss'
                 // Используйте ваши dayjs/this.tz/... если нужно TZ
                 const start = `${t.day} ${t.start ?? ''}`.trim();
-                const end   = `${t.day} ${t.end ?? ''}`.trim();
+                const end = `${t.day} ${t.end ?? ''}`.trim();
                 // Если есть ваши функции форматирования — используйте их
                 const s12 = this.to12Hour ? this.to12Hour(t.start, t.day) : (t.start ?? '');
-                const e12 = this.to12Hour ? this.to12Hour(t.end,   t.day) : (t.end ?? '');
-                return { formatted: `${s12} – ${e12}`, start12: s12, end12: e12, start, end };
+                const e12 = this.to12Hour ? this.to12Hour(t.end, t.day) : (t.end ?? '');
+                return {formatted: `${s12} – ${e12}`, start12: s12, end12: e12, start, end};
             },
             techNamesOf(t) {
                 const list = this.employees || [];
@@ -3746,7 +3790,7 @@
                     txt('div', t.client?.address ?? '');
                     line(`<b>Phone: </b>${t.client?.phone ?? ''}`);
                 }
-                if (this.showField('technician')){
+                if (this.showField('technician')) {
                     line(`<b>Technician: </b>${techNames ?? ''}`);
                 }
                 return root;
