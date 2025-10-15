@@ -37,8 +37,8 @@ class ManagerSchedule extends Component
     public array $defaultTimeSlots = [];
     public int $timeSlotsBaseCount = 0;
     public bool $isLoading = false;
-    public string $dayStart = '06:00';
-    public string $dayEnd   = '22:00';
+    public int $dayStartHour = 6;
+    public int $dayEndHour   = 22;
 
     public $jobModalForm = [
         'schedule_from' => '',
@@ -101,16 +101,36 @@ class ManagerSchedule extends Component
             $this->days[] = $startOfWeek->copy()->addDays($i)->toDateString();
         }
 
-        $start = Carbon::createFromTimeString('06:00');
-        $end = Carbon::createFromTimeString('22:00');
-        while ($start < $end) {
-            $this->timeSlots[] = $start->format('g:i A');
-            $this->defaultTimeSlots[] = $start->format('g:i A');
+        $this->rebuildTimeSlots();
+        $this->loadTasks();
+    }
+
+    private function rebuildTimeSlots(): void
+    {
+        // 1) Часы видимости
+        if (!empty($this->settings['onlyBusiness'])) {
+            $this->dayStartHour = 6;
+            $this->dayEndHour   = 22;
+        } else {
+            $this->dayStartHour = 0;
+            $this->dayEndHour   = 24;
+        }
+
+        // 2) Слоты: [start, end) без финального «end»
+        $start = Carbon::createFromTime($this->dayStartHour, 0, 0);
+        $end   = Carbon::createFromTime($this->dayEndHour, 0, 0);
+
+        $this->timeSlots = [];
+        $this->defaultTimeSlots = [];
+
+        while ($start->lt($end)) {
+            $label = $start->format('g:i A');
+            $this->timeSlots[]        = $label;
+            $this->defaultTimeSlots[] = $label;
             $start->addMinutes(30);
         }
-        $this->timeSlots[] = $end->format('g:i A');
 
-        $this->loadTasks();
+        $this->timeSlotsBaseCount = count($this->defaultTimeSlots);
     }
 
     private function loadSchedulerSettings(): array
@@ -150,6 +170,7 @@ class ManagerSchedule extends Component
 
         // вернём то, чем реально будем пользоваться на фронте
         $this->settings = $this->loadSchedulerSettings();
+        $this->rebuildTimeSlots();
 
         return $this->settings;
     }
@@ -603,7 +624,7 @@ class ManagerSchedule extends Component
                 $maxLanes = $lanes;
             }
         }
-        $this->timeSlots = $this->buildTimeSlots($this->dayStart, $this->dayEnd, 30, $maxLanes);
+        $this->timeSlots = $this->buildTimeSlots($this->dayStartHour, $this->dayEndHour, 30, $maxLanes);
     }
 
     /**

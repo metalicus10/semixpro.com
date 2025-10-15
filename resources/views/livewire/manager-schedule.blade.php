@@ -374,12 +374,15 @@
                 </div>
             </template>
 
-            <div class="flex items-center top-0 z-10 h-[20px] w-full border-b border-gray-300 day-grid-top-panel-border">
-                <div class="flex w-[50px] h-full text-[9px] justify-center items-center px-0 border-r border-gray-300">GMT-04</div>
+            <div
+                class="flex items-center top-0 z-10 h-[20px] w-full border-b border-gray-300 day-grid-top-panel-border">
+                <div class="flex w-[50px] h-full text-[9px] justify-center items-center px-0 border-r border-gray-300">
+                    GMT-04
+                </div>
                 <div class="flex-1"></div>
             </div>
 
-            <div id="dayGrid" class="relative bg-white pb-5"
+            <div id="dayGrid" class="relative bg-white pb-3"
                  :style="`height:${dayGridHeight}px`">
                 <div class="relative" :style="`min-height:${dayGridHeight}px`">
                     <div
@@ -387,55 +390,80 @@
                         style="z-index: 5"
                         :style="{
                               top: 0,
-                              height: `${(dayEndHour - dayStartHour) * 60 * pxPerMin + 30}px`,
+                              height: `${(dayEndHour - dayStartHour) * 60 * pxPerMin}px`,
                             }"
                         @mousedown.stop
                         @click.stop
                         @touchstart.stop
                     ></div>
+
+                    <!-- маска 12:00am – 12:30am -->
+                    <template x-if="!settings.onlyBusiness">
+                        <div
+                            class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
+                            style="z-index: 5"
+                            :style="`top: 0; height: ${30 * pxPerMin}px`"
+                            @mousedown.stop @click.stop @touchstart.stop
+                            title="Недоступно для создания задач">
+                        </div>
+                    </template>
+
+                    <!-- маска 11:30pm – 12:00am -->
+                    <template x-if="!settings.onlyBusiness">
+                        <div
+                            class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
+                            style="z-index: 5"
+                            :style="`top: ${(dayEndHour - dayStartHour) * 60 * pxPerMin - 30 * pxPerMin}px;
+                                height: ${30 * pxPerMin}px`"
+                            @mousedown.stop @click.stop @touchstart.stop
+                            title="Недоступно для создания задач">
+                        </div>
+                    </template>
 
                     <!-- маска 6:00–7:00 -->
-                    <div
-                        class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
-                        style="z-index: 5"
-                        :style="{
-                              top: 0,
-                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 30}px`
-                            }"
-                        @mousedown.stop
-                        @click.stop
-                        @touchstart.stop
-                        title="Недоступно для создания задач"
-                    ></div>
+                    <template x-if="settings.onlyBusiness">
+                        <div
+                            class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
+                            style="z-index: 5"
+                            :style="{
+                                  top: 0,
+                                  height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 30}px`
+                                }"
+                            @mousedown.stop
+                            @click.stop
+                            @touchstart.stop
+                            title="Недоступно для создания задач"
+                        ></div>
+                    </template>
 
                     <!-- маска 9:30PM – 10:00PM -->
-                    <div
-                        class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
-                        style="z-index: 5"
-                        :style="{
-                              top: `${(dayEndHour - dayStartHour) * 60 * pxPerMin - 0}px`,
-                              height: `${(DAY_OPEN_HOUR - dayStartHour) * 60 * pxPerMin - 30}px`
-                            }"
-                        @mousedown.stop
-                        @click.stop
-                        @touchstart.stop
-                        title="Недоступно для создания задач"
-                    ></div>
+                    <template x-if="settings.onlyBusiness">
+                        <div
+                            class="absolute left-[50px] right-0 bg-gray-200/60 cursor-not-allowed"
+                            style="z-index: 5"
+                            :style="{
+                                  top: `${(dayEndHour - dayStartHour) * 60 * pxPerMin - 30}px`,
+                                  height: `${30 * pxPerMin}px`,
+                                }"
+                            @mousedown.stop
+                            @click.stop
+                            @touchstart.stop
+                            title="Недоступно для создания задач"
+                        ></div>
+                    </template>
 
                     <!-- ЧАСОВЫЕ линии + подпись -->
                     <template x-for="slot in hours" :key="slot.h">
-                        <template x-if="slot.h >= DAY_OPEN_HOUR">
-                            <div>
-                                <!-- толстая часовая линия -->
-                                <div class="absolute left-10 right-0 border-t border-gray-300"
-                                     :style="`top:${slot.top}px`"></div>
+                        <div>
+                            <!-- толстая часовая линия -->
+                            <div class="absolute left-10 right-0 border-t border-gray-300"
+                                 :style="`top:${slot.top}px`"></div>
 
-                                <!-- подпись по центру часа -->
-                                <div class="absolute left-2 text-[11px] text-gray-500 select-none"
-                                     :style="`top:${slot.center}px; transform:translateY(-50%);`"
-                                     x-text="slot.label"></div>
-                            </div>
-                        </template>
+                            <!-- подпись по центру часа -->
+                            <div class="absolute left-2 text-[11px] text-gray-500 select-none"
+                                 :style="`top:${slot.center}px; transform:translateY(-50%);`"
+                                 x-text="slot.label"></div>
+                        </div>
                     </template>
 
                     <!-- ПОЛУЧАСОВЫЕ тонкие линии -->
@@ -444,13 +472,13 @@
                              :style="`top:${hh.top}px`"></div>
                     </template>
 
-                    <div class="absolute inset-x-0" :style="`top:0; bottom:0;height:960px;`"
+                    <div class="absolute inset-x-0" :style="`top:0; bottom:0;height:100%;`"
                          @mouseleave="selecting && endSelectionDay()"
                     >
                         <template x-for="cell in dayCells" :key="cell.i">
                             <div
                                 class="absolute left-12 right-0 border-b border-transparent select-none"
-                                :style="`top:${cell.top}px; height:${cell.h + 2}px;`"
+                                :style="`top:${cell.top}px; height:${cell.h}px;`"
                                 :class="{
                                     'pointer-events-none':
                                       cell.min < DAY_OPEN_HOUR*60 ||
@@ -1679,12 +1707,14 @@
             timeSlots: @entangle('timeSlots'),
             defaultTimeSlots: @entangle('defaultTimeSlots'),
             baseCount: @entangle('timeSlotsBaseCount'),
+            dayStartHour: @entangle('dayStartHour'),
+            dayEndHour: @entangle('dayEndHour'),
             tasks: @entangle('tasks'),
             settings: @entangle('settings'),
             now: new Date(),
             slotWidthPx: 30,
             rowHeightPx: 60,
-            wrapCols: 32,
+            wrapCols: 0,
             sel: {idx: null, emp: null, day: null, startIdx: null, endIdx: null},
             menuX: 0,
             menuY: 0,
@@ -1748,10 +1778,8 @@
             weekStart: '',
             days: [],
             firstDay: 1,
-            DAY_START_HOUR: 6,
-            DAY_END_HOUR: 22,
             DAY_OPEN_HOUR: 7,
-            DAY_HEADER_H: 30,
+            DAY_HEADER_H: 0,
             HOLIDAY_H: 30,
             pxPerMin: 1,
             selecting: false,
@@ -1761,10 +1789,7 @@
 
             APP_TZ: dayjs.tz.guess(),
             BUSINESS_START: 6,
-            BUSINESS_END: 21.5,
-
-            dayStartHour: 6,
-            dayEndHour: 22,
+            BUSINESS_END: 22,
 
             _reqId: 0,
             _fetching: false,
@@ -1778,7 +1803,8 @@
                 {value: 'America/New_York', label: '(GMT-04:00) Eastern Time - New York'},
                 {value: 'America/Chicago', label: '(GMT-05:00) Central Time - Chicago'},
                 {value: 'America/Denver', label: '(GMT-06:00) Mountain Time - Denver'},
-                {value: 'America/Los_Angeles', label: '(GMT-07:00) Pacific Time - Los Angeles'}
+                {value: 'America/Los_Angeles', label: '(GMT-07:00) Pacific Time - Los Angeles'},
+                {value: 'Asia/Vladivostok', label: '(GMT+10:00) Vladivostok Time'},
             ],
             labels: {
                 job_number: 'Job number',
@@ -1809,8 +1835,17 @@
                 this.loadSettings();
                 this.applySettings(true);
 
-                this.$watch('settings', () => {
-                }); // (чтобы Alpine держал реактивность)
+                this.wrapCols = this.baseCount;
+
+                this.$watch('settings.onlyBusiness', () => {
+                    this.wrapCols = this.baseCount;
+                    this.invalidateLanes();
+                    this.queueFetch();
+                });
+
+                this.$watch('baseCount', v => this.wrapCols = v);
+
+                this.$watch('settings', () => {});
                 window.addEventListener('cal-settings:changed', (e) => {
                     this.settings = e.detail;
                     this.applySettings();
@@ -1909,10 +1944,9 @@
                     // обновляем локальные настройки тем, что пришло с бэка
                     self.settings = saved || self.settings;
 
+                    this.closeSettings();
                     // применяем и перерисовываем
                     await this.applySettings(false);
-
-                    this.closeSettings(); // закрыть модалку
                 } catch (e) {
                     console.error('Failed to save settings', e);
                 }
@@ -1933,10 +1967,12 @@
                 // 2) Диапазон видимых часов
                 if (this.settings?.onlyBusiness) {
                     this.dayStartHour = this.BUSINESS_START;
-                    this.dayEndHour = this.BUSINESS_END;
+                    this.dayEndHour   = this.BUSINESS_END;
+                    this.wrapCols     = 32;
                 } else {
-                    this.dayStartHour = this.DAY_START_HOUR;
-                    this.dayEndHour = this.DAY_END_HOUR;
+                    this.dayStartHour = 0;
+                    this.dayEndHour   = 24;
+                    this.wrapCols     = 64;
                 }
 
                 await this.$nextTick();
@@ -1980,6 +2016,10 @@
             get topOffset() {
                 const hasHoliday = this.settings.usHolidays && this.holidays.has(this.currentDayISO);
                 return this.DAY_HEADER_H + (hasHoliday ? this.HOLIDAY_H : 0);
+            },
+
+            toPx(minutesFromMidnight) {
+                return (minutesFromMidnight - this.dayStartHour * 60) * this.pxPerMin;
             },
 
             to12h(h) {
@@ -2120,11 +2160,11 @@
 
             get dayCells() {
                 const out = [];
-                const startMin = this.DAY_START_HOUR * 60;
-                const endMin = this.DAY_END_HOUR * 60;
+                const startMin = this.dayStartHour * 60;
+                const endMin = this.dayEndHour * 60;
                 let idx = 0;
 
-                for (let m = startMin; m < endMin; m += 30, idx++) {
+                for (let m = startMin; m <= endMin; m += this.slotWidthPx, idx++) {
                     const top = this.DAY_HEADER_H + (m - startMin) * this.pxPerMin;
                     out.push({
                         i: idx,
@@ -2290,12 +2330,12 @@
 
             get daySlots() {
                 const out = [];
-                for (let h = this.DAY_START_HOUR; h <= this.DAY_END_HOUR; h++) {
-                    const top = (h - this.DAY_START_HOUR) * 60 * this.pxPerMin;
+                for (let h = this.dayStartHour; h <= this.dayEndHour; h++) {
+                    const top = (h - this.dayStartHour) * 60 * this.pxPerMin;
                     let yHour = (h * 60) * this.pxPerMin;
                     out.push({
                         h,
-                        label: this.to12h(h),
+                        label: this.to12h(h % 24),
                         top,
                         yHour,
                         yHalf: yHour + 30 * this.pxPerMin,
@@ -2306,7 +2346,10 @@
 
             // высота всей области дня
             get dayGridHeight() {
-                return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 30;
+                if(this.settings?.onlyBusiness)
+                    return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 35;
+                else
+                    return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 20;
             },
 
             get hours() {
@@ -2315,11 +2358,12 @@
                     const top = (h - this.dayStartHour) * 60 * this.pxPerMin;
                     out.push({
                         h,
-                        label: this.to12h(h),
-                        top: top + 1,
+                        label: this.to12h(h % 24),
+                        top: top,
                         center: top
                     });
                 }
+                console.log(out);
                 return out;
             },
 
@@ -2525,8 +2569,8 @@
                 const endMinutesFromOpen = (b + 1) * 30;
 
                 // абсолютные минуты от полуночи
-                const absStartMin = this.DAY_START_HOUR * 60 + startMinutesFromOpen;
-                const absEndMin = this.DAY_START_HOUR * 60 + endMinutesFromOpen;
+                const absStartMin = this.dayStartHour * 60 + startMinutesFromOpen;
+                const absEndMin = this.dayStartHour * 60 + endMinutesFromOpen;
 
                 // перерасчёт в «часы:мин» текущего дня (dayjs)
                 const d = this.tz(this.currentDayISO ?? this.tz());
@@ -3080,8 +3124,8 @@
 
             prepTaskForDay(t, dayISO) {
                 // день начала сетки (например, 06:00)
-                const dayStart = dayjs.tz(`${dayISO} ${String(this.DAY_START_HOUR).padStart(2, '0')}:00:00`, this.FMT, this.APP_TZ);
-                const dayEnd = dayStart.clone().add((this.DAY_END_HOUR - this.DAY_START_HOUR), 'hour');
+                const dayStart = dayjs.tz(`${dayISO} ${String(this.dayStartHour).padStart(2, '0')}:00:00`, this.FMT, this.APP_TZ);
+                const dayEnd = dayStart.clone().add((this.dayEndHour - this.dayStartHour), 'hour');
 
                 // реальные время старта/финиша
                 const start = dayjs.tz(`${t.day} ${t.start}`, this.FMT, this.APP_TZ);
