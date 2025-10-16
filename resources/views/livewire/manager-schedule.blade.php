@@ -327,7 +327,7 @@
                                         <div
                                             class="absolute top-1 h-14 bg-green-500 text-white text-[11px] rounded shadow cursor-move px-1 flex items-center space-x-1 z-30 border border-emerald-600"
                                             :class="{
-                                                    'pointer-events-none opacity-60 bg-[repeating-linear-gradient(45deg,#aeaeae00_0,#10182885_5px,#0000_5px,#0000_18px)]': isTaskPast(task),
+                                                    'pointer-events-none opacity-60': isTaskPast(task),
                                                     'cursor-pointer': !isTaskPast(task)
                                                 }"
                                             @click.stop="onTaskClick(task, $event)"
@@ -2026,6 +2026,7 @@
                 const am = h < 12;
                 let hh = h % 12;
                 if (hh === 0) hh = 12;
+                if(hh === 6) return '';
                 return `${hh}${am ? 'am' : 'pm'}`;
             },
             parseTime(dayISO, timeStr) {
@@ -2363,7 +2364,6 @@
                         center: top
                     });
                 }
-                console.log(out);
                 return out;
             },
 
@@ -2824,7 +2824,7 @@
                 const widthPx = (endIdx - startIdx) * this.slotWidthPx;
 
                 const lane = this.laneOf(task);
-                const topPx = lane * this.rowHeightPx;
+                const topPx = 2;//lane * this.rowHeightPx;
 
                 return `left:${leftPx}px; width:${widthPx}px; top:${topPx}px;`;
             },

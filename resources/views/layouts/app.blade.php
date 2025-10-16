@@ -351,6 +351,18 @@
             (typeof r === 'object' && r?.message === 'The operation was aborted.');
         if (isAbort) event.preventDefault();
     });
+    (function () {
+        const _fetch = window.fetch;
+        window.fetch = async (...args) => {
+            const res = await _fetch(...args);
+            if (res.status === 419) window.location.reload();
+            return res;
+        };
+
+        document.addEventListener('ajax:error', (e) => {
+            if (e.detail && e.detail.status === 419) window.location.reload();
+        });
+    })();
 </script>
 <script>
     function viewportPanel () {
