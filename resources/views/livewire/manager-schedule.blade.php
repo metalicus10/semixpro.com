@@ -133,7 +133,7 @@
                                     <select x-model="form.tz"
                                             class="w-full rounded border-gray-300 text-sm dark:border-slate-700 dark:bg-slate-800">
                                         <template x-for="z in timezones" :key="z.value">
-                                            <option :value="z.value" x-text="z.label"></option>
+                                            <option :value="z.value" x-text="z.label" :selected="form.tz === z.value"></option>
                                         </template>
                                     </select>
                                 </div>
@@ -961,6 +961,10 @@
 
                     <!-- Center Column -->
                     <div class="w-full lg:w-2/3 space-y-6">
+                        <div class="border p-4 rounded space-y-4">
+                            <livewire:task-steps :task-id="getTaskId()"  :key="'task-steps_'.getTaskId()"  />
+                        </div>
+
                         <div class="border p-4 rounded"
                              x-data="{
                                         money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
@@ -2011,6 +2015,10 @@
 
             holidayName(dayISO) {
                 return this.holidays.get(dayISO) || 'Holiday';
+            },
+
+            get getTaskId(){
+                return this.jobModalForm.task_id;
             },
 
             get topOffset() {

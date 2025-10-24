@@ -89,6 +89,12 @@
     }
 }
 
+select option:checked,
+select option[selected] {
+    background-color: #ecfdf5;
+    color: #065f46;
+}
+
 /* {
     border-color: hsl(var(--border));
 }*/
