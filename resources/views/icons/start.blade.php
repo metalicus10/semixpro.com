@@ -1,0 +1,3 @@
+<svg fill="#ffe37c" width="18px" height="18px" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+    <image x="5" y="5" width="18" height="18" xlink:href="data:img/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAABA0lEQVQ4jbXRuUoEQQBF0TMyuIALYuQviF8kJgYumLkGg2iqIobihpF/ZmSguMKowUhJFTSN4/TmSxq6i3tfvW717vZgFsd4xAGe1EwbM1jAYkR1EWxfddBD6MS2Kbv4xBGG64Cn4zOfIPiI0tKC34D57FQRFAGnJMFJEUEZcMpWRjDSJDgr6PYT1AHnBafZiZoAp2zEiZYw1m4QnHKN+SYbpwTm6H80Xsdtk+AwwSZeNfTzAnAKywlaF3yZAb7kP1aZ4ipe+e2vQ2Uah4aTWBkELQo+xwRWsxsOSpjiGT20cmcvsF2kXb/Gh9jPvDvDONaqQkNC43vcYA4PUfJeFfgTfAOnfDKgH5nIvwAAAABJRU5ErkJggg=="/>
+</svg>

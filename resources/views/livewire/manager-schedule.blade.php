@@ -133,7 +133,8 @@
                                     <select x-model="form.tz"
                                             class="w-full rounded border-gray-300 text-sm dark:border-slate-700 dark:bg-slate-800">
                                         <template x-for="z in timezones" :key="z.value">
-                                            <option :value="z.value" x-text="z.label" :selected="form.tz === z.value"></option>
+                                            <option :value="z.value" x-text="z.label"
+                                                    :selected="form.tz === z.value"></option>
                                         </template>
                                     </select>
                                 </div>
@@ -696,6 +697,21 @@
         </div>
 
         <div x-show="jobModalOpen"
+             x-init="
+                const pushSchedule = () => {
+                  Livewire.dispatch('task-steps.schedule', {
+                    from: jobModalForm.schedule_from_time12,
+                    to:   jobModalForm.schedule_to_time12,
+                  });
+                };
+
+                // 1) при открытии/первичной установке формы — вызови вручную там, где ты заполняешь jobModalForm
+                pushSchedule();
+
+                // 2) автообновление при изменении
+                $watch('jobModalForm.schedule_from_time12', () => pushSchedule());
+                $watch('jobModalForm.schedule_to_time12',   () => pushSchedule());
+             "
              class="fixed inset-0 z-[45] flex items-center justify-center bg-black bg-opacity-40">
             <div class="bg-white rounded-lg shadow-lg w-full max-w-6xl p-6 overflow-y-auto max-h-[95vh]">
                 <div class="flex justify-between items-center border-b pb-4 mb-6">
@@ -706,7 +722,8 @@
 
                 <div class="flex flex-col lg:flex-row gap-6">
                     <!-- Left Column -->
-                    <div class="w-full lg:w-1/3 space-y-6">
+                    <div class="w-full lg:w-1/3 space-y-4">
+                        <!-- Customer -->
                         <div class="bg-gray-50 rounded-lg border p-4 w-full max-w-[400px]">
                             <div class="font-medium text-sm mb-1 flex items-center gap-1">
                                 <svg class="w-4 h-4"/>
@@ -768,12 +785,17 @@
                                                                 $dispatch('time-changed', { field: 'from', value: this.value });
                                                             },
                                                             setFromExternal(val) {
-                                                                if (!val) return;
-                                                                let [time, ampm] = val.split(' ');
-                                                                let [h, m] = time.split(':');
-                                                                this.hour = parseInt(h);
+                                                                if(!val) return;
+
+                                                                val = val.trim().toUpperCase();
+                                                                val = val.replace(/(AM|PM)$/, ' $1');
+
+                                                                const [time, ampm] = val.split(' ');
+                                                                const [h, m] = time.split(':');
+
+                                                                this.hour = parseInt(h, 10);
                                                                 this.minute = m;
-                                                                this.ampm = ampm || 'AM';
+                                                                this.ampm = (ampm === 'PM' ? 'PM' : 'AM');
                                                             }
                                                         }"
 
@@ -781,8 +803,7 @@
                                             @time-changed.window="updateTime($event.detail)"
                                             class="relative w-36"
                                         >
-                                            <button type="button"
-                                                    @click="show = !show"
+                                            <button type="button" @click="show = !show"
                                                     class="w-full px-2 py-1 border rounded focus:outline-none flex items-center justify-between"
                                             >
                                                 <span x-text="value"></span>
@@ -837,29 +858,30 @@
                                                class="border rounded px-2 py-1">
                                         <div
                                             x-data="{
-                                                            show: false,
-                                                            hour: 9,
-                                                            minute: '00',
-                                                            ampm: 'AM',
-                                                            get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
-                                                            setValue(h, m, a) {
-                                                                this.hour = h;
-                                                                this.minute = m;
-                                                                this.ampm = a;
-                                                                this.show = false;
-                                                                // Если нужна двусторонняя связь с jobModalForm:
-                                                                $dispatch('time-changed', { field: 'to', value: this.value });
-                                                            },
-                                                            setFromExternal(val) {
-                                                                if (!val) return;
-                                                                let [time, ampm] = val.split(' ');
-                                                                let [h, m] = time.split(':');
-                                                                this.hour = parseInt(h);
-                                                                this.minute = m;
-                                                                this.ampm = ampm || 'AM';
-                                                            }
-                                                        }"
-
+                                                show: false,
+                                                hour: 9,
+                                                minute: '00',
+                                                ampm: 'AM',
+                                                get value() { return `${this.hour}:${this.minute} ${this.ampm}` },
+                                                setValue(h, m, a) {
+                                                    this.hour = h;
+                                                    this.minute = m;
+                                                    this.ampm = a;
+                                                    this.show = false;
+                                                    // Если нужна двусторонняя связь с jobModalForm:
+                                                    $dispatch('time-changed', { field: 'to', value: this.value });
+                                                },
+                                                setFromExternal(val) {
+                                                    if(!val) return;
+                                                    val = val.trim().toUpperCase();
+                                                    val = val.replace(/(AM|PM)$/, ' $1');
+                                                    const [time, ampm] = val.split(' ');
+                                                    const [h, m] = time.split(':');
+                                                    this.hour = parseInt(h, 10);
+                                                    this.minute = m;
+                                                    this.ampm = (ampm === 'PM' ? 'PM' : 'AM');
+                                                }
+                                            }"
                                             x-effect="setFromExternal(jobModalForm.schedule_to_time12)"
                                             @time-changed.window="updateTime($event.detail)"
                                             class="relative w-36"
@@ -960,13 +982,20 @@
                     </div>
 
                     <!-- Center Column -->
-                    <div class="w-full lg:w-2/3 space-y-6">
-                        <div class="border p-4 rounded space-y-4">
-                            <livewire:task-steps :task-id="getTaskId()"  :key="'task-steps_'.getTaskId()"  />
+                    <div class="w-full lg:w-2/3">
+                        <div class="rounded space-y-4"
+                             x-init="
+                                $watch('jobModalForm.task_id', id => {
+                                    if (id) { Livewire.dispatch('task-steps.switch', { id: Number(id) }) }
+                                })
+                             "
+                        >
+                            <livewire:task-steps :task-id="0" :key="'task-steps_key'"/>
                         </div>
 
-                        <div class="border p-4 rounded"
-                             x-data="{
+                        <div class="space-y-4">
+                            <div class="border p-4 rounded"
+                                 x-data="{
                                         money(v){ return Number(v||0).toLocaleString(undefined,{style:'currency',currency:'USD'}) },
                                         openList(it){
                                             if (!it.search) it.search = { open: false, q: '', results: [], hi: -1, loading: false };
@@ -1085,169 +1114,44 @@
                                             this.recalcItemsTotal();
                                         },
                                     }"
-                        >
-                            <label class="block text-sm font-medium mb-2">Job items</label>
-                            <!-- Services -->
-                            <button
-                                @click="addItem('service')"
-                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                                type="button"
                             >
-                                + Add service
-                            </button>
-                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
-                                      :key="item.id">
-                                <div class="mb-4 space-y-2 border-b pb-2">
-                                    <div class="flex flex-row justify-between w-full">
-                                        <div class="flex w-4/5">
-                                            <!-- Drag-handle, если нужен -->
-                                            <div class="flex items-start text-gray-400 cursor-move">
-                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                     viewBox="0 0 24 24">
-                                                    <circle cx="5" cy="7" r="1.5"/>
-                                                    <circle cx="5" cy="12" r="1.5"/>
-                                                    <circle cx="5" cy="17" r="1.5"/>
-                                                    <circle cx="12" cy="7" r="1.5"/>
-                                                    <circle cx="12" cy="12" r="1.5"/>
-                                                    <circle cx="12" cy="17" r="1.5"/>
-                                                </svg>
-                                            </div>
-
-                                            <!-- Service fields (имя, qty, price и т.д.) -->
-                                            <div class="flex flex-col bg-white rounded w-full ">
-                                                <div class="flex gap-2 mb-2 w-full">
-
-                                                    <!-- Service Name + Tax -->
-                                                    <div class="flex-1 flex flex-col w-3/5">
-                                                        <label class="sr-only">Service name</label>
-                                                        <div class="relative flex items-center">
-                                                            <input x-model="item.name" type="text"
-                                                                   placeholder="Item name"
-                                                                   class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
-                                                            <label
-                                                                class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
-                                                                Tax
-                                                                <input type="checkbox" x-model="item.tax"
-                                                                       class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-
-                                                    <div class="flex w-2/5 gap-1">
-                                                        <!-- Qty -->
-                                                        <div class="relative flex flex-col w-full">
-                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                                   x-model="item.qty" type="number" step="1" min="0"
-                                                                   placeholder=" " @input="recalcItemsTotal()"
-                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                            <label :for="`qty-${index}`"
-                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                                Qty
-                                                            </label>
-                                                        </div>
-
-                                                        <!-- Unit price -->
-                                                        <div class="relative flex flex-col w-full">
-                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                                   x-model="item.unit_price" type="number"
-                                                                   step="0.01"
-                                                                   min="0" @input="recalcItemsTotal()"
-                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                            <label :for="`uprice-${index}`"
-                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                                Unit price
-                                                            </label>
-                                                        </div>
-                                                    </div>
+                                <label class="block text-sm font-medium mb-2">Job items</label>
+                                <!-- Services -->
+                                <button
+                                    @click="addItem('service')"
+                                    class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                    type="button"
+                                >
+                                    + Add service
+                                </button>
+                                <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'service')"
+                                          :key="item.id">
+                                    <div class="mb-4 space-y-2 border-b pb-2">
+                                        <div class="flex flex-row justify-between w-full">
+                                            <div class="flex w-4/5">
+                                                <!-- Drag-handle, если нужен -->
+                                                <div class="flex items-start text-gray-400 cursor-move">
+                                                    <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                         viewBox="0 0 24 24">
+                                                        <circle cx="5" cy="7" r="1.5"/>
+                                                        <circle cx="5" cy="12" r="1.5"/>
+                                                        <circle cx="5" cy="17" r="1.5"/>
+                                                        <circle cx="12" cy="7" r="1.5"/>
+                                                        <circle cx="12" cy="12" r="1.5"/>
+                                                        <circle cx="12" cy="17" r="1.5"/>
+                                                    </svg>
                                                 </div>
-                                                <!-- Вторая строка: Описание и Unit Cost -->
-                                                <div class="flex gap-2 w-full">
-                                                    <div class="flex-1 w-3/5">
-                                                    <textarea x-model="item.description"
-                                                              placeholder="Description (optional)" rows="1"
-                                                              class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto">
-                                                    </textarea>
-                                                    </div>
-                                                    <div class="relative flex flex-col w-2/5">
-                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost"
-                                                               type="number" step="0.1"
-                                                               min="0" @input="recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`ucost-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
-                                                                            peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit cost
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="flex flex-row items-start w-1/5">
-                                            <!-- Итоговая цена -->
-                                            <div class="p-2 text-right text-sm min-w-[70px]">
-                                                <span x-text="formatMoney(item.total)"></span>
-                                            </div>
 
-                                            <!-- Удалить -->
-                                            <button @click="removeItem(item.id)"
-                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                    tabindex="-1">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                    <path d="M6 6l12 12M6 18L18 6"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </template>
+                                                <!-- Service fields (имя, qty, price и т.д.) -->
+                                                <div class="flex flex-col bg-white rounded w-full ">
+                                                    <div class="flex gap-2 mb-2 w-full">
 
-                            <!-- Materials -->
-                            <button
-                                @click="addItem('material')"
-                                class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
-                                type="button"
-                            >
-                                + Add material
-                            </button>
-                            <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
-                                      :key="item.key">
-                                <div class="mb-4 space-y-2 border-b pb-2">
-                                    <!-- Material fields (имя, qty, price и т.д.) -->
-                                    <div class="flex flex-row justify-between w-full">
-                                        <div class="flex w-4/5">
-                                            <!-- Drag-handle, если нужен -->
-                                            <div class="flex items-start text-gray-400 cursor-move">
-                                                <svg class="w-6 h-8" fill="none" stroke="currentColor"
-                                                     viewBox="0 0 24 24">
-                                                    <circle cx="5" cy="7" r="1.5"/>
-                                                    <circle cx="5" cy="12" r="1.5"/>
-                                                    <circle cx="5" cy="17" r="1.5"/>
-                                                    <circle cx="12" cy="7" r="1.5"/>
-                                                    <circle cx="12" cy="12" r="1.5"/>
-                                                    <circle cx="12" cy="17" r="1.5"/>
-                                                </svg>
-                                            </div>
-
-                                            <div class="flex flex-col bg-white rounded w-full ">
-                                                <div class="flex gap-2 mb-2 w-full">
-
-                                                    <!-- Material Name + Tax -->
-                                                    <div class="flex-1 flex flex-col w-3/5">
-                                                        <label class="sr-only">Material name</label>
-                                                        <div class="relative flex flex-col"
-                                                             @click.outside="hideList(item)">
-                                                            <div class="relative flex flex-row">
+                                                        <!-- Service Name + Tax -->
+                                                        <div class="flex-1 flex flex-col w-3/5">
+                                                            <label class="sr-only">Service name</label>
+                                                            <div class="relative flex items-center">
                                                                 <input x-model="item.name" type="text"
-                                                                       placeholder="Material name"
-                                                                       @input.debounce.300ms="autocomplete(item)"
-                                                                       @focus="openList(item)"
-                                                                       @blur="deferClose(item)"
-                                                                       @keydown.escape.prevent="hideList(item)"
-                                                                       @keydown.arrow-down.prevent="move(item,1)"
-                                                                       @keydown.arrow-up.prevent="move(item,-1)"
-                                                                       @keydown.enter.prevent="choose(index)"
+                                                                       placeholder="Item name"
                                                                        class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
                                                                 <label
                                                                     class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
@@ -1256,9 +1160,134 @@
                                                                            class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
                                                                 </label>
                                                             </div>
-                                                            <!-- Chip "Linked to part" -->
-                                                            <div x-show="item.part_id"
-                                                                 class="mt-1 flex items-center gap-2 text-xs">
+                                                        </div>
+
+                                                        <div class="flex w-2/5 gap-1">
+                                                            <!-- Qty -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                       x-model="item.qty" type="number" step="1" min="0"
+                                                                       placeholder=" " @input="recalcItemsTotal()"
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`qty-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                    Qty
+                                                                </label>
+                                                            </div>
+
+                                                            <!-- Unit price -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                       x-model="item.unit_price" type="number"
+                                                                       step="0.01"
+                                                                       min="0" @input="recalcItemsTotal()"
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`uprice-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                                    peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                    Unit price
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Вторая строка: Описание и Unit Cost -->
+                                                    <div class="flex gap-2 w-full">
+                                                        <div class="flex-1 w-3/5">
+                                                    <textarea x-model="item.description"
+                                                              placeholder="Description (optional)" rows="1"
+                                                              class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto">
+                                                    </textarea>
+                                                        </div>
+                                                        <div class="relative flex flex-col w-2/5">
+                                                            <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                                   type="number" step="0.1"
+                                                                   min="0" @input="recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`ucost-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                                            peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
+                                                                Unit cost
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex flex-row items-start w-1/5">
+                                                <!-- Итоговая цена -->
+                                                <div class="p-2 text-right text-sm min-w-[70px]">
+                                                    <span x-text="formatMoney(item.total)"></span>
+                                                </div>
+
+                                                <!-- Удалить -->
+                                                <button @click="removeItem(item.id)"
+                                                        class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                        tabindex="-1">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                        <path d="M6 6l12 12M6 18L18 6"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Materials -->
+                                <button
+                                    @click="addItem('material')"
+                                    class="w-full mb-2 flex justify-start items-center px-4 py-2 text-blue-600 text-sm hover:bg-blue-50 border border-dashed border-blue-200 rounded"
+                                    type="button"
+                                >
+                                    + Add material
+                                </button>
+                                <template x-for="(item, index) in jobModalForm.items.filter(i => i.type === 'material')"
+                                          :key="item.key">
+                                    <div class="mb-4 space-y-2 border-b pb-2">
+                                        <!-- Material fields (имя, qty, price и т.д.) -->
+                                        <div class="flex flex-row justify-between w-full">
+                                            <div class="flex w-4/5">
+                                                <!-- Drag-handle, если нужен -->
+                                                <div class="flex items-start text-gray-400 cursor-move">
+                                                    <svg class="w-6 h-8" fill="none" stroke="currentColor"
+                                                         viewBox="0 0 24 24">
+                                                        <circle cx="5" cy="7" r="1.5"/>
+                                                        <circle cx="5" cy="12" r="1.5"/>
+                                                        <circle cx="5" cy="17" r="1.5"/>
+                                                        <circle cx="12" cy="7" r="1.5"/>
+                                                        <circle cx="12" cy="12" r="1.5"/>
+                                                        <circle cx="12" cy="17" r="1.5"/>
+                                                    </svg>
+                                                </div>
+
+                                                <div class="flex flex-col bg-white rounded w-full ">
+                                                    <div class="flex gap-2 mb-2 w-full">
+
+                                                        <!-- Material Name + Tax -->
+                                                        <div class="flex-1 flex flex-col w-3/5">
+                                                            <label class="sr-only">Material name</label>
+                                                            <div class="relative flex flex-col"
+                                                                 @click.outside="hideList(item)">
+                                                                <div class="relative flex flex-row">
+                                                                    <input x-model="item.name" type="text"
+                                                                           placeholder="Material name"
+                                                                           @input.debounce.300ms="autocomplete(item)"
+                                                                           @focus="openList(item)"
+                                                                           @blur="deferClose(item)"
+                                                                           @keydown.escape.prevent="hideList(item)"
+                                                                           @keydown.arrow-down.prevent="move(item,1)"
+                                                                           @keydown.arrow-up.prevent="move(item,-1)"
+                                                                           @keydown.enter.prevent="choose(index)"
+                                                                           class="w-full rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer text-sm pr-16"/>
+                                                                    <label
+                                                                        class="flex flex-col absolute right-3 top-1/2 -translate-y-1/2 items-center gap-0 text-[8px] uppercase text-gray-600 select-none cursor-pointer">
+                                                                        Tax
+                                                                        <input type="checkbox" x-model="item.tax"
+                                                                               class="form-checkbox accent-blue-600 h-3 w-3 cursor-pointer"/>
+                                                                    </label>
+                                                                </div>
+                                                                <!-- Chip "Linked to part" -->
+                                                                <div x-show="item.part_id"
+                                                                     class="mt-1 flex items-center gap-2 text-xs">
                                                                                         <span
                                                                                             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                                                                                             <svg class="w-3.5 h-3.5"
@@ -1276,43 +1305,43 @@
                                                                                                 x-text="item.part_id"></span>
                                                                                         </span>
 
-                                                                <button type="button"
-                                                                        @click="unlinkPart(item)"
-                                                                        class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
-                                                                    Unlink
-                                                                </button>
-                                                            </div>
+                                                                    <button type="button"
+                                                                            @click="unlinkPart(item)"
+                                                                            class="text-rose-600 hover:text-rose-700 underline underline-offset-2">
+                                                                        Unlink
+                                                                    </button>
+                                                                </div>
 
-                                                            <!-- выпадающий список -->
-                                                            <div x-show="item.search.open" x-transition.opacity
-                                                                 @mousedown.prevent
-                                                                 class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
-                                                                <template x-if="item.search.loading">
-                                                                    <div class="px-3 py-2 text-sm text-gray-500">
-                                                                        Searching…
-                                                                    </div>
-                                                                </template>
+                                                                <!-- выпадающий список -->
+                                                                <div x-show="item.search.open" x-transition.opacity
+                                                                     @mousedown.prevent
+                                                                     class="absolute top-full left-0 z-30 w-full bg-white border rounded shadow mt-1 max-h-56 overflow-auto">
+                                                                    <template x-if="item.search.loading">
+                                                                        <div class="px-3 py-2 text-sm text-gray-500">
+                                                                            Searching…
+                                                                        </div>
+                                                                    </template>
 
-                                                                <template x-for="(p, idx) in item.search.results"
-                                                                          :key="p.id">
-                                                                    <div @click="choose(idx)"
-                                                                         :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
-                                                                        <div class="flex items-center gap-2">
-                                                                            <template x-if="p.image">
-                                                                                <img
-                                                                                    :src="'{{ asset('storage') }}' + p.image"
-                                                                                    alt="p.name"
-                                                                                    class="w-9 h-9 rounded object-cover border">
-                                                                            </template>
-                                                                            <template
-                                                                                x-if="!p.image && p.nomenclature.image">
-                                                                                <img
-                                                                                    :src="'{{ asset('storage') }}' + p.nomenclature.image"
-                                                                                    :alt="p.name"
-                                                                                    class="w-9 h-9 rounded object-cover border">
-                                                                            </template>
-                                                                            <template
-                                                                                x-if="!p.image && !p.nomenclature.image">
+                                                                    <template x-for="(p, idx) in item.search.results"
+                                                                              :key="p.id">
+                                                                        <div @click="choose(idx)"
+                                                                             :class="['px-3 py-2 cursor-pointer', idx===item.search.hi ? 'bg-blue-50' : 'hover:bg-gray-50']">
+                                                                            <div class="flex items-center gap-2">
+                                                                                <template x-if="p.image">
+                                                                                    <img
+                                                                                        :src="'{{ asset('storage') }}' + p.image"
+                                                                                        alt="p.name"
+                                                                                        class="w-9 h-9 rounded object-cover border">
+                                                                                </template>
+                                                                                <template
+                                                                                    x-if="!p.image && p.nomenclature.image">
+                                                                                    <img
+                                                                                        :src="'{{ asset('storage') }}' + p.nomenclature.image"
+                                                                                        :alt="p.name"
+                                                                                        class="w-9 h-9 rounded object-cover border">
+                                                                                </template>
+                                                                                <template
+                                                                                    x-if="!p.image && !p.nomenclature.image">
                                                                                         <span class="w-[50px] h-[50px]">
                                                                                             <div>
                                                                                                 <svg
@@ -1345,155 +1374,159 @@
                                                                                                 </svg>
                                                                                             </div>
                                                                                         </span>
-                                                                            </template>
-                                                                            <div class="min-w-0">
-                                                                                <div class="flex items-center gap-2">
+                                                                                </template>
+                                                                                <div class="min-w-0">
+                                                                                    <div
+                                                                                        class="flex items-center gap-2">
                                                                                             <span
                                                                                                 class="font-medium truncate"
                                                                                                 x-text="p.name"></span>
-                                                                                    <span class="text-xs text-gray-500"
-                                                                                          x-text="p.sku ?? ''"></span>
-                                                                                </div>
-                                                                                <div
-                                                                                    class="flex items-center gap-2 text-xs">
+                                                                                        <span
+                                                                                            class="text-xs text-gray-500"
+                                                                                            x-text="p.sku ?? ''"></span>
+                                                                                    </div>
+                                                                                    <div
+                                                                                        class="flex items-center gap-2 text-xs">
                                                                                             <span class="text-gray-600"
                                                                                                   x-text="money(p.price)"></span>
-                                                                                    <!-- бейдж наличия -->
-                                                                                    <span
-                                                                                        :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
-                                                                                        class="px-1.5 py-0.5 rounded">
+                                                                                        <!-- бейдж наличия -->
+                                                                                        <span
+                                                                                            :class="p.quantity>0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                                                                                            class="px-1.5 py-0.5 rounded">
                                                                                                 <span
                                                                                                     x-show="p.available>0">In stock: <span
                                                                                                         x-text="p.available"></span></span>
                                                                                                 <span
                                                                                                     x-show="p.available<=0">Out of stock</span>
                                                                                             </span>
-                                                                                    <template x-if="p.reserved > 0">
+                                                                                        <template x-if="p.reserved > 0">
                                                                                                 <span
                                                                                                     class="inline-flex items-center rounded px-2 py-0.5 text-xs bg-orange-100 text-orange-700">
                                                                                                     Reserved <span
                                                                                                         class="ml-1"
                                                                                                         x-text="p.reserved"></span>
                                                                                                 </span>
-                                                                                    </template>
+                                                                                        </template>
+                                                                                    </div>
                                                                                 </div>
                                                                             </div>
                                                                         </div>
-                                                                    </div>
-                                                                </template>
+                                                                    </template>
 
-                                                                <div
-                                                                    x-show="!item.search.loading && item.search.results.length===0"
-                                                                    class="px-3 py-2 text-sm text-gray-500">
-                                                                    No matches. Press Enter to keep custom name.
+                                                                    <div
+                                                                        x-show="!item.search.loading && item.search.results.length===0"
+                                                                        class="px-3 py-2 text-sm text-gray-500">
+                                                                        No matches. Press Enter to keep custom name.
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
 
-                                                    <div class="flex w-2/5 gap-1">
-                                                        <!-- Qty -->
-                                                        <div class="relative flex flex-col w-full">
-                                                            <input :id="`qty-${index}`" :name="`name-${index}`"
-                                                                   x-model="item.qty" type="number" step="1" min="0"
-                                                                   placeholder=""
-                                                                   @input="onQtyInput(item); recalcItemsTotal()"
-                                                                   :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
-                                                                   :max="item.part_id ? (item.stock ?? 0) : null"
-                                                                   @blur="onQtyInput(item); recalcItemsTotal()"
-                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                            <p x-show="item.warn.qty" class="mt-1 text-xs text-rose-600"
-                                                               x-text="item.warn.qty"></p>
-                                                            <label :for="`qty-${index}`"
-                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                        <div class="flex w-2/5 gap-1">
+                                                            <!-- Qty -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`qty-${index}`" :name="`name-${index}`"
+                                                                       x-model="item.qty" type="number" step="1" min="0"
+                                                                       placeholder=""
+                                                                       @input="onQtyInput(item); recalcItemsTotal()"
+                                                                       :min="(item.part_id && (item.stock ?? 0) <= 0) ? 0 : 1"
+                                                                       :max="item.part_id ? (item.stock ?? 0) : null"
+                                                                       @blur="onQtyInput(item); recalcItemsTotal()"
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <p x-show="item.warn.qty"
+                                                                   class="mt-1 text-xs text-rose-600"
+                                                                   x-text="item.warn.qty"></p>
+                                                                <label :for="`qty-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                                     peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                                Qty
-                                                            </label>
-                                                        </div>
+                                                                    Qty
+                                                                </label>
+                                                            </div>
 
-                                                        <!-- Unit price -->
-                                                        <div class="relative flex flex-col w-full">
-                                                            <input :id="`uprice-${index}`" :name="`uprice-${index}`"
-                                                                   x-model="item.unit_price" type="number"
-                                                                   step="0.01" min="0"
-                                                                   @input="recalcItemsTotal()"
-                                                                   :readonly="item.priceLocked"
-                                                                   :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
-                                                                   title="Цена берётся из выбранной запчасти"
-                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                            <label :for="`uprice-${index}`"
-                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                            <!-- Unit price -->
+                                                            <div class="relative flex flex-col w-full">
+                                                                <input :id="`uprice-${index}`" :name="`uprice-${index}`"
+                                                                       x-model="item.unit_price" type="number"
+                                                                       step="0.01" min="0"
+                                                                       @input="recalcItemsTotal()"
+                                                                       :readonly="item.priceLocked"
+                                                                       :class="['w-full rounded-lg border', item.priceLocked ? 'bg-gray-100 cursor-not-allowed' : '']"
+                                                                       title="Цена берётся из выбранной запчасти"
+                                                                       class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                                <label :for="`uprice-${index}`"
+                                                                       class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                                     peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                                Unit price
-                                                            </label>
+                                                                    Unit price
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <!-- Вторая строка: Описание и Unit Cost -->
-                                                <div class="flex gap-2 w-full">
-                                                    <div class="flex-1 w-3/5">
+                                                    <!-- Вторая строка: Описание и Unit Cost -->
+                                                    <div class="flex gap-2 w-full">
+                                                        <div class="flex-1 w-3/5">
                                                                     <textarea x-model="item.description"
                                                                               placeholder="Description (optional)"
                                                                               rows="1"
                                                                               class="w-full rounded-lg h-[38px] text-sm border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer overflow-y-auto"></textarea>
-                                                    </div>
-                                                    <div class="relative flex flex-col w-2/5">
-                                                        <input :id="`ucost-${index}`" x-model="item.unit_cost"
-                                                               type="number" step="0.1"
-                                                               min="0" @input="recalcItemsTotal()"
-                                                               class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
-                                                        <label :for="`ucost-${index}`"
-                                                               class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
+                                                        </div>
+                                                        <div class="relative flex flex-col w-2/5">
+                                                            <input :id="`ucost-${index}`" x-model="item.unit_cost"
+                                                                   type="number" step="0.1"
+                                                                   min="0" @input="recalcItemsTotal()"
+                                                                   class="block px-2 py-2 w-full text-sm bg-white rounded-lg border border-gray-300 appearance-none focus:outline-none focus:ring-0 focus:border-blue-600 peer"/>
+                                                            <label :for="`ucost-${index}`"
+                                                                   class="absolute text-xs text-gray-500 duration-300 transform -translate-y-4 scale-75 top-2 z-10 origin-[0] bg-white px-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0
                                                                             peer-focus:scale-75 peer-focus:-translate-y-4 left-1">
-                                                            Unit cost
-                                                        </label>
+                                                                Unit cost
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div class="flex flex-row items-start w-1/5">
-                                            <!-- Итоговая цена -->
-                                            <div class="p-2 text-right text-sm min-w-[70px]">
-                                                <span x-text="formatMoney(item.total)"></span>
-                                            </div>
+                                            <div class="flex flex-row items-start w-1/5">
+                                                <!-- Итоговая цена -->
+                                                <div class="p-2 text-right text-sm min-w-[70px]">
+                                                    <span x-text="formatMoney(item.total)"></span>
+                                                </div>
 
-                                            <!-- Удалить -->
-                                            <button @click="removeItem(item.id)"
-                                                    class="flex p-2 text-gray-400 items-center hover:text-red-500"
-                                                    tabindex="-1">
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor">
-                                                    <path d="M6 6l12 12M6 18L18 6"/>
-                                                </svg>
-                                            </button>
+                                                <!-- Удалить -->
+                                                <button @click="removeItem(item.id)"
+                                                        class="flex p-2 text-gray-400 items-center hover:text-red-500"
+                                                        tabindex="-1">
+                                                    <svg class="w-5 h-5" fill="none" stroke="currentColor">
+                                                        <path d="M6 6l12 12M6 18L18 6"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
+                                </template>
+                            </div>
+
+                            <div class="border p-4 rounded space-y-4">
+                                <div class="flex justify-between text-sm">
+                                    <span>Subtotal</span>
+                                    <span x-text="subtotal()"></span>
                                 </div>
-                            </template>
-                        </div>
+                                <div class="flex justify-between text-sm">
+                                    <span>Tax</span>
+                                    <span x-text="taxTotal()"></span>
+                                </div>
+                                <div class="flex justify-between font-semibold text-base">
+                                    <span>Total</span>
+                                    <span x-text="total()"></span>
+                                </div>
+                            </div>
 
-                        <div class="border p-4 rounded space-y-4">
-                            <div class="flex justify-between text-sm">
-                                <span>Subtotal</span>
-                                <span x-text="subtotal()"></span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span>Tax</span>
-                                <span x-text="taxTotal()"></span>
-                            </div>
-                            <div class="flex justify-between font-semibold text-base">
-                                <span>Total</span>
-                                <span x-text="total()"></span>
-                            </div>
-                        </div>
-
-                        <div>
-                            <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
-                            </button>
-                            <template x-if="jobModalForm.message !== null">
+                            <div>
+                                <button @click="jobModalForm.message = ''" class="text-blue-600 text-sm">+ Message
+                                </button>
+                                <template x-if="jobModalForm.message !== null">
                                         <textarea x-model="jobModalForm.message"
                                                   class="w-full border rounded mt-2 px-3 py-2 text-sm"
                                                   placeholder="Add a message..."></textarea>
-                            </template>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1849,7 +1882,8 @@
 
                 this.$watch('baseCount', v => this.wrapCols = v);
 
-                this.$watch('settings', () => {});
+                this.$watch('settings', () => {
+                });
                 window.addEventListener('cal-settings:changed', (e) => {
                     this.settings = e.detail;
                     this.applySettings();
@@ -1971,12 +2005,12 @@
                 // 2) Диапазон видимых часов
                 if (this.settings?.onlyBusiness) {
                     this.dayStartHour = this.BUSINESS_START;
-                    this.dayEndHour   = this.BUSINESS_END;
-                    this.wrapCols     = 32;
+                    this.dayEndHour = this.BUSINESS_END;
+                    this.wrapCols = 32;
                 } else {
                     this.dayStartHour = 0;
-                    this.dayEndHour   = 24;
-                    this.wrapCols     = 64;
+                    this.dayEndHour = 24;
+                    this.wrapCols = 64;
                 }
 
                 await this.$nextTick();
@@ -2017,7 +2051,7 @@
                 return this.holidays.get(dayISO) || 'Holiday';
             },
 
-            get getTaskId(){
+            get getTaskId() {
                 return this.jobModalForm.task_id;
             },
 
@@ -2034,7 +2068,7 @@
                 const am = h < 12;
                 let hh = h % 12;
                 if (hh === 0) hh = 12;
-                if(hh === 6) return '';
+                if (hh === 6) return '';
                 return `${hh}${am ? 'am' : 'pm'}`;
             },
             parseTime(dayISO, timeStr) {
@@ -2355,7 +2389,7 @@
 
             // высота всей области дня
             get dayGridHeight() {
-                if(this.settings?.onlyBusiness)
+                if (this.settings?.onlyBusiness)
                     return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 35;
                 else
                     return (this.dayEndHour - this.dayStartHour) * 60 * this.pxPerMin + 20;

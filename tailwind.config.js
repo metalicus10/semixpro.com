@@ -66,7 +66,7 @@ export default {
             },
             flexBasis: {
                 "1/9": "11.11%",
-            }
+            },
         },
         container: {
             center: true,

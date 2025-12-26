@@ -116,6 +116,13 @@ select option[selected] {
     background-color: hsl(var(--background));
 }
 
+@layer utilities {
+    .text-xs {
+        font-size: 11px;
+        line-height: 1rem;
+    }
+}
+
 @theme {
     --font-display: "Lufga SemiBold";
 
