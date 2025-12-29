@@ -1533,6 +1533,7 @@
 
                 <div class="flex justify-end mt-6">
                     <button @click="onSubmit(jobModalForm); jobModalOpen = false"
+                            class="px-5 py-2 rounded-xl bg-brand-accent text-white"
                             :disabled="saving || !validateJobModalForm(jobModalForm) || hasQtyErrors"
                             :class="{'opacity-50 pointer-events-none': saving || !validateJobModalForm(jobModalForm) || hasQtyErrors}">
                         <span x-show="!saving">Save job</span>

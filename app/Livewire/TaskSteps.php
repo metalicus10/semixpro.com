@@ -95,8 +95,8 @@ class TaskSteps extends Component
     {
         $meta = $this->stepMeta ?? [];
 
-        $from = $this->compactAmPm($this->scheduleFrom12);
-        $to   = $this->compactAmPm($this->scheduleTo12);
+        $from = $this->compactAmPm($this->scheduleFrom12 ?? null);
+        $to   = $this->compactAmPm($this->scheduleTo12 ?? null);
 
         $meta['SCHEDULE'] = [];
 
@@ -157,9 +157,14 @@ class TaskSteps extends Component
         $this->stepMeta = $meta;
     }
 
-    private function compactAmPm(string $t): string
+    private function compactAmPm(?string $t): ?string
     {
-        return strtolower(str_replace(' ', '', trim($t)));
+        if ($t === null) return null;
+
+        $t = trim($t);
+        if ($t === '') return null;
+
+        return strtolower(str_replace(' ', '', $t));
     }
 
     public function render()
